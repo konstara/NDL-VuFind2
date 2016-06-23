@@ -270,17 +270,17 @@ class Navibar extends \Zend\View\Helper\AbstractHelper
                     }
                 }
 
+                if (strpos($action, 'metalib-', 0) === 0) {
+                    // Discard MetaLib menu items
+                    continue;
+                }
+
                 $option = array_merge(
                     ['label' => "menu_$itemKey"],
                     $parseUrl($action)
                 );
 
                 if ($option['route']) {
-                    if (strpos('metalib-', $option['url']) === 0) {
-                        if (!$this->metaLibHelper->isAvailable()) {
-                            continue;
-                        }
-                    }
                     if (strpos('primo-', $option['url']) === 0) {
                         if (!$this->primoHelper->isAvailable()) {
                             continue;

@@ -120,11 +120,7 @@
     <?=$this->record($this->driver)->getOnlineUrls('results')?>
     <?
       $formats = $this->driver->tryMethod('getFormats');
-      $metalib = $this->metalib()->isAvailable() && !empty($formats) && strstr((string)$formats[0], '0/Database') !== false;
-      if ($metalib):
     ?>
-       <?= $this->partial('RecordDriver/MetaLib/search-link.phtml', ['id' => $this->driver->getUniqueID()]); ?>
-    <? endif; ?>
     <?=$this->record($this->driver)->getPreviews()?>
     <? if ($this->layout()->templateDir === 'list'): ?>
       <?=$this->render('list/list-notes.phtml')?>

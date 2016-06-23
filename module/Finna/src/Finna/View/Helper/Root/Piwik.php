@@ -41,13 +41,6 @@ namespace Finna\View\Helper\Root;
 class Piwik extends \VuFind\View\Helper\Root\Piwik
 {
     /**
-     * MetaLib search results
-     *
-     * @var \Finna\Search\MetaLib\Results
-     */
-    protected $results = null;
-
-    /**
      * Translator
      *
      * @var \VuFind\Translator
@@ -72,14 +65,10 @@ class Piwik extends \VuFind\View\Helper\Root\Piwik
     /**
      * Returns Piwik code (if active) or empty string if not.
      *
-     * @param \Finna\Search\MetaLib\Results $results MetaLib search results
-     *
      * @return string
      */
-    public function __invoke($results = null)
+    public function __invoke()
     {
-        $this->results = $results;
-
         $viewModel = $this->getView()->plugin('view_model');
         if ($current = $viewModel->getCurrent()) {
             $children = $current->getChildren();
@@ -110,7 +99,7 @@ class Piwik extends \VuFind\View\Helper\Root\Piwik
 
         $source = $recordDriver->getSourceIdentifier();
         $sourceMap
-            = ['Solr' => 'Local', 'Primo' => 'PCI', 'MetaLib' => 'MetaLib'];
+            = ['Solr' => 'Local', 'Primo' => 'PCI'];
 
         $vars['RecordIndex']
             = isset($sourceMap[$source]) ? $sourceMap[$source] : $source;
@@ -128,12 +117,6 @@ class Piwik extends \VuFind\View\Helper\Root\Piwik
                     unset($vars[$var]);
                 }
             }
-        } else if ($source == 'MetaLib') {
-            $vars['MetaLibRecordSource'] = $recordDriver->getSource();
-            $vars['MetaLibRecordData'] = $vars['RecordData'];
-            unset($vars['RecordFormat']);
-            unset($vars['RecordData']);
-            unset($vars['RecordInstitution']);
         } else {
             $format = $formats = $recordDriver->tryMethod('getFormats');
             if (is_array($formats)) {
@@ -176,20 +159,7 @@ class Piwik extends \VuFind\View\Helper\Root\Piwik
         $backendId = method_exists($results, 'getBackendId')
             ? $results->getBackendId() : '';
 
-        if ($backendId === 'MetaLib') {
-            unset($vars['Facets']);
-            unset($vars['FacetTypes']);
-            unset($vars['View']);
-            unset($vars['Limit']);
-            unset($vars['Sort']);
-
-            $vars['SearchType'] = 'MetaLib';
-            if ($currentType == 'advanced') {
-                $vars['SearchType'] = 'MetaLibAdvanced';
-            }
-
-            return $vars;
-        } else if ($backendId == 'Primo') {
+        if ($backendId == 'Primo') {
             unset($vars['View']);
             $vars['SearchType'] = 'PCI';
             if ($currentType == 'advanced') {
@@ -227,16 +197,5 @@ class Piwik extends \VuFind\View\Helper\Root\Piwik
         $vars['FacetTypes'] = implode("\t", $facetTypes);
 
         return $vars;
-    }
-
-    /**
-     * Get Search Results if on a Results Page
-     *
-     * @return VuFind\Search\Base\Results|null Search results or null if not
-     * on a search page
-     */
-    protected function getSearchResults()
-    {
-        return $this->results ?: parent::getSearchResults();
     }
 }

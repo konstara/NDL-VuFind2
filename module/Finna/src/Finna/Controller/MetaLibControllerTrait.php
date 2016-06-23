@@ -1,10 +1,10 @@
 <?php
 /**
- * MetaLib Record Controller
+ * MetaLib Controller Trait
  *
  * PHP version 5
  *
- * Copyright (C) The National Library of Finland 2015-2016.
+ * Copyright (C) The National Library of Finland 2016.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -23,42 +23,28 @@
  * @package  Controller
  * @author   Samuli Sillanpää <samuli.sillanpaa@helsinki.fi>
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
- * @link     http://vufind.org   Main Site
+ * @link     https://vufind.org/wiki/development:plugins:controllers Wiki
  */
 namespace Finna\Controller;
 
 /**
- * MetaLib Record Controller
+ * MetaLib Controller Trait
  *
  * @category VuFind
  * @package  Controller
  * @author   Samuli Sillanpää <samuli.sillanpaa@helsinki.fi>
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
- * @link     http://vufind.org   Main Site
+ * @link     https://vufind.org/wiki/development:plugins:controllers Wiki
  */
-class MetaLibrecordController extends \VuFind\Controller\AbstractRecord
+trait MetaLibControllerTrait
 {
-    use MetaLibControllerTrait;
-
     /**
-    * Constructor
-    */
-    public function __construct()
-    {
-        // Override some defaults:
-        $this->searchClassId = 'MetaLib';
-
-        // Call standard record controller initialization:
-        parent::__construct();
-    }
-
-    /**
-     * Home (default) action -- show deprecated info
+     * Handle deprecated MetaLib actions
      *
      * @return mixed
      */
-    public function homeAction()
+    protected function depricatedInfo()
     {
-        return $this->depricatedInfo();
+        return $this->redirect()->toRoute('content-page', ['page' => 'metalib']);
     }
 }

@@ -16,7 +16,6 @@ var finna = (function() {
                 'imagePopup',
                 'itemStatus',
                 'layout',
-                'metalibLinks',
                 'myList',
                 'openUrl',
                 'organisationInfo',

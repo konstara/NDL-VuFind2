@@ -53,20 +53,7 @@
 
     <?
       $formats = $this->driver->getFormats();
-      $metalib = $this->metalib()->isAvailable() && !empty($formats) && strstr((string)$formats[0], '0/Database') !== false;
     ?>
-    <? if ($metalib): ?>
-       <? $this->headScript()->appendFile("finna-metalib-links.js"); ?>
-       <?= $this->partial('RecordDriver/MetaLib/search-link.phtml', ['id' => $this->driver->getUniqueID()]); ?>
-       <?
-       $script = '
-       $(document).ready(function() {
-          finna.metalibLinks.init();
-       });';
-       ?>
-       <?=$this->inlineScript(\Zend\View\Helper\HeadScript::SCRIPT, $script, 'SET');?>
-    <? endif; ?>
-
     <?
       $openUrl = $this->openUrl($this->driver, 'record');
       $openUrlActive = $openUrl->isActive();

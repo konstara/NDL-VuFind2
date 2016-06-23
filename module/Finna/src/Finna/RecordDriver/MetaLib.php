@@ -39,7 +39,7 @@ namespace Finna\RecordDriver;
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     http://vufind.org/wiki/vufind2:record_drivers Wiki
  */
-class MetaLib extends \Finna\RecordDriver\SolrMarc
+class MetaLib extends \Finna\RecordDriver\SolrDefault
 {
     /**
      * Used for identifying search backends
@@ -59,112 +59,13 @@ class MetaLib extends \Finna\RecordDriver\SolrMarc
     }
 
     /**
-     * Return an array of associative URL arrays with one or more of the following
-     * keys:
-     *
-     * <li>
-     *   <ul>desc: URL description text to display (optional)</ul>
-     *   <ul>url: fully-formed URL (required if 'route' is absent)</ul>
-     * </li>
-     *
-     * @return array
-     */
-    public function getURLs()
-    {
-        $urls = parent::getURLS();
-        foreach ($urls as &$url) {
-            $urlParts = parse_url($url['url']);
-            $url['urlShort']
-                = isset($urlParts['host']) ? $urlParts['host'] : $url['url'];
-        }
-        return $urls;
-    }
-
-    /**
      * Get the item's source.
      *
      * @return array
      */
     public function getSource()
     {
-        return $this->fields['source'] ?: null;
-    }
-
-    /**
-     * Returns an array of parameter to send to Finna's cover generator.
-     * Fallbacks to VuFind's getThumbnail if no record image with the
-     * given index was found.
-     *
-     * @param string $size  Size of thumbnail
-     * @param int    $index Image index
-     *
-     * @return array|bool
-     */
-    public function getRecordImage($size = 'small', $index = 0)
-    {
-        $params = parent::getThumbnail($size);
-        if ($params && !is_array($params)) {
-            $params = ['url' => $params];
-        }
-        return $params;
-    }
-
-    /**
-     * Return record format.
-     *
-     * @return string.
-     */
-    public function getRecordType()
-    {
-        return null;
-    }
-
-    /**
-     * Return image rights.
-     *
-     * @param string $language Language
-     *
-     * @return mixed array with keys:
-     *   'copyright'  Copyright (e.g. 'CC BY 4.0') (optional)
-     *   'description Human readable description (array)
-     *   'link'       Link to copyright info
-     *   or false if the record contains no images
-     */
-    public function getImageRights($language)
-    {
-        return false;
-    }
-
-    /**
-     * Get default OpenURL parameters.
-     *
-     * @return array
-     */
-    protected function getDefaultOpenUrlParams()
-    {
-        $params = parent::getDefaultOpenUrlParams();
-        if (isset($this->fields['isbn'])) {
-            $isbn = $this->fields['isbn'];
-            if (is_array($isbn) && !empty($isbn)) {
-                $isbn = $isbn[0];
-            }
-            $params['rft.isbn'] = $isbn;
-        }
-        if (isset($this->fields['issn'])) {
-            $issn = $this->fields['issn'];
-            if (is_array($issn) && !empty($issn)) {
-                $issn = $issn[0];
-            }
-            $params['rft.issn'] = $issn;
-        }
-        if (isset($this->fields['container_volume'])) {
-            $params['rft.volume'] = $this->fields['container_volume'];
-        }
-        if (isset($this->fields['container_issue'])) {
-            $params['rft.issue'] = $this->fields['container_issue'];
-        }
-        $params['rft.atitle'] = $params['rft.title'];
-        return $params;
+        return 'MetaLib';
     }
 
     /**
@@ -173,32 +74,9 @@ class MetaLib extends \Finna\RecordDriver\SolrMarc
      * @param string $format Export format
      *
      * @return bool
-     *
-     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
     public function exportDisabled($format)
     {
-        // Support export for EndNote and RefWorks
-        return !in_array($format, ['EndNote', 'RefWorks']);
-    }
-
-    /**
-     * Returns true if the record supports real-time AJAX status lookups.
-     *
-     * @return bool
-     */
-    public function supportsAjaxStatus()
-    {
-        return false;
-    }
-
-    /**
-     * Returns true if record links should be proxified.
-     *
-     * @return bool
-     */
-    public function proxyLinks()
-    {
-        return $this->fields['proxy'];
+        return true;
     }
 }

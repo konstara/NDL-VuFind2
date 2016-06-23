@@ -1,10 +1,10 @@
 <?php
 /**
- * Row Definition for MetaLib search
+ * Records Controller
  *
  * PHP version 5
  *
- * Copyright (C) The National Library of Finland 2015.
+ * Copyright (C) The National Library of Finland 2016.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -20,44 +20,40 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * @category VuFind
- * @package  Db_Row
+ * @package  Controller
  * @author   Samuli Sillanpää <samuli.sillanpaa@helsinki.fi>
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
- * @link     http://vufind.org   Main Site
+ * @link     https://vufind.org Main Site
  */
-namespace Finna\Db\Row;
+namespace Finna\Controller;
 
 /**
- * Row Definition for MetaLib search
+ * Records Controller
  *
  * @category VuFind
- * @package  Db_Row
+ * @package  Controller
  * @author   Samuli Sillanpää <samuli.sillanpaa@helsinki.fi>
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
- * @link     http://vufind.org   Main Site
+ * @link     https://vufind.org Main Site
  */
-class MetaLibSearch extends \VuFind\Db\Row\RowGateway
+class RecordsController extends \VuFind\Controller\RecordsController
 {
     /**
-     * Constructor
+     * Home action -- call standard results action
      *
-     * @param \Zend\Db\Adapter\Adapter $adapter Database adapter
+     * @return mixed
      */
-    public function __construct($adapter)
+    public function homeAction()
     {
-        parent::__construct('id', 'finna_metalib_search', $adapter);
-    }
-
-    /**
-     * Get the search object from the row
-     *
-     * @return \VuFind\Search\Minified
-     */
-    public function getSearchObject()
-    {
-        // Resource check for PostgreSQL compatibility:
-        $raw = is_resource($this->search_object)
-            ? stream_get_contents($this->search_object) : $this->search_object;
-        return unserialize($raw);
+        // Handle displaying of a single MetaLib record via results-action.
+        // (VuFind would redirect to /MetaLibRecord/[id] which is deprecated)
+        $ids = $this->params()->fromQuery('id', []);
+        if (count($ids) == 1) {
+            $parts = explode('|', $ids[0], 2);
+            if (count($parts) == 2 && $parts[0] === 'MetaLib') {
+                return parent::resultsAction();
+            }
+        }
+        return parent::homeAction();
     }
 }
