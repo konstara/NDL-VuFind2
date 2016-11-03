@@ -147,6 +147,10 @@
           <div class="col-sm-4 profile-title"><?=$this->transEsc('Group') ?>:</div>
           <div class="col-sm-8 profile-text-value"><?=$this->escapeHtml($this->profile['group']) ?></div>
         <? endif; ?>
+        <? if (!empty($this->profile['expiration_date'])): ?>
+          <div class="col-sm-4 profile-title"><?=$this->transEsc('Expires') ?>:</div>
+          <div class="col-sm-8 profile-text-value"><?=$this->escapeHtml($this->profile['expiration_date']) ?></div>
+        <? endif; ?>
         <? if ($updatePhone || $updateEmail): ?>
           <div class="col-xs-12">
             <input id="save-library-profile" name="saveLibraryProfile" type="submit" value="<?=$this->transEsc("save_my_profile") ?>" class="btn btn-primary" />
