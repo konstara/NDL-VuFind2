@@ -36,6 +36,7 @@ use VuFind\Exception\ILS as ILSException;
  *
  * @category VuFind
  * @package  ILS_Drivers
+ * @author   Ere Maijala <ere.maijala@helsinki.fi>
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org/wiki/development:plugins:ils_drivers Wiki
  */
@@ -88,9 +89,24 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
     ];
 
     /**
+     * Mappings from fee (account line) types
+     *
+     * @var array
+     */
+    protected $feeTypeMappings = [
+        'A' => 'Account',
+        'Copie' => 'Copier Fee',
+        'F' => 'Overdue',
+        'L' => 'Lost Item Replacement',
+        'M' => 'Sundry',
+        'N' => 'New Card',
+        'Res' => 'Hold Fee'
+    ];
+
+    /**
      * Constructor
      *
-     * @param \VuFind\Date\Converter $dateConverter Date converter object
+     * @param \VuFind\Date\Converter $dateConverter  Date converter object
      * @param Callable               $sessionFactory Factory function returning
      * SessionContainer object
      */
@@ -131,6 +147,12 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
         if (!empty($this->config['StatusRankings'])) {
             $this->statusRankings = array_merge(
                 $this->statusRankings, $this->config['StatusRankings']
+            );
+        }
+
+        if (!empty($this->config['FeeTypeMappings'])) {
+            $this->feeTypeMappings = array_merge(
+                $this->feeTypeMappings, $this->config['FeeTypeMappings']
             );
         }
 
@@ -841,14 +863,8 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
                 ? $this->dateConverter->convertToDisplayDate('Y-m-d', $entry['date'])
                 : '';
             $type = $entry['accounttype'];
-            switch ($type) {
-            case 'A': $type = 'Account'; break;
-            case 'Copie': $type = 'Copier Fee'; break;
-            case 'F': $type = 'Overdue'; break;
-            case 'L': $type = 'Lost Item Replacement'; break;
-            case 'M': $type = 'Sundry'; break;
-            case 'N': $type = 'New Card'; break;
-            case 'Res': $type = 'Hold Fee'; break;
+            if (isset($this->feeTypeMappings[$type])) {
+                $type = $this->feeTypeMappings[$type];
             }
             $fines[] = [
                 'amount' => $entry['amount'] * 100,
@@ -1349,7 +1365,7 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
     /**
      * Fetch a bib record from Koha
      *
-     * @param int   $id     Bib record id
+     * @param int $id Bib record id
      *
      * @return array|null
      */
@@ -1390,6 +1406,8 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
      *
      * @param int   $code   HTTP Result Code
      * @param array $result API Response
+     *
+     * @return array
      */
     protected function holdError($code, $result)
     {
