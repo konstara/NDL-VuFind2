@@ -87,7 +87,7 @@
           <div class="col-sm-4 profile-title"><?=$this->transEsc('Last Name') ?>:</div>
           <div class="col-sm-8 profile-text-value"><?=$this->escapeHtml($this->profile['lastname']) ?></div>
         <? endif; ?>
-        <? if (isset($this->profile['address1'])): ?>
+        <? if (!empty($this->profile['address1'])): ?>
           <? if ($updateAddress): ?>
             <div class="col-sm-4 profile-title profile-long"><?=$this->transEsc('Address') ?> 1:</div>
             <div class="col-sm-4 profile-text-value profile-long"><?=$this->escapeHtml($this->profile['address1']) ?></div>
@@ -103,18 +103,18 @@
             <div class="clearfix visible-xs  profile-xs"><br/></div>
           <? else: ?>
             <div class="col-sm-4 profile-title"><?=$this->transEsc('Address') ?> 1:</div>
-            <div class="col-sm-8 profile-text-value"><?=$this->escapeHtml($this->profile['address1']) ?></div>
+            <div class="col-sm-8 profile-text-value"><?=$this->escapeHtml($this->profile['address1']) ?> </div>
           <? endif; ?>
         <? endif; ?>
-        <? if (isset($this->profile['address2']) && !$updateAddress): ?>
+        <? if (!empty($this->profile['address2']) && !$updateAddress): ?>
           <div class="col-sm-4 profile-title"><?=$this->transEsc('Address') ?> 2:</div>
           <div class="col-sm-8 profile-text-value"><?=$this->escapeHtml($this->profile['address2']) ?></div>
         <? endif; ?>
-        <? if (isset($this->profile['zip'])): ?>
+        <? if (!empty($this->profile['zip'])): ?>
           <div class="col-sm-4 profile-title"><?=$this->transEsc('Zip') ?>:</div>
           <div class="col-sm-8 profile-text-value"><?=$this->escapeHtml($this->profile['zip']) ?></div>
         <? endif; ?>
-        <? if (isset($this->profile['city'])): ?>
+        <? if (!empty($this->profile['city'])): ?>
           <div class="col-sm-4 profile-title"><?=$this->transEsc('City') ?>:</div>
           <div class="col-sm-8 profile-text-value"><?=$this->escapeHtml($this->profile['city']) ?></div>
         <? endif; ?>
@@ -122,7 +122,7 @@
           <div class="col-sm-4 profile-title"><?=$this->transEsc('Country') ?>:</div>
           <div class="col-sm-8 profile-text-value"><?=$this->escapeHtml($this->profile['country']) ?></div>
         <? endif; ?>
-        <? if (isset($this->profile['phone'])): ?>
+        <? if (!empty($this->profile['phone'])): ?>
           <? if ($updatePhone): ?>
             <div class="col-sm-4 profile-title"><?=$this->transEsc('Phone') ?>:</div>
             <div class="col-sm-8">
@@ -133,7 +133,7 @@
             <div class="col-sm-8 profile-text-value"><?=$this->escapeHtml($this->profile['phone']) ?></div>
           <? endif; ?>
         <? endif; ?>
-        <? if (isset($this->profile['email'])): ?>
+        <? if (!empty($this->profile['email'])): ?>
           <div class="col-sm-4 profile-title"><?=$this->transEsc('Email') ?>:</div>
           <? if ($updateEmail): ?>
             <div class="col-sm-8">
@@ -143,7 +143,7 @@
             <div class="col-sm-8 profile-text-value"><?=$this->escapeHtml($this->profile['email']) ?></div>
           <? endif; ?>
         <? endif; ?>
-        <? if (isset($this->profile['group'])): ?>
+        <? if (!empty($this->profile['group'])): ?>
           <div class="col-sm-4 profile-title"><?=$this->transEsc('Group') ?>:</div>
           <div class="col-sm-8 profile-text-value"><?=$this->escapeHtml($this->profile['group']) ?></div>
         <? endif; ?>
