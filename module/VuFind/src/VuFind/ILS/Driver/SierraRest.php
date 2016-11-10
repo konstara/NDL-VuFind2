@@ -860,9 +860,13 @@ class SierraRest extends AbstractBase implements TranslatorAwareInterface,
     /**
      * Get request groups
      *
-     * @param integer $bibId  BIB ID
-     * @param array   $patron Patron information returned by the patronLogin
+     * @param integer $bibId       BIB ID
+     * @param array   $patron      Patron information returned by the patronLogin
      * method.
+     * @param array   $holdDetails Optional array, only passed in when getting a list
+     * in the context of placing a hold; contains most of the same values passed to
+     * placeHold, minus the patron data.  May be used to limit the request group
+     * options or may be ignored.
      *
      * @return array  False if request groups not in use or an array of
      * associative arrays with id and name keys
@@ -1488,7 +1492,7 @@ class SierraRest extends AbstractBase implements TranslatorAwareInterface,
      * This is responsible for retrieving the status information of a certain
      * record.
      *
-     * @param string $id   The record id to retrieve the holdings for
+     * @param string $id The record id to retrieve the holdings for
      *
      * @return array An associative array with the following keys:
      * id, availability (boolean), status, location, reserve, callnumber.
@@ -1609,7 +1613,7 @@ class SierraRest extends AbstractBase implements TranslatorAwareInterface,
     /**
      * Determine whether an item is holdable
      *
-     * @param array $item         Item from Sierra
+     * @param array $item Item from Sierra
      *
      * @return bool
      */
@@ -1621,7 +1625,6 @@ class SierraRest extends AbstractBase implements TranslatorAwareInterface,
                 return false;
             }
         }
-
         return true;
     }
 
