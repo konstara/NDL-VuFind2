@@ -138,7 +138,7 @@ class SierraRest extends AbstractBase implements TranslatorAwareInterface,
     /**
      * Constructor
      *
-     * @param \VuFind\Date\Converter $dateConverter Date converter object
+     * @param \VuFind\Date\Converter $dateConverter  Date converter object
      * @param Callable               $sessionFactory Factory function returning
      * SessionContainer object
      */
@@ -244,7 +244,7 @@ class SierraRest extends AbstractBase implements TranslatorAwareInterface,
      */
     public function getStatus($id)
     {
-        return $this->getItemStatuses($id, false);
+        return $this->getItemStatusesForBib($id);
     }
 
     /**
@@ -261,7 +261,7 @@ class SierraRest extends AbstractBase implements TranslatorAwareInterface,
     {
         $items = [];
         foreach ($ids as $id) {
-            $items[] = $this->getItemStatuses($id, false);
+            $items[] = $this->getItemStatusesForBib($id);
         }
         return $items;
     }
@@ -283,7 +283,7 @@ class SierraRest extends AbstractBase implements TranslatorAwareInterface,
      */
     public function getHolding($id, array $patron = null)
     {
-        return $this->getItemStatuses($id, true);
+        return $this->getItemStatusesForBib($id, true);
     }
 
     /**
@@ -838,7 +838,7 @@ class SierraRest extends AbstractBase implements TranslatorAwareInterface,
     /**
      * Get Default Request Group
      *
-     * Returns the default request group set in VoyagerRestful.ini
+     * Returns the default request group set in SierraRest.ini
      *
      * @param array $patron      Patron information returned by the patronLogin
      * method.
@@ -866,11 +866,12 @@ class SierraRest extends AbstractBase implements TranslatorAwareInterface,
      *
      * @return array  False if request groups not in use or an array of
      * associative arrays with id and name keys
-     * @todo We need hold level here to decide whether request groups are needed
      */
-    public function getRequestGroups($bibId, $patron)
+    public function getRequestGroups($bibId, $patron, $holdDetails = null)
     {
-        if (!$this->requestGroupsEnabled) {
+        if (!$this->requestGroupsEnabled || null === $holdDetails
+            || !isset($holdDetails['level']) || $holdDetails['level'] !== 'title'
+        ) {
             return false;
         }
 
@@ -1261,7 +1262,6 @@ class SierraRest extends AbstractBase implements TranslatorAwareInterface,
         $headers->addHeaderLine(
             'Authorization', "Bearer {$this->sessionCache->accessToken}"
         );
-        $headers->addHeaderLine('User-Agent', 'VuFind');
         if (is_string($params)) {
             $headers->addHeaderLine('Content-Type', 'application/json');
         }
@@ -1278,12 +1278,12 @@ class SierraRest extends AbstractBase implements TranslatorAwareInterface,
         // If we get a 401, we need to renew the access token and try again
         if ($response->getStatusCode() == 401) {
             if (!$this->renewAccessToken($patron)) {
-                return false;
+                return null;
             }
             $client->getRequest()->getHeaders()->addHeaderLine(
                 'Authorization', "Bearer {$this->sessionCache->accessToken}"
             );
-            $response = $client->setMethod($method)->send();
+            $response = $client->send();
         }
         $result = $response->getBody();
 
@@ -1457,7 +1457,9 @@ class SierraRest extends AbstractBase implements TranslatorAwareInterface,
         // Set timeout value
         $timeout = isset($this->config['Catalog']['http_timeout'])
             ? $this->config['Catalog']['http_timeout'] : 30;
-        $client->setOptions(['timeout' => $timeout, 'useragent' => 'VuFind']);
+        $client->setOptions(
+            ['timeout' => $timeout, 'useragent' => 'VuFind', 'keepalive' => true]
+        );
 
         // Set Accept header
         $client->getRequest()->getHeaders()->addHeaderLine(
@@ -1487,13 +1489,11 @@ class SierraRest extends AbstractBase implements TranslatorAwareInterface,
      * record.
      *
      * @param string $id   The record id to retrieve the holdings for
-     * @param bool   $full Whether to retrieve full holdings or just enough for
-     * status information in results screen
      *
      * @return array An associative array with the following keys:
      * id, availability (boolean), status, location, reserve, callnumber.
      */
-    protected function getItemStatuses($id, $full)
+    protected function getItemStatusesForBib($id)
     {
         $availableStatuses = ['-'];
 
@@ -1598,7 +1598,9 @@ class SierraRest extends AbstractBase implements TranslatorAwareInterface,
             }
         } else {
             switch ($status) {
-            case 'Lib Use Only': $status = 'On Reference Desk'; break;
+            case 'Lib Use Only':
+                $status = 'On Reference Desk';
+                break;
             }
         }
         return [$status, $duedate, $notes];
