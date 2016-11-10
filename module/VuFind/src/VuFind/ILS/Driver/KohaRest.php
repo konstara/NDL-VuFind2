@@ -895,36 +895,32 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
      */
     public function changePassword($details)
     {
-        // Force new login
-        $this->sessionCache->accessTokenPatron = '';
-        $patron = $this->patronLogin(
-            $details['patron']['cat_username'], $details['oldPassword']
-        );
-        if (null === $patron) {
-            return [
-                'success' => false, 'status' => 'authentication_error_invalid'
-            ];
-        }
+        $patron = $details['patron'];
+        $request = [
+            'new_password' => $details['newPassword'],
+            'current_password' => $details['oldPassword']
+        ];
 
-        $newPIN = preg_replace('/[^\d]/', '', trim($details['newPassword']));
-        if (strlen($newPIN) != 4) {
-            return [
-                'success' => false, 'status' => 'password_error_invalid'
-            ];
-        }
-
-        $request = ['pin' => $newPIN];
-
-        $result = $this->makeRequest(
-            ['v3', 'patrons', $patron['id']],
+        list($code, $result) = $this->makeRequest(
+            ['v1', 'patrons', $patron['id'], 'password'],
             json_encode($request),
-            'PUT',
-            $patron
+            'PATCH',
+            $patron,
+            true
         );
 
-        if (isset($result['code']) && $result['code'] != 0) {
+        if ($code != 200) {
+            if ($code == 403 || (isset($result['error'])
+                && $result['error'] == 'Wrong current password.')
+            ) {
+                $message = 'authentication_error_invalid';
+            } elseif ($code == 404) {
+                $message = 'An error has occurred';
+            } else {
+                $message = 'password_error_invalid';
+            }
             return [
-                'success' => false, 'status' => $result['description']
+                'success' => false, 'status' => $message
             ];
         }
         return ['success' => true, 'status' => 'change_password_ok'];
