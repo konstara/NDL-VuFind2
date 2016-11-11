@@ -28,7 +28,7 @@
 
   // Set page title.
   $headText = $this->driver->getBreadcrumb();
-  $organisationName = $this->organisationDisplayName($this->driver, false);
+  $organisationName = $this->organisationDisplayName($this->driver);
   if (!empty($organisationName)) {
      $headText .= " | $organisationName";
   }

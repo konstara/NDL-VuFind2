@@ -47,7 +47,7 @@ class OrganisationDisplayName extends \Zend\View\Helper\AbstractHelper
      *
      * @return string
      */
-    public function __invoke($record, $fullName = true)
+    public function __invoke($record, $fullName = false)
     {
         $translator = $this->getView()->plugin('TransEsc');
 
