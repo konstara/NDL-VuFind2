@@ -111,11 +111,11 @@ trait SolrFinna
     /**
      * Return building from index.
      *
-     * @return string
+     * @return array
      */
     public function getBuilding()
     {
-        return $this->fields['building'];
+        return isset($this->fields['building']) ? $this->fields['building'] : [];
     }
 
     /**
@@ -347,6 +347,10 @@ trait SolrFinna
     public function getOrganisationInfoId()
     {
         $building = $this->getBuilding();
+        if (empty($building)) {
+            return null;
+        }
+
         if (is_array($building)) {
             $building = $building[0];
         }
