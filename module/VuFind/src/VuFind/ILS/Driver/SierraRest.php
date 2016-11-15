@@ -1075,6 +1075,11 @@ class SierraRest extends AbstractBase implements TranslatorAwareInterface,
                 }
                 $description .= $entry['description'];
             }
+            switch ($description) {
+            case 'Overdue Renewal':
+                $description = 'Overdue';
+                break;
+            }
             $bibId = null;
             $title = null;
             if (!empty($entry['item'])) {
