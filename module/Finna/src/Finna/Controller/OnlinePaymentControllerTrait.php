@@ -224,8 +224,7 @@ trait OnlinePaymentControllerTrait
             }
             exit();
         } else if ($payment) {
-            // Payment response received. 
-
+            // Payment response received.
 
             // AJAX/onlinePaymentNotify was called before the user returned to Finna.
             // Display success message and return since the transaction is already
