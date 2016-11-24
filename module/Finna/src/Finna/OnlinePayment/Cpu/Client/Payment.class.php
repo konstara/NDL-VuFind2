@@ -246,3 +246,4 @@ class Cpu_Client_Payment {
 	}
 }
 // @codingStandardsIgnoreEnd
+
