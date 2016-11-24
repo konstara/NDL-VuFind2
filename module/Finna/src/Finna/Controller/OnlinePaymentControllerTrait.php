@@ -465,6 +465,6 @@ trait OnlinePaymentControllerTrait
             $this->logger->logException($e, new \Zend\Stdlib\Parameters());
         } else {
             $this->logException($e);
-        }        
+        }
     }
 }
