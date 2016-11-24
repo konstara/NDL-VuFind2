@@ -104,9 +104,9 @@ class Cpu_Client {
 
 		if ($payment->isValid() && !empty($source) && !empty($secret_key)) {
 			$string .= $payment->ApiVersion . $separator;
-			$string .= $source           . $separator;
-			$string .= $payment->Id         . $separator;
-			$string .= $payment->Mode       . $separator;
+			$string .= $source . $separator;
+			$string .= $payment->Id . $separator;
+			$string .= $payment->Mode . $separator;
 
 			if ($payment->Description != NULL)
 				$string .= str_replace(';', '', $payment->Description) . $separator;

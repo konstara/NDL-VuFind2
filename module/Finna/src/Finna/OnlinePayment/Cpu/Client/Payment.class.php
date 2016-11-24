@@ -152,9 +152,9 @@ class Cpu_Client_Payment {
 
 		if (!empty($source) && !empty($secret_key)) {
 			$string .= $this->ApiVersion . $separator;
-			$string .= $source           . $separator;
-			$string .= $this->Id         . $separator;
-			$string .= $this->Mode       . $separator;
+			$string .= $source . $separator;
+			$string .= $this->Id . $separator;
+			$string .= $this->Mode . $separator;
 
 			if ($this->Description != NULL)
 				$string .= str_replace(';', '', $this->Description) . $separator;
