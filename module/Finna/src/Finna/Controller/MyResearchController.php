@@ -227,8 +227,6 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
         $view->language = $translator->getLocale();
 
         $view->setTemplate('myresearch/terms.phtml');
-        $view->lightbox
-            = $this->getRequest()->getQuery('layout', 'no') === 'lightbox';
 
         return $view;
     }

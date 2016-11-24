@@ -5,6 +5,9 @@
        'sv' => 'Asiakastietojen käsittely Finnassa',
        'en-gb' => 'Asiakastietojen käsittely Finnassa'
     ];
+    if (!isset($titles[$this->language])) {
+       $this->language = 'en-gb';
+    }
     $title = $titles[$this->language];
     $this->headTitle($title);
     $link = $this->url('content-page', ['page' => 'privacy']);
@@ -18,7 +21,6 @@
 </div>
 <?
 // Set up validation; we do this inline instead of in the header for lightbox compatibility:
-$lightbox = $this->lightbox ? 'true' : 'false';
 $js = <<<JS
   if ($.isReady) {
     $('.terms-of-service form').validator();
