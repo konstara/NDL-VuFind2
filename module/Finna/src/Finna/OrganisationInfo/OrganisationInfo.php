@@ -296,9 +296,9 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
      * a link to the organisation page.
      *
      * @param string  $parent     Consortium Finna ID in Kirjastohakemisto.
-     * Use a comma delimited string to check multiple Finna IDs.
+     *   Use a comma delimited string to check multiple Finna IDs.
      * @param boolean $link       True to render the link as a html-snippet.
-     * Oherwise only the link URL is outputted.
+     *   Oherwise only the link URL is outputted.
      * @param string  $parentName Translated consortium display name.
      *
      * @return array Array with the keys 'success' and 'items'.
