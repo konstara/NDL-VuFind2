@@ -1,15 +1,19 @@
 <?
     $this->layout()->searchbox = false;
-    $this->headTitle($this->translate('terms_of_service_title'));
+    $titles = [
+       'fi' => 'Asiakastietojen käsittely Finnassa',
+       'sv' => 'Asiakastietojen käsittely Finnassa',
+       'en-gb' => 'Asiakastietojen käsittely Finnassa'
+    ];
+    $title = $titles[$this->language];
+    $this->headTitle($title);
+    $link = $this->url('content-page', ['page' => 'privacy']);
 ?>
 <!-- START of: finna - myresearch/terms.phtml -->
-<h2 class="lightbox-header"><?=$this->transEsc('terms_of_service_title')?></h2>
+<h2 class="lightbox-header"><?=$title?></h2>
 <div class="terms-of-service">
   <form name="termsForm" method="post" action="<?=$this->url('myresearch-userlogin')?>" data-toggle="validator">
-
-    <p><?= $this->translate('terms_of_service_text_html', ['%%link%%' => $this->url('content-page', ['page' => 'privacy'])]); ?></p>
-    <p><label><input type="checkbox" name="acceptTerms" value="1" required> <?= $this->translate('terms_of_service_checkbox', ['%%link%%' => $this->url('content-page', ['page' => 'privacy'])]); ?></p></label>
-    <input type="submit" class="btn btn-primary submit" name="submit" value="<?=$this->transEsc('Send')?>">
+    <?=$this->partial('terms_' . $this->language . '.phtml', ['link' => $link])?>
   </form>
 </div>
 <?
