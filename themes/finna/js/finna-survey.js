@@ -1,22 +1,20 @@
-/*global VuFind*/
-finna.survey = (function() {
-    var cookieName = 'finnaSurvey';
+finna.finnaSurvey = (function() {
+    var _cookieName = 'finnaSurvey';
 
     var init = function() {
-        console.log("init");
-        var cookie = $.cookie(cookieName);
+        var cookie = $.cookie(_cookieName);
         if (typeof cookie !== 'undefined' && cookie == '1') {
             return;
         }
 
-        var holder = $('#survey');
+        var holder = $('#finna-survey');
         holder.find('a').click(function(e) {
             holder.fadeOut(100);
-            $.cookie(cookieName, 1, { path: '/' });
-            
+            $.cookie(_cookieName, 1, { path: '/' });
+
             if ($(this).hasClass('close-survey')) {
                 return false;
-            } 
+            }
         });
 
         setTimeout(function() {

@@ -36,7 +36,7 @@ namespace Finna\View\Helper\Root;
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     http://vufind.org   Main Site
  */
-class Survey extends \Zend\View\Helper\AbstractHelper
+class FinnaSurvey extends \Zend\View\Helper\AbstractHelper
 {
     /**
      * Configuration
@@ -63,8 +63,8 @@ class Survey extends \Zend\View\Helper\AbstractHelper
     public function render()
     {
         return $this->getView()->render(
-            'Helpers/survey.phtml',
-            ['url' => $this->config->Survey->url]
+            'Helpers/finna-survey.phtml',
+            ['url' => $this->config->FinnaSurvey->url]
         );
     }
 
@@ -75,8 +75,8 @@ class Survey extends \Zend\View\Helper\AbstractHelper
      */
     public function isEnabled()
     {
-        return isset($this->config->Survey->enabled)
-            && $this->config->Survey->enabled
-            && !empty($this->config->Survey->url);
+        return isset($this->config->FinnaSurvey->enabled)
+            && $this->config->FinnaSurvey->enabled
+            && !empty($this->config->FinnaSurvey->url);
     }
 }

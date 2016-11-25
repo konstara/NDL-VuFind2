@@ -35,12 +35,12 @@
       $this->headScript()->appendFile("vendor/imagesloaded.pkgd.min.js");
       $this->headScript()->appendFile("vendor/masonry.pkgd.min.js");
 
-      $finnaSurvey =
-         in_array($this->layout()->templateDir, ['search', 'record'])
-         && $this->survey()->isEnabled();
+      $finnaSurvey
+        = in_array($this->layout()->templateDir, ['search', 'record'])
+        && $this->finnaSurvey()->isEnabled();
 
       if ($finnaSurvey) {
-         $this->headScript()->appendFile("finna-survey.js");
+        $this->headScript()->appendFile('finna-survey.js');
       }
     ?>
     <?=$this->headLink()?>
@@ -359,7 +359,7 @@ JS;
     <? endif; ?>
 
     <? if ($finnaSurvey): ?>
-      <?=$this->survey()->render()?>
+      <?=$this->finnaSurvey()->render()?>
     <? endif; ?>
   </body>
 </html>
