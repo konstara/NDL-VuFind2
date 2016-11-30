@@ -723,6 +723,7 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
         $level = isset($data['level']) ? $data['level'] : 'copy';
         if ('title' == $data['level']) {
             //$bib = $this->getBibRecord($id);
+            // TODO: How to check?
 
         }
         return true;
