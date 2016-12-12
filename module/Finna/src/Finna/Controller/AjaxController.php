@@ -27,7 +27,6 @@
  */
 namespace Finna\Controller;
 
-use VuFindSearch\ParamBag as ParamBag;
 use VuFindSearch\Query\Query as Query;
 use VuFind\Search\RecommendListener;
 use Finna\Search\Solr\Params;
