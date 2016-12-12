@@ -36,29 +36,15 @@ namespace Finna\Controller;
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     http://vufind.org   Main Site
  */
-class MetaLibrecordController extends \VuFind\Controller\AbstractRecord
+class MetaLibrecordController extends \VuFind\Controller\AbstractBase
 {
-    use MetaLibControllerTrait;
-
-    /**
-    * Constructor
-    */
-    public function __construct()
-    {
-        // Override some defaults:
-        $this->searchClassId = 'MetaLib';
-
-        // Call standard record controller initialization:
-        parent::__construct();
-    }
-
-    /**
+/**
      * Home (default) action -- show MetaLib unavailable message
      *
      * @return mixed
      */
     public function homeAction()
     {
-        return $this->showMetalibUnavailableMessage();
+        return $this->forwardTo('Content', 'Content', ['page' => 'metalib']);
     }
 }

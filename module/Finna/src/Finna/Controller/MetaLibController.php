@@ -36,10 +36,8 @@ namespace Finna\Controller;
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org/wiki/development:plugins:controllers Wiki
  */
-class MetaLibController extends \VuFind\Controller\AbstractSearch
+class MetaLibController extends \VuFind\Controller\AbstractBase
 {
-    use MetaLibControllerTrait;
-
     /**
      * Home action -- show MetaLib unavailable message
      *
@@ -68,5 +66,15 @@ class MetaLibController extends \VuFind\Controller\AbstractSearch
     public function advancedAction()
     {
         return $this->showMetalibUnavailableMessage();
+    }
+
+    /**
+     * Show MetaLib unavailable show
+     *
+     * @return mixed
+     */
+    protected function showMetalibUnavailableMessage()
+    {
+        return $this->forwardTo('Content', 'Content', ['page' => 'metalib']);
     }
 }

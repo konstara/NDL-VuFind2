@@ -126,8 +126,6 @@
 
       <?=$this->partial('RecordDriver/SolrDefault/holdings.phtml') ?>
       <?=$this->record($this->driver)->getOnlineUrls('results')?>
-      <?
-        $formats = $this->driver->tryMethod('getFormats');
       <?=$this->record($this->driver)->getPreviews()?>
       <? if ($this->layout()->templateDir === 'list'): ?>
         <?=$this->render('list/list-notes.phtml')?>
