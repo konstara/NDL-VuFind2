@@ -53,7 +53,7 @@ class MetaLibrecordController extends \VuFind\Controller\AbstractRecord
     }
 
     /**
-     * Home (default) action -- show deprecated info
+     * Home (default) action -- show MetaLib unavailable message
      *
      * @return mixed
      */
