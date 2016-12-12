@@ -172,6 +172,7 @@ $config = [
             'VuFind\ILSHoldLogic' => 'Finna\Service\Factory::getILSHoldLogic',
             'VuFind\DbTablePluginManager' => 'Finna\Service\Factory::getDbTablePluginManager',
             'VuFind\AuthManager' => 'Finna\Auth\Factory::getManager',
+            'VuFind\RecordLoader' => 'Finna\Service\Factory::getRecordLoader',
             'VuFind\SearchResultsPluginManager' => 'Finna\Service\Factory::getSearchResultsPluginManager',
             'VuFind\SearchSpecsReader' => 'Finna\Service\Factory::getSearchSpecsReader',
         ],

@@ -189,6 +189,22 @@ class Factory extends \VuFind\Service\Factory
     }
 
     /**
+     * Construct the record loader.
+     *
+     * @param ServiceManager $sm Service manager.
+     *
+     * @return \VuFind\Record\Loader
+     */
+    public static function getRecordLoader(ServiceManager $sm)
+    {
+        return new \Finna\Record\Loader(
+            $sm->get('VuFind\Search'),
+            $sm->get('VuFind\RecordDriverPluginManager'),
+            $sm->get('VuFind\RecordCache')
+        );
+    }
+
+    /**
      * Construct the Search\Results Plugin Manager.
      *
      * @param ServiceManager $sm Service manager.
