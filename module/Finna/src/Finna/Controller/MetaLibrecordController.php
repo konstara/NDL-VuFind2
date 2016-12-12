@@ -38,7 +38,7 @@ namespace Finna\Controller;
  */
 class MetaLibrecordController extends \VuFind\Controller\AbstractBase
 {
-/**
+    /**
      * Home (default) action -- show MetaLib unavailable message
      *
      * @return mixed
