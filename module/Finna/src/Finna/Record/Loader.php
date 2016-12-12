@@ -31,8 +31,7 @@ namespace Finna\Record;
 use VuFind\RecordDriver\PluginManager as RecordFactory,
     VuFindSearch\Service as SearchService,
     VuFind\Record\Cache,
-    Finna\Db\Table\Resource,
-    Finna\RecordDriver\MetaLib;
+    Finna\Db\Table\Resource;
 
 /**
  * Record loader

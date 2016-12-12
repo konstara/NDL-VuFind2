@@ -100,7 +100,7 @@
       $urls = $this->record($this->driver)->getLinkDetails($openUrlActive);
     ?>
     <? $onlineURLs = $this->driver->getOnlineURLs(); $mergedData = $this->driver->tryMethod('getMergedRecordData'); ?>
-    <? if (!empty($urls) || $openUrlActive || !empty($onlineURLs) || !empty($mergedData['urls']) || strncmp($this->driver->getUniqueID(), 'metalib_', 8) == 0): ?>
+    <? if (!empty($urls) || $openUrlActive || !empty($onlineURLs) || !empty($mergedData['urls'])): ?>
       <div class="recordURLs local-available-online-record">
         <div class="truncate-field">
           <? $renderedURLs = []; ?>
