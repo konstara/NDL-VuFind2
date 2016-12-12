@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
  * @category VuFind
  * @package  Session_Handlers
@@ -127,6 +127,23 @@ class ManagerFactory implements \Zend\ServiceManager\FactoryInterface
 
         // Start up the session:
         $sessionManager->start();
+
+        // Verify that any existing session has the correct path to avoid using
+        // a cookie from a service higher up in the path hierarchy.
+        $storage = new \Zend\Session\Container('SessionState', $sessionManager);
+        if (null !== $storage->cookiePath) {
+            if ($storage->cookiePath != $sessionConfig->getCookiePath()) {
+                // Disable writes temporarily to keep the existing session intact
+                $sessionManager->getSaveHandler()->disableWrites();
+                // Regenerate session ID and reset the session data
+                $sessionManager->regenerateId(false);
+                session_unset();
+                $sessionManager->getSaveHandler()->enableWrites();
+                $storage->cookiePath = $sessionConfig->getCookiePath();
+            }
+        } else {
+            $storage->cookiePath = $sessionConfig->getCookiePath();
+        }
 
         // Check if we need to immediately stop it based on the settings object
         // (which may have been informed by a controller that sessions should not

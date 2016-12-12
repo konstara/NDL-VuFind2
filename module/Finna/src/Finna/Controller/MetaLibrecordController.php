@@ -59,6 +59,6 @@ class MetaLibrecordController extends \VuFind\Controller\AbstractRecord
      */
     public function homeAction()
     {
-        return $this->depricatedInfo();
+        return $this->showMetalibUnavailableMessage();
     }
 }

@@ -172,7 +172,11 @@ class SearchController extends \VuFind\Controller\SearchController
     public function openUrlAction()
     {
         $params = $this->parseOpenURL();
-        $results = $this->processOpenURL($params);
+        $hiddenFilters = $this->getRequest()->getQuery(
+            'vufind_hidden_filters',
+            $this->getRequest()->getPost('vufind_hidden_filters')
+        );
+        $results = $this->processOpenURL($params, $hiddenFilters);
 
         // If we were asked to return just information whether something was found,
         // do it here
@@ -207,6 +211,16 @@ class SearchController extends \VuFind\Controller\SearchController
     }
 
     /**
+     * StreetSearch action.
+     *
+     * @return \Zend\View\Model\ViewModel
+     */
+    public function streetSearchAction()
+    {
+        return $this->createViewModel();
+    }
+
+    /**
      * Handler for database and journal browse actions.
      *
      * @param string $type Browse type
@@ -228,48 +242,50 @@ class SearchController extends \VuFind\Controller\SearchController
         $configLoader = $this->getServiceLocator()->get('VuFind\Config');
         $options = new Options($configLoader);
 
-        try {
-            $config = $config[$type];
-            $query = $this->getRequest()->getQuery();
-            if (!$query->get('limit')) {
-                $query->set('limit', $config['resultLimit'] ?: 100);
-            }
-            if (!$query->get('sort')) {
-                $query->set('sort', $config['sort'] ?: 'title');
-            }
-            if (!$query->get('type')) {
-                $query->set('type', $config['type'] ?: 'Title');
-            }
-            $queryType = $query->get('type');
-
-            $query->set('hiddenFilters', $config['filter']->toArray() ?: []);
-            $query->set(
-                'recommendOverride',
-                ['side' => ["SideFacets:Browse{$type}:CheckboxFacets:facets-browse"]]
-            );
-
-            $view = $this->forwardTo('Search', 'Results');
-
-            $view->overrideTitle = "browse_extended_$type";
-            $type = strtolower($type);
-            $view->browse = $type;
-            $view->defaultBrowseHandler = $config['type'];
-
-            $view->results->getParams()->setBrowseHandler($queryType);
-
-            // Update last search URL
-            $view->results->getParams()->getOptions()
-                ->setBrowseAction("browse-$type");
-            $this->getSearchMemory()->forgetSearch();
-            $this->rememberSearch($view->results);
-
-            $view->results->getParams()->setView('condensed');
-            $view->results->getParams()->getQuery()->setHandler($queryType);
-
-            return $view;
-        } catch (\Exception $e) {
-            $options->rememberLastView($lastView);
+        $config = $config[$type];
+        $query = $this->getRequest()->getQuery();
+        if (!$query->get('limit')) {
+            $query->set('limit', $config['resultLimit'] ?: 100);
         }
+        if (!$query->get('sort')) {
+            $query->set('sort', $config['sort'] ?: 'title');
+        }
+        if (!$query->get('type')) {
+            $query->set('type', $config['type'] ?: 'Title');
+        }
+        $queryType = $query->get('type');
+
+        $query->set('hiddenFilters', $config['filter']->toArray() ?: []);
+        $query->set(
+            'recommendOverride',
+            ['side' => ["SideFacets:Browse{$type}:CheckboxFacets:facets-browse"]]
+        );
+
+        $view = $this->forwardTo('Search', 'Results');
+
+        $view->overrideTitle = "browse_extended_$type";
+        $type = strtolower($type);
+        $view->browse = $type;
+        $view->defaultBrowseHandler = $config['type'];
+
+        $view->results->getParams()->setBrowseHandler($queryType);
+
+        // Get rid of the hidden filters from search and url params so that they
+        // they don't linger around and cause trouble with the mechanism that
+        // adds hidden filters to the searchbox for search tabs.
+        $view->results->getParams()->clearHiddenFilters();
+        $query->set('hiddenFilters', []);
+
+        // Update last search URL
+        $view->results->getParams()->getOptions()
+            ->setBrowseAction("browse-$type");
+        $this->getSearchMemory()->forgetSearch();
+        $this->rememberSearch($view->results);
+
+        $view->results->getParams()->setView('condensed');
+        $view->results->getParams()->getQuery()->setHandler($queryType);
+
+        return $view;
     }
 
     /**
@@ -373,11 +389,12 @@ class SearchController extends \VuFind\Controller\SearchController
     /**
      * Process the OpenURL params and try to find record(s) with them
      *
-     * @param array $params Referent params
+     * @param array $params        Referent params
+     * @param array $hiddenFilters Optional hidden filters
      *
      * @return object Search object
      */
-    protected function processOpenURL($params)
+    protected function processOpenURL($params, $hiddenFilters = [])
     {
         $runner = $this->getServiceLocator()->get('VuFind\SearchRunner');
         $results = false;
@@ -385,12 +402,12 @@ class SearchController extends \VuFind\Controller\SearchController
         // Journal first..
         if (!$params['eissn']
             || !($results = $this->trySearch(
-                $runner, ['ISN' => $params['eissn']]
+                $runner, ['ISN' => $params['eissn']], $hiddenFilters
             ))
         ) {
             if ($params['issn']) {
                 $results = $this->trySearch(
-                    $runner, ['ISN' => $params['issn']]
+                    $runner, ['ISN' => $params['issn']], $hiddenFilters
                 );
             }
         }
@@ -430,7 +447,7 @@ class SearchController extends \VuFind\Controller\SearchController
                 if ($params['atitle']) {
                     $query['Title'] = $params['atitle'];
                 }
-                if ($articles = $this->trySearch($runner, $query)) {
+                if ($articles = $this->trySearch($runner, $query, $hiddenFilters)) {
                     return $articles;
                 }
 
@@ -441,7 +458,10 @@ class SearchController extends \VuFind\Controller\SearchController
                 ) {
                     if (isset($query[$param])) {
                         unset($query[$param]);
-                        if ($articles = $this->trySearch($runner, $query)) {
+                        $articles = $this->trySearch(
+                            $runner, $query, $hiddenFilters
+                        );
+                        if ($articles) {
                             return $articles;
                         }
                     }
@@ -454,7 +474,7 @@ class SearchController extends \VuFind\Controller\SearchController
         // Try to find a book or something
         if (!$params['isbn']
             || !($results = $this->trySearch(
-                $runner, ['ISN' => $params['isbn']]
+                $runner, ['ISN' => $params['isbn']], $hiddenFilters
             ))
         ) {
             $query = [];
@@ -465,12 +485,14 @@ class SearchController extends \VuFind\Controller\SearchController
                 $query['Author'] = $params['author'];
             }
             if ($query) {
-                $results = $this->trySearch($runner, $query);
+                $results = $this->trySearch($runner, $query, $hiddenFilters);
             }
         }
 
         if ($results === false) {
-            $results = $this->trySearch($runner, ['id' => 'notfound'], true);
+            $results = $this->trySearch(
+                $runner, ['id' => 'notfound'], $hiddenFilters, true
+            );
         }
 
         return $results;
@@ -481,13 +503,14 @@ class SearchController extends \VuFind\Controller\SearchController
      *
      * @param \VuFind\Search\SearchRunner $runner             Search runner
      * @param array                       $params             Search params
+     * @param array                       $hiddenFilters      Optional hidden filters
      * @param bool                        $returnEmptyResults Whether to return empty
      * results object instead of boolean false
      *
      * @return bool|\VuFind\Search\Base\Results
      */
     protected function trySearch(\VuFind\Search\SearchRunner $runner, $params,
-        $returnEmptyResults = false
+        $hiddenFilters = [], $returnEmptyResults = false
     ) {
         $mapFunc = function ($val) {
             return addcslashes($val, '"');
@@ -508,6 +531,9 @@ class SearchController extends \VuFind\Controller\SearchController
                 $query["lookfor$i"][] = addcslashes($param, '"');
             }
             ++$i;
+        }
+        if ($hiddenFilters) {
+            $query['hiddenFilters'] = $hiddenFilters;
         }
 
         $results = $runner->run($query);

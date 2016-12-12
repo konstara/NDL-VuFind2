@@ -1,3 +1,4 @@
+/* global VuFind */
 finna.advSearch = (function() {
 
     var initForm = function() {
@@ -46,11 +47,148 @@ finna.advSearch = (function() {
             fromField.attr('max', toField.val());
         });
     };
+    
+    /**
+     * Initialize advanced search map
+     * 
+     * @param options Array of options:
+     *   tileLayer     L.tileLayer Tile layer
+     *   center        L.LatLng    Map center point
+     *   zoom          int         Initial zoom level
+     *   items         array       Items to draw on the map
+     */
+    var initMap = function(options) {
+      var mapCanvas = $('.selection-map-canvas');
+      if (mapCanvas.length == 0) {
+        return;
+      }
+      L.drawLocal.draw.handlers.circle.tooltip.start = '';
+      L.drawLocal.draw.handlers.simpleshape.tooltip.end = '';
+      L.drawLocal.draw.handlers.circle.radius = VuFind.translate('radiusPrefix');
 
+      var defaults = {
+        tileLayer: L.tileLayer('//map-api.finna.fi/v1/rendered/{z}/{x}/{y}.png', {
+          maxZoom: 18,
+          tileSize: 256,
+          attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>'
+        }),
+        center: new L.LatLng(64.8, 26),
+        zoom: 5,
+        items: []
+      };
+      options = $.extend(defaults, options);
+      
+      var drawnItems = new L.FeatureGroup();
+      $.each(options.items, function (idx, item) {
+        var matches = item.match(/pt=([\d.]+),([\d.]+) d=([\d.]+)/);
+        if (matches) {
+          var circle = new L.Circle([matches[1], matches[2]], matches[3] * 1000); 
+          addRemoveButton(circle, drawnItems);
+          drawnItems.addLayer(circle);
+        }
+      });
+      
+      map = new L.Map(mapCanvas.get(0), {
+        layers: [options.tileLayer, drawnItems],
+        center: options.center,
+        zoom: options.zoom,
+        zoomControl: false
+      });
+      
+      finna.layout.initMap(map);
+
+      if (options.items.length > 0) {
+        var onLoad = function() {
+          var bounds = drawnItems.getBounds();
+          map.fitBounds(bounds, {maxZoom: 11});
+          options.tileLayer.off('load', onLoad);
+        };
+        options.tileLayer.on('load', onLoad);
+      }
+      
+      FinnaMapButton = L.Control.extend({
+        options: {
+          position: 'bottomright'
+        },
+        createButton: function(cssClass, html, clickHandler, style) {
+          var container = L.DomUtil.create('div', 'map-button ' + cssClass + ' btn btn-primary leaflet-bar leaflet-control leaflet-control-custom');
+          $(container).html(html).click(clickHandler);
+          return container;
+       }
+      });
+
+      DeleteButton = FinnaMapButton.extend({
+       onAdd: function (map) {
+         var htmlElem = $('<div><i class="fa fa-times"></i>');
+         $('<span/>').text(' ' + VuFind.translate('clearCaption')).appendTo(htmlElem);
+         return this.createButton('map-button-clear', htmlElem.html(), function() {
+           drawnItems.clearLayers();
+         });
+        }
+      });
+      map.addControl(new DeleteButton());
+
+      CircleButton = FinnaMapButton.extend({
+        onAdd: function (map) {
+         var htmlElem = $('<div><i class="fa fa-crosshairs"></i>');
+         $('<span/>').text(' ' + VuFind.translate('circleCaption')).appendTo(htmlElem);
+          var button = this.createButton('map-button-circle', htmlElem.html(), function() {
+           $('.map-button-circle').addClass('active');  
+            new L.Draw.Circle(map, {}).on('disabled', function() {
+              $('.map-button-circle').removeClass('active');  
+            }).enable();
+          });
+          $(button).css('top', '-10px');
+          return button;
+        }
+      });
+      map.addControl(new CircleButton());
+
+      map.on('draw:created', function(e) {
+        var layer = e.layer;
+        addRemoveButton(layer, drawnItems);
+        drawnItems.addLayer(layer);
+      });
+      
+      map.on('popupopen', function(e) {
+        e.popup._source.setStyle({opacity: 0.8, fillOpacity: 0.5});
+      });
+      map.on('popupclose', function(e) {
+        e.popup._source.setStyle({opacity: 0.5, fillOpacity: 0.2});
+      });
+      
+      mapCanvas.closest('form').submit(function() {
+        var filters = '';
+        drawnItems.eachLayer(function(layer) {
+          var latlng = layer.getLatLng(); 
+          var value = '{!geofilt sfield=location_geo pt=' + latlng.lat + ',' + latlng.lng + ' d=' + (layer.getRadius() / 1000) + '}';
+          if (filters) {
+            filters += ' OR ';  
+          }
+          filters += value;
+        });
+        if (filters) {
+          var field = $('<input type="hidden" name="filter[]"/>').val(filters);
+          mapCanvas.closest('form').append(field);
+        }
+      });
+    };
+
+    var addRemoveButton = function(layer, featureGroup) {
+      var button = $('<a/>')
+        .html('<i class="fa fa-times" aria-hidden="true"></i>')
+        .click(function(e) {
+          featureGroup.removeLayer(layer);
+      });
+      $('<span/>').text(VuFind.translate('removeCaption')).appendTo(button);
+      layer.bindPopup(button.get(0), {closeButton: false});
+    };
+    
     var my = {
         init: function() {
             initForm();
-        }
+        },
+        initMap: initMap
     };
 
     return my;

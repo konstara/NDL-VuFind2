@@ -209,7 +209,7 @@ class SolrMarc extends \VuFind\RecordDriver\SolrMarc
             $type = $url->getSubfield('q');
             if ($type) {
                 $type = $type->getData();
-                if ("IMAGE" == $type || "image/jpeg" == $type) {
+                if (strcasecmp('image', $type) == 0 || 'image/jpeg' == $type) {
                     $address = $url->getSubfield('u');
                     if ($address && $this->urlAllowed($address->getData())) {
                         $address = $address->getData();
@@ -337,7 +337,7 @@ class SolrMarc extends \VuFind\RecordDriver\SolrMarc
         }
 
         if ($isbn = $this->getCleanISBN()) {
-            return 'http://siilo-kk.lib.helsinki.fi/getText.php?query=' . $isbn;
+            return 'http://s1.doria.fi/getText.php?query=' . $isbn;
         }
         return false;
     }
@@ -572,7 +572,7 @@ class SolrMarc extends \VuFind\RecordDriver\SolrMarc
                 )
             );
         }
-        return array_values(array_unique($isbn));
+        return array_values(array_unique(array_filter($isbn)));
     }
 
     /**
@@ -712,7 +712,7 @@ class SolrMarc extends \VuFind\RecordDriver\SolrMarc
             $issn = $link->getSubfield('x');
             if ($isbn) {
                 $isn = $isbn->getData();
-            } else if ($issn) {
+            } elseif ($issn) {
                 $isn = $issn->getData();
             } else {
                 $isn = '';
@@ -805,7 +805,7 @@ class SolrMarc extends \VuFind\RecordDriver\SolrMarc
             $month = intval(substr($dateString, 4, 2));
             $day = intval(substr($dateString, 6, 2));
             return implode('.', [$day, $month, $year]);
-        } else if (strlen($dateString) === 6) {
+        } elseif (strlen($dateString) === 6) {
             $year = intval(substr($dateString, 0, 4));
             $month = intval(substr($dateString, 4, 2));
             return implode('/', [$month, $year]);
@@ -894,7 +894,7 @@ class SolrMarc extends \VuFind\RecordDriver\SolrMarc
     /**
      * Return SFX Object ID
      *
-     * @return string.
+     * @return string
      */
     public function getSfxObjectId()
     {
@@ -1067,12 +1067,9 @@ class SolrMarc extends \VuFind\RecordDriver\SolrMarc
             $title = $title->getData();
         } else {
             $titleFields = [];
-            if ($relInfo = $field->getSubfield('i')) {
-                $titleFields[] = $relInfo->getData();
-            }
             if ($issn = $field->getSubfield('x')) {
                 $titleFields[] = $issn->getData();
-            } else if ($isbn = $field->getSubfield('z')) {
+            } elseif ($isbn = $field->getSubfield('z')) {
                 $titleFields[] = $isbn->getData();
             }
             $title = implode(' ', $titleFields);
@@ -1083,10 +1080,6 @@ class SolrMarc extends \VuFind\RecordDriver\SolrMarc
                 $title .= ' ';
             }
             $title .= $qualifyingInfo->getData();
-        }
-
-        if (!$title) {
-            return false;
         }
 
         $linkTypeSetting = isset($this->mainConfig->Record->marc_links_link_types)
@@ -1100,7 +1093,7 @@ class SolrMarc extends \VuFind\RecordDriver\SolrMarc
         // If reference found, exit loop and go straight to end
         // If no reference found, check the next link type instead
         foreach ($linkTypes as $linkType) {
-            switch (trim($linkType)){
+            switch (trim($linkType)) {
             case 'oclc':
                 foreach ($linkFields as $current) {
                     if ($oclc = $this->getIdFromLinkingField($current, 'OCoLC')) {
@@ -1147,9 +1140,10 @@ class SolrMarc extends \VuFind\RecordDriver\SolrMarc
                 break;
             }
         }
+        $note = $this->stripTrailingPunctuation($this->getRecordLinkNote($field));
         // Make sure we have something to display:
         return !isset($link) ? false : [
-            'title' => $this->getRecordLinkNote($field),
+            'title' => $note,
             'value' => $title,
             'link'  => $link
         ];

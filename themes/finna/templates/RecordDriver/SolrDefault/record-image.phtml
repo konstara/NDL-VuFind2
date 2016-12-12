@@ -2,19 +2,19 @@
 <? $formats = $this->driver->tryMethod('getFormats'); ?>
 <div class="recordcover-holder" data-format="<?=$this->transEsc(end($formats))?>" data-noimage="<?=$this->transEsc('no_image')?>">
 <?
-$images = null;
+$images = [];
 if (count($allImages)) {
   $images = $allImages;
 } else if ($largeImage) {
-  $images = array(array('small' => $smallImage, 'medium' => $mediumImage, 'large' => $largeImage));
+  $images = [['small' => $smallImage, 'medium' => $mediumImage, 'large' => $largeImage]];
 }
-$imageData = array('images' => $images, 'type' => $type);
+$imageData = ['images' => $images, 'type' => $type];
 ?>
 
 <?= $this->partial('RecordDriver/SolrDefault/record-image-navi.phtml', $imageData) ?>
 
 <? if ($mediumImage): ?>
-<a class="image-popup-trigger" href="<?= $this->recordLink()->getUrl($this->driver) ?>#image">
+<a class="image-popup-trigger" href="<?= $this->recordLink()->getUrl($this->driver) ?>#image" title="<?=$this->transEsc('Open Preview')?>">
 <? if (count($allImages) <= 1): ?>
   <div class="iconlabel format-<?=$this->record($this->driver)->getFormatClass(end($formats))?>"></div>
 <? endif; ?>

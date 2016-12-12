@@ -120,21 +120,6 @@ class Factory extends \VuFind\Service\Factory
     }
 
     /**
-     * Construct the ILS hold logic.
-     *
-     * @param ServiceManager $sm Service manager.
-     *
-     * @return \Finna\ILS\Logic\Holds
-     */
-    public static function getILSHoldLogic(ServiceManager $sm)
-    {
-        return new \Finna\ILS\Logic\Holds(
-            $sm->get('VuFind\ILSAuthenticator'), $sm->get('VuFind\ILSConnection'),
-            $sm->get('VuFind\HMAC'), $sm->get('VuFind\Config')->get('config')
-        );
-    }
-
-    /**
      * Generic plugin manager factory (support method).
      *
      * @param ServiceManager $sm Service manager.
@@ -164,10 +149,11 @@ class Factory extends \VuFind\Service\Factory
     public static function getOrganisationInfo(ServiceManager $sm)
     {
         return new \Finna\OrganisationInfo\OrganisationInfo(
-            $config = $sm->get('VuFind\Config')->get('organisationInfo'),
+            $config = $sm->get('VuFind\Config')->get('OrganisationInfo'),
             $sm->get('VuFind\CacheManager'),
             $sm->get('VuFind\Http'),
-            $sm->get('viewmanager')->getRenderer()
+            $sm->get('viewmanager')->getRenderer(),
+            $sm->get('VuFind\Translator')
         );
     }
 
@@ -195,6 +181,7 @@ class Factory extends \VuFind\Service\Factory
     public static function getOnlinePayment(ServiceManager $sm)
     {
         return new \Finna\OnlinePayment\OnlinePayment(
+            $sm->get('VuFind\Http'),
             $sm->get('VuFind\DbTablePluginManager'),
             $sm->get('VuFind\Logger'),
             $sm->get('VuFind\Config')->get('datasources')

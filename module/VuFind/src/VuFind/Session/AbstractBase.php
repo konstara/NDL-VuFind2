@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
  * @category VuFind
  * @package  Session_Handlers
@@ -65,6 +65,16 @@ abstract class AbstractBase implements SaveHandlerInterface,
      * @var bool
      */
     protected $writesDisabled = false;
+
+    /**
+     * Enable session writing (default)
+     *
+     * @return void
+     */
+    public function enableWrites()
+    {
+        $this->writesDisabled = false;
+    }
 
     /**
      * Disable session writing, i.e. make it read-only
@@ -133,8 +143,10 @@ abstract class AbstractBase implements SaveHandlerInterface,
      */
     public function destroy($sess_id)
     {
-        $table = $this->getTable('Search');
-        $table->destroySession($sess_id);
+        $searchTable = $this->getTable('Search');
+        $searchTable->destroySession($sess_id);
+        $sessionTable = $this->getTable('ExternalSession');
+        $sessionTable->destroySession($sess_id);
         return true;
     }
 

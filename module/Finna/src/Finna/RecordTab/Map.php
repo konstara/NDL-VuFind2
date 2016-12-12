@@ -42,6 +42,17 @@ namespace Finna\RecordTab;
 class Map extends \VuFind\RecordTab\Map
 {
     /**
+     * Can this tab be loaded via AJAX?
+     *
+     * @return bool
+     */
+    public function supportsAjax()
+    {
+        // Yes, no magic required
+        return true;
+    }
+
+    /**
      * Get all map markers (points, polygons etc.)
      *
      * @return string
@@ -53,7 +64,7 @@ class Map extends \VuFind\RecordTab\Map
             return json_encode([]);
         }
         foreach ($locations as $location) {
-            $marker = $this->wktToMarker($location);
+            $marker = $this->locationToMarker($location);
             $marker['title'] = (string)$this->getRecordDriver()->getBreadcrumb();
             $markers[] = $marker;
         }
@@ -67,9 +78,6 @@ class Map extends \VuFind\RecordTab\Map
      */
     public function isActive()
     {
-        if (!$this->enabled) {
-            return false;
-        }
         $locations = $this->getRecordDriver()->tryMethod('getGeoLocations');
         return !empty($locations);
     }
@@ -86,104 +94,63 @@ class Map extends \VuFind\RecordTab\Map
         $array = [];
         $envelope = preg_replace('/.*\((.+)\).*/', '\\1', $envelope);
         list($minX, $maxX, $maxY, $minY) = explode(' ', trim($envelope));
-        // Workaround for jquery geo issue preventing polygon with longitude
-        // -180.0 from being displayed (https://github.com/AppGeo/geo/issues/128)
-        if ((float)$minX === -180) {
-            $minX = -179.9999999;
-        }
         return [
-            [(float)$minX, (float)$minY],
-            [(float)$minX, (float)$maxY],
-            [(float)$maxX, (float)$maxY],
-            [(float)$maxX, (float)$minY],
-            [(float)$minX, (float)$minY]
+            [(float)$minY, (float)$minX],
+            [(float)$minY, (float)$maxX],
+            [(float)$maxY, (float)$maxX],
+            [(float)$maxY, (float)$minX],
+            [(float)$minY, (float)$minX]
         ];
-    }
-
-    /**
-     * Convert WKT polygon to array
-     *
-     * @param string $polygon WKT polygon
-     *
-     * @return array Results
-     */
-    protected function polygonToArray($polygon)
-    {
-        $array = [];
-        $polygon = preg_replace('/.*\((.+)\).*/', '\\1', $polygon);
-        foreach (explode(',', $polygon) as $point) {
-            list($lon, $lat) = explode(' ', trim($point), 2);
-            // Workaround for jquery geo issue preventing polygon with longitude
-            // -180.0 from being displayed (https://github.com/AppGeo/geo/issues/128)
-            if ((float)$lon === -180) {
-                $lon = -179.9999999;
-            }
-            $array[] = [(float)$lon, (float)$lat];
-        }
-        return $array;
     }
 
     /**
      * Convert WKT to array (support function for getGoogleMapMarker)
      *
-     * @param string $wkt Well Known Text
+     * @param string $location Well Known Text, envelope or simple point
      *
-     * @return array A marker with title and other attributes
+     * @return array A marker
      */
-    protected function wktToMarker($wkt)
+    protected function locationToMarker($location)
     {
-        if (strtolower(substr($wkt, 0, 5)) == 'point') {
-            if (preg_match('/\((.+)\s+(.+)\)/', $wkt, $matches)) {
+        $wktTypes = [
+            'coords', 'multicoords', 'linestring',
+            'multilinestring', 'polygon', 'multipolygon', 'geometrycollection'
+        ];
+
+        $p = strpos($location, '(');
+        $type = strtolower(substr($location, 0, $p));
+
+        if ($p > 0 && in_array($type, $wktTypes)) {
+            return ['wkt' => $location];
+        }
+
+        if ($type == 'point' || $type == 'multipoint') {
+            if (preg_match_all(
+                '/\((.+)\s+?(.+)\)/', $location, $matches, PREG_SET_ORDER
+            )) {
+                $results = [];
+                foreach ($matches as $match) {
+                    $results[] = [
+                        'lon' => (float)$match[1],
+                        'lat' => (float)$match[2]
+                    ];
+                }
                 return [
-                    'lon' => (float)$matches[1],
-                    'lat' => (float)$matches[2]
+                    'points' => $results
                 ];
             }
             return null;
-        } elseif (strtolower(substr($wkt, 0, 7)) == 'polygon') {
-            if (preg_match('/\((\(.+\))\s*,\s*(\(.+\))\)/', $wkt, $matches)) {
-                return [
-                    'polygon' => [
-                        $this->polygonToArray($matches[1]),
-                        $this->polygonToArray($matches[2])
-                    ]
-                ];
-            } else {
-                $wkt = preg_replace('/.*\((.+)\).*/', '\\1', $wkt);
-                return [
-                    'polygon' => [
-                        $this->polygonToArray($wkt)
-                    ]
-                ];
-            }
-        } elseif (strtolower(substr($wkt, 0, 12)) == 'multipolygon') {
-            preg_match_all('/(\(\(.+?\)\))/', $wkt, $matches);
-            $polygons = [];
-            foreach ($matches[1] as $polygon) {
-                if (preg_match('/\((\(.+\))\s*,\s*(\(.+\))\)/', $polygon, $parts)) {
-                    $polygons[] = [
-                        $this->polygonToArray($parts[1]),
-                        $this->polygonToArray($parts[2])
-                    ];
-                } else {
-                    $polygon = preg_replace('/.*\((.+)\).*/', '\\1', $polygon);
-                    $polygons[] = [
-                        $this->polygonToArray($polygon)
-                    ];
-                }
-            }
-            return [
-                'multipolygon' => $polygons
-            ];
-        } elseif (strtolower(substr($wkt, 0, 8)) == 'envelope') {
+        }
+
+        if ($type == 'envelope') {
             return [
                 'polygon' => [
-                    $this->envelopeToArray($wkt)
+                    $this->envelopeToArray($location)
                 ]
             ];
         }
 
-        $coordinates = explode(' ', $wkt);
+        $coordinates = explode(' ', $location);
         if (count($coordinates) > 2) {
             $polygon = [];
             // Assume rectangle
@@ -191,18 +158,22 @@ class Map extends \VuFind\RecordTab\Map
             $lat = (float)$coordinates[1];
             $lon2 = (float)$coordinates[2];
             $lat2 = (float)$coordinates[3];
-            $polygon[] = [$lon, $lat];
-            $polygon[] = [$lon2, $lat];
-            $polygon[] = [$lon2, $lat2];
-            $polygon[] = [$lon, $lat2];
-            $polygon[] = [$lon, $lat];
+            $polygon[] = [$lat, $lon];
+            $polygon[] = [$lat, $lon2];
+            $polygon[] = [$lat2, $lon2];
+            $polygon[] = [$lat2, $lon];
+            $polygon[] = [$lat, $lon];
             return [
                 'polygon' => [$polygon]
             ];
         }
         return [
-            'lon' => $coordinates[0],
-            'lat' => $coordinates[1]
+            'points' => [
+                [
+                    'lon' => $coordinates[0],
+                    'lat' => $coordinates[1]
+                ]
+            ]
         ];
     }
 }

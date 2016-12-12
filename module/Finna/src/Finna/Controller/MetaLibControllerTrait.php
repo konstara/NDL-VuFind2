@@ -39,12 +39,12 @@ namespace Finna\Controller;
 trait MetaLibControllerTrait
 {
     /**
-     * Handle deprecated MetaLib actions
+     * Handle removed MetaLib actions
      *
      * @return mixed
      */
-    protected function depricatedInfo()
+    protected function showMetalibUnavailableMessage()
     {
-        return $this->redirect()->toRoute('content-page', ['page' => 'metalib']);
+        return $this->forwardTo('Content', 'Content', ['page' => 'metalib']);
     }
 }

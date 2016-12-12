@@ -249,24 +249,29 @@ class OnlinePaymentMonitor extends AbstractService
                 $user = $this->userTable->getById($t->user_id);
             }
 
-            $catUsername = $patron = null;
+            $patron = null;
             foreach ($user->getLibraryCards() as $card) {
                 $card = $user->getLibraryCard($card['id']);
 
                 if ($card['cat_username'] == $t->cat_username) {
                     try {
+                        $cardUser = $this->userTable->createRow();
+                        $cardUser->cat_username = $card['cat_username'];
+                        $cardUser->cat_pass_enc = $card['cat_pass_enc'];
                         $patron = $this->catalog->patronLogin(
-                            $card['cat_username'], $card['cat_password']
+                            $card['cat_username'], $cardUser->getCatPassword()
                         );
+
                         if ($patron) {
                             break;
                         }
                     } catch (\Exception $e) {
                         $this->err('Patron login error: ' . $e->getMessage());
+                        $this->logException($e);
                     }
                 }
             }
-            
+
             if (!$patron) {
                 $this->warn(
                     "Catalog login failed for user {$user->username}"
@@ -294,7 +299,8 @@ class OnlinePaymentMonitor extends AbstractService
                     '    Registration of transaction '
                     . $t->transaction_id . ' failed'
                 );
-                $this->err('      ' .  $e->getMessage());
+                $this->err('      ' . $e->getMessage());
+                $this->logException($e);
 
                 if ($this->transactionTable->setTransactionRegistrationFailed(
                     $t->transaction_id, $e->getMessage()
@@ -315,7 +321,7 @@ class OnlinePaymentMonitor extends AbstractService
      *
      * @param Transaction $t         Transaction
      * @param array       $report    Transactions to be reported.
-     * @param int         $remindCnt Number of transactions to be 
+     * @param int         $remindCnt Number of transactions to be
      *                               reported as unresolved.
      *
      * @return void
@@ -323,7 +329,7 @@ class OnlinePaymentMonitor extends AbstractService
     protected function processUnresolvedTransaction($t, &$report, &$remindCnt)
     {
         $this->msg("  Transaction id {$t->transaction_id} still unresolved.");
-        
+
         if (!$this->transactionTable->setTransactionReported($t->transaction_id)) {
             $this->err(
                 '    Failed to update transaction '
@@ -387,6 +393,7 @@ class OnlinePaymentMonitor extends AbstractService
                         "    Failed to send error email to customer: $email "
                         . "(driver: $driver)"
                     );
+                    $this->logException($e);
                     continue;
                 }
             }
@@ -417,7 +424,7 @@ class OnlinePaymentMonitor extends AbstractService
 // @codingStandardsIgnoreStart
         return <<<EOT
 Usage:
-  php index.php util online_payment_monitor <expire_hours> <internal_error_email> <from_email> <report_interval_hours> 
+  php index.php util online_payment_monitor <expire_hours> <from_email> <report_interval_hours>
 
   Validates unregistered online payment transactions.
     expire_hours          Number of hours before considering unregistered

@@ -8,9 +8,6 @@
      $this->headScript()->appendFile('vendor/bootstrap-rating.min.js');
      $this->headLink()->appendStylesheet('vendor/bootstrap-rating.min.css');
   }
-  if ($this->record($this->driver)->bxRecommendationsEnabled() && in_array($this->driver->getSourceIdentifier(), ['Primo'])) {
-    $this->headScript()->appendFile("finna-bx.js");
-  }
   // Activate Syndetics Plus if necessary:
   if ($this->syndeticsPlus()->isActive()) {
     echo $this->headScript()->appendFile($this->syndeticsPlus()->getScript());
@@ -33,6 +30,19 @@
   $dataSource = $this->driver->tryMethod('getDataSource');
   $headText = $this->driver->getBreadcrumb() . (isset($dataSource) ? ' | ' . $this->transEsc('default::source_'. $dataSource, null, $dataSource) : '');
   $this->headTitle($headText);
+
+  // Add map css if necessary:
+  foreach ($this->tabs as $tab) {
+    if ($tab instanceof \Finna\RecordTab\Map) {
+      $this->headLink()->appendStylesheet('vendor/leaflet.css');
+      break;
+    }
+  }
+  $this->jsTranslations()->addStrings(
+    [
+      'map_zoom_in' => 'map_zoom_in',
+      'map_zoom_out' => 'map_zoom_out'
+  ]);
 ?>
 </div>
 <div class="container-fluid record-view-header">
@@ -52,19 +62,35 @@
     <? if (isset($this->scrollData) && ($this->scrollData['previousRecord'] || $this->scrollData['nextRecord'])): ?>
       <ul class="pager hidden-print" id="view-pager">
       <? if ($this->scrollData['previousRecord']): ?>
+        <? if ($this->scrollData['firstRecord']): ?>
+          <li>
+            <a href="<?=$this->recordLink()->getUrl($this->scrollData['firstRecord'])?>" rel="nofollow"><i class="fa fa-first-page"></i><span class="sr-only"><?=$this->transEsc('First Record')?></span></a>
+          </li>
+        <? endif; ?>
         <li class="pager-previous-record">
-          <a href="<?=$this->recordLink()->getUrl($this->scrollData['previousRecord'])?>" title="<?=$this->transEsc('Previous Record')?>" rel="nofollow"><i class="fa fa-arrow-left"></i></a>
+          <a href="<?=$this->recordLink()->getUrl($this->scrollData['previousRecord'])?>" rel="nofollow"><i class="fa fa-arrow-left"></i><span class="sr-only"><?=$this->transEsc('Previous Record')?></span></a>
         </li>
-        <? else: ?>
-        <li class="disabled" title="<?=$this->transEsc('First Record')?>"><a href=""><i class="fa fa-arrow-left"></i></a></li>
+      <? else: ?>
+        <? if ($this->scrollData['firstRecord']): ?>
+          <li class="disabled" title="<?=$this->transEsc('First Record')?>"><a><i class="fa fa-first-page"></i></a></li>
+        <? endif; ?>
+        <li class="disabled" title="<?=$this->transEsc('Previous Record')?>"><a><i class="fa fa-arrow-left"></i></a></li>
       <? endif; ?>
         <li class="pager-text"><?=$this->localizedNumber($this->scrollData['currentPosition']) . ' / ' . $this->localizedNumber($this->scrollData['resultTotal']) ?></li>
       <? if ($this->scrollData['nextRecord']): ?>
         <li class="pager-next-record">
-          <a href="<?=$this->recordLink()->getUrl($this->scrollData['nextRecord'])?>" title="<?=$this->transEsc('Next Record')?>" rel="nofollow"><i class="fa fa-arrow-right"></i></a>
+          <a href="<?=$this->recordLink()->getUrl($this->scrollData['nextRecord'])?>" rel="nofollow"><i class="fa fa-arrow-right"></i><span class="sr-only"><?=$this->transEsc('Next Record')?></span></a>
         </li>
+        <? if ($this->scrollData['lastRecord']): ?>
+          <li>
+            <a href="<?=$this->recordLink()->getUrl($this->scrollData['lastRecord'])?>" rel="nofollow"><i class="fa fa-last-page"></i><span class="sr-only"><?=$this->transEsc('Last Record')?></span></a>
+          </li>
+        <? endif; ?>
       <? else: ?>
-        <li class="disabled" title="<?=$this->transEsc('Last Record')?>"><a href="#"><i class="fa fa-arrow-right"></i></a></li>
+        <li class="disabled" title="<?=$this->transEsc('Next Record')?>"><a><i class="fa fa-arrow-right"></i></a></li>
+        <? if ($this->scrollData['lastRecord']): ?>
+          <li class="disabled" title="<?=$this->transEsc('Last Record')?>"><a><i class="fa fa-last-page"></i></a></li>
+        <? endif; ?>
       <? endif; ?>
       </ul>
       <? endif; ?>
@@ -73,18 +99,16 @@
  </div>
 </div>
 <div class="container">
-<div class="row record-row">
+<div class="record source<?=$this->escapeHtmlAttr($this->driver->getSourceIdentifier())?> row record-row">
   <div class="col-xs-12">
       <?=$this->record($this->driver)->getToolbar()?>
   </div>
   <div class="col-sm-9">
-    <div class="record source<?=$this->escapeHtmlAttr($this->driver->getSourceIdentifier())?>">
-      <input type="hidden" value="<?=$this->escapeHtmlAttr($this->driver->getUniqueId())?>" class="hiddenId" />
-      <input type="hidden" value="<?=$this->escapeHtmlAttr($this->driver->getSourceIdentifier()) ?>" class="hiddenSource" />
-      <?=$this->flashmessages()?>
-      <?=$this->record($this->driver)->getMetaTags();?>
-      <?=$this->record($this->driver)->getCoreMetadata()?>
-    </div>
+    <input type="hidden" value="<?=$this->escapeHtmlAttr($this->driver->getUniqueId())?>" class="hiddenId" />
+    <input type="hidden" value="<?=$this->escapeHtmlAttr($this->driver->getSourceIdentifier()) ?>" class="hiddenSource" />
+    <?=$this->flashmessages()?>
+    <?=$this->record($this->driver)->getMetaTags();?>
+    <?=$this->record($this->driver)->getCoreMetadata()?>
 
     <? // N.B. The element/class structure here is important for the ajax tabs to work properly ?>
     <div class="record-tabs">
@@ -97,7 +121,7 @@
           <? foreach ($this->tabs as $tab => $obj): ?>
             <? // add current tab to breadcrumbs if applicable:
               $desc = $obj->getDescription();
-              $tab_classes = array();
+              $tab_classes = [];
               if (0 === strcasecmp($this->activeTab, $tab)) {
                 if (!$this->loadInitialTabWithAjax || !$obj->supportsAjax()) {
                   $tab_classes[] = 'active';
@@ -111,7 +135,7 @@
               if (strtolower($tab) == 'details') { $tab_classes[] = 'hidden-xs'; }
             ?>
             <li<?=count($tab_classes) > 0 ? ' class="' . implode(' ', $tab_classes) . '"' : ''?>>
-            <a class="<?=strtolower($tab) ?>" href="<?=$this->recordLink()->getTabUrl($this->driver, $tab)?>#tabnav"><i class="fa fa-<?=$this->escapeHtmlAttr($tab)?>"></i> <?=$this->transEsc($desc)?><? if (strtolower($tab) == 'usercomments') : ?>(<span class="count"><?= count($this->driver->getComments()) ?></span>)<? endif; ?></a>
+            <a class="<?=strtolower($tab) ?>" href="<?=$this->recordLink()->getTabUrl($this->driver, $tab)?>#tabnav"<? if ($obj->supportsAjax() && in_array($tab, $this->backgroundTabs)):?> data-background<? endif ?>><i class="fa fa-<?=$this->escapeHtmlAttr($tab)?>"></i> <?=$this->transEsc($desc)?><? if (strtolower($tab) == 'usercomments') : ?>(<span class="count"><?= count($this->driver->getComments()) ?></span>)<? endif; ?></a>
           </li>
           <? endforeach; ?>
         </ul>
@@ -139,10 +163,13 @@
     <? foreach ($this->related()->getList($this->driver) as $current): ?>
       <?=$this->related()->render($current)?>
     <? endforeach; ?>
+<<<<<<< HEAD
     <? if ($this->record($this->driver)->bxRecommendationsEnabled() && in_array($this->driver->getSourceIdentifier(), ['Primo'])): ?>
       <div id="bx-recommendations-holder">
       </div>
     <? endif; ?>
+=======
+>>>>>>> master
     <? if ($template = $this->content()->findTemplateForLng("content/Additions/record-post-recommendations")): ?>
       <div class="row">
         <div class="col-xs-12">

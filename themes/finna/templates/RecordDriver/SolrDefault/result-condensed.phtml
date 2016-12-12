@@ -1,10 +1,18 @@
 <!-- START of: finna - RecordDriver/SolrDefault/result-condensed.phtml -->
 <?
-    $formats = $this->driver->tryMethod('getFormats');
-    $this->record($this->driver)->getFormatClass(end($formats)) === '0database' ? $database = 'true' :  $database = 'false';
-    $this->record($this->driver)->getFormatClass(end($formats)) === '1journaleserial' ? $ejournal = 'true' :  $ejournal = 'false';
-
-?>
+  $formats = $this->driver->tryMethod('getFormats');
+  $this->record($this->driver)->getFormatClass(end($formats)) === '0database' ? $database = 'true' :  $database = 'false';
+  $this->record($this->driver)->getFormatClass(end($formats)) === '1journaleserial' ? $ejournal = 'true' :  $ejournal = 'false';
+  // Thumbnail
+  $img = $this->recordImage($this->record($this->driver));
+  $thumbnail = false;
+  $thumbnailAlignment = $this->record($this->driver)->getThumbnailAlignment('result');
+  if ($img):
+    ob_start(); ?>
+    <?=$img->render('list', ['medium' => ['w' => 250]]) ?>
+    <? $thumbnail = ob_get_contents(); ?>
+  <? ob_end_clean(); ?>
+<? endif;?>
 <div class="record-container<?=$this->driver->supportsAjaxStatus()?' ajaxItem ':''?> list-view">
   <div class="col-xs-12 condensed-collapse-toggle">
       <div class="col-sm-6 col-md-8">
@@ -13,7 +21,7 @@
             <?=$this->record($this->driver)->getTitleHtml()?>
           </a>
           <div class="resultOtherLinks">
-          <div class="resultItemFormat"><?=str_replace('class="', 'class="label label-info ', $this->record($this->driver)->getFormatList())?></div>
+          <div class="resultItemFormat"><?=$this->record($this->driver)->getFormatList() ?></div>
           <? if ($results = $this->driver->tryMethod('getOtherLinks')): ?>
               <? $prevOtherLinkHeading = ''; ?>
               <? foreach ($results as $result): ?>
@@ -57,7 +65,7 @@
                   }
                 }
                 if ($parentLink === false) {
-                  $parentLink = $this->record($this->driver)->getLink('journaltitle', str_replace(array('{{{{START_HILITE}}}}', '{{{{END_HILITE}}}}'), '', $journalTitle));
+                  $parentLink = $this->record($this->driver)->getLink('journaltitle', str_replace(['{{{{START_HILITE}}}}', '{{{{END_HILITE}}}}'], '', $journalTitle));
                 }
                 ?>
                 <?=/* TODO: handle highlighting more elegantly here */ $this->transEsc('Published in') . ' <a href="' . $parentLink . '">' . $this->highlight($journalTitle) . '</a>';?>
@@ -86,9 +94,9 @@
       </div>
   </div>
   <div class="clearfix"></div>
-  <div class="condensed-collapse-data col-xs-12">
+  <div class="media condensed-collapse-data col-xs-12">
   <? if  ($database === 'false' && $ejournal === 'false'): ?>
-    <div class="col-xs-9 col-sm-push-2">
+    <div class="media-body col-xs-9<? if ($thumbnailAlignment == 'left'): ?> col-sm-push-2<? endif; ?>">
           <? $classifications = $this->driver->tryMethod('getClassifications'); if (!empty($classifications)): ?>
             <div class="resultClassification">
               <?
@@ -111,7 +119,7 @@
             <? foreach ($summInCollection as $collId => $collText): ?>
               <div>
                 <b><?=$this->transEsc("in_collection_label")?></b>
-                <a class="collectionLinkText" href="<?=$this->url('collection', array('id' => $collId))?>?recordID=<?=urlencode($this->driver->getUniqueID())?>">
+                <a class="collectionLinkText" href="<?=$this->url('collection', ['id' => $collId])?>?recordID=<?=urlencode($this->driver->getUniqueID())?>">
                   <?=$this->escapeHtml($collText)?>
                 </a>
               </div>
@@ -124,7 +132,7 @@
       $dedupData = $this->driver->getDedupData();
       if (count($dedupData) > 1): ?>
         <div class="dedupInformation">
-            <select class="dedup-select form-control" role="listbox" aria-haspopup="true">
+            <select class="dedup-select form-control" role="listbox" aria-haspopup="true" title="<?=$this->transEsc('select_dedup_organisation');?>">
             <? foreach ($dedupData as $source => $current): ?>
               <option value="<?=$this->escapeHtmlAttr($current['id']) ?>" class="dedup-data-id" data-source="<?=$this->escapeHtmlAttr($source) ?>"><?=$this->transEsc("source_$source", null, $source) ?></option>
             <? endforeach; ?>
@@ -176,11 +184,12 @@
     </div>
 
   </div>
-  <div class="col-xs-3 col-sm-2 col-sm-pull-9 resultThumb">
-      <input type="hidden" value="<?=$this->escapeHtmlAttr($this->driver->getUniqueID())?>" class="hiddenId" />
-      <input type="hidden" value="<?=$this->escapeHtmlAttr($this->driver->getSourceIdentifier())?>" class="hiddenSource" />
-      <? $img = $this->recordImage($this->record($this->driver))?>
-      <?= $img->render('list', array('medium' => array('w' => 250))) ?>
+  <div class="media-<?=$thumbnailAlignment ?> col-xs-3 col-sm-2<? if ($thumbnailAlignment == 'left'): ?> col-sm-pull-9<? endif; ?> resultThumb">
+    <input type="hidden" value="<?=$this->escapeHtmlAttr($this->driver->getUniqueID())?>" class="hiddenId" />
+    <input type="hidden" value="<?=$this->escapeHtmlAttr($this->driver->getSourceIdentifier())?>" class="hiddenSource" />
+    <? if ($thumbnail): ?>
+      <?=$thumbnail ?>
+    <? endif; ?>
   </div>
   <? endif; ?><? /* this will end layout for format other than database or e-magazines */ ?>
   <? if ($database == 'true'): ?>
@@ -196,7 +205,7 @@
       <? if ($QRCode = $this->record($this->driver)->getQRCode("results")): ?>
         <?
           // Add JS Variables for QrCode
-          $this->jsTranslations()->addStrings(array('qrcode_hide' => 'qrcode_hide', 'qrcode_show' => 'qrcode_show'));
+          $this->jsTranslations()->addStrings(['qrcode_hide' => 'qrcode_hide', 'qrcode_show' => 'qrcode_show']);
         ?>
         <div class="hidden-xs">
           <i class="fa fa-qrcode"></i> <a href="<?=$this->escapeHtmlAttr($QRCode);?>" class="qrcodeLink"><?=$this->transEsc('qrcode_show')?></a>
@@ -216,7 +225,7 @@
           <div class="hierarchyTreeLink">
             <input type="hidden" value="<?=$this->escapeHtmlAttr($hierarchyID)?>" class="hiddenHierarchyId" />
             <i class="fa fa-sitemap"></i>
-            <a class="hierarchyTreeLinkText" data-lightbox href="<?=$this->recordLink()->getTabUrl($this->driver, 'HierarchyTree')?>?hierarchy=<?=urlencode($hierarchyID)?>#tabnav" data-lightbox href="<?=$this->recordLink()->getTabUrl($this->driver, 'HierarchyTree')?>?hierarchy=<?=urlencode($hierarchyID)?>#tabnav" title="<?=$this->transEsc('hierarchy_tree')?>" data-lightbox-href="<?=$this->recordLink()->getTabUrl($this->driver, 'AjaxTab')?>?hierarchy=<?=urlencode($hierarchyID)?>" data-lightbox-post="tab=hierarchytree">
+            <a class="hierarchyTreeLinkText" data-lightbox href="<?=$this->recordLink()->getTabUrl($this->driver, 'HierarchyTree')?>?hierarchy=<?=urlencode($hierarchyID)?>#tabnav" title="<?=$this->transEsc('hierarchy_tree')?>" data-lightbox-href="<?=$this->recordLink()->getTabUrl($this->driver, 'AjaxTab')?>?hierarchy=<?=urlencode($hierarchyID)?>" data-lightbox-post="tab=hierarchytree">
               <?=$this->transEsc('hierarchy_view_context')?><? if (count($trees) > 1): ?>: <?=$this->escapeHtml($hierarchyTitle)?><? endif; ?>
             </a>
           </div>

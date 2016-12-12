@@ -28,6 +28,22 @@ title           = "Finna"
 ; This is the default theme for non-mobile devices (or all devices if mobile_theme
 ; is disabled below)
 theme           = finna
+
+; Automatic asset minification and concatenation setting. When active, HeadScript
+; and HeadLink will concatenate and minify all viable files to reduce requests and
+; load times. This setting is off by default.
+;
+; This configuration takes the form of a semi-colon separated list of
+; environment:configuration pairs where "environment" is a possible APPLICATION_ENV
+; value (e.g. 'production' or 'development') or '*'/no prefix for all contexts.
+; Possible values for 'configuration' within each environment are 'js', 'css',
+; 'off'/false, 'on'/true/'*'. This allows global enabling/disabling of the pipeline
+; or separate configurations for different types of resources. Multiple configuration
+; values may be comma-separated -- e.g. 'js,css'.
+;
+; Example: "development:off; production:js,css"
+asset_pipeline = "production:js"
+
 ; Uncomment the following line to use a different default theme for mobile devices
 ;mobile_theme    = jquerymobile
 ; This is a comma-separated list of themes that may be accessed via the ?ui GET
@@ -112,7 +128,7 @@ indexBasedNewItems = true
 ; Whether to hide email address in patron profile. Default is false
 ;hideProfileEmailAddress = true
 ; Scale for advanced search year slider. Current year + 1 is always added to the end.
-; Default scale is "0,900,1800,1910" 
+; Default scale is "0,900,1800,1910"
 ;advSearchYearScale = "1600,1800,2000,2010"
 
 ; This section allows you to configure the mechanism used for storing user
@@ -246,7 +262,7 @@ library_cards = true
 
 ; The number of checked out items to display per page; 0 for no limit (may cause
 ; memory problems for users with huge numbers of items). Default = 50.
-; N.B. Values other than 0 are not supported in the finna theme. 
+; N.B. Values other than 0 are not supported in the finna theme.
 checked_out_page_size = 0
 
 ; This section allows you to determine how the users will authenticate.
@@ -272,10 +288,23 @@ hideLogin = false
 
 ; Set this to false if you would like to store local passwords in plain text
 ; (only applies when method = Database above).
-hash_passwords = "1"
+hash_passwords = true
+
+; Allow users to recover passwords via email (if supported by Auth method)
+; You can set the subject of recovery emails in your
+; language files under the term "recovery_email_subject"
+recover_password = true
+; Time (seconds) before another recovery attempt can be made
+recover_interval      = 60
+; Length of time before a recovery hash can no longer be used (expires)
+; Default: Two weeks
+recover_hash_lifetime = 1209600
+
+; Allow users to set change their passwords (if supported by Auth method)
+change_password = true
 
 ; Set this to false if you would like to store catalog passwords in plain text
-encrypt_ils_password = "1"
+encrypt_ils_password = true
 
 ; This is the key used to encrypt and decrypt catalog passwords.  This must be
 ; filled in with a random string value when encrypt_ils_passwords is set to true.
@@ -286,13 +315,20 @@ ils_encryption_key = ""
 ; You can use mcrypt_list_algorithms to see the full list of choices for your system.
 ils_encryption_algo = "aes"
 
-;Whether Mozilla Persona login is enabled
-;mozillaPersona = true
-;Whether Persona autologout is enabled (default is true)
-mozillaPersonaAutoLogout = false
+; Specify default minimum and maximum password length (Auth method may override
+; this).
+minimum_password_length = 8
+maximum_password_length = 32
+; Specify default limit of accepted characters in the password. Allowed values
+; are "numeric", "alphanumeric" or a regular expression
+;password_pattern = "(?=.*\d)(?=.*[a-z])(?=.*[A-Z])"
+; Specify default hint about what the password may contain when using a regexp
+; pattern. May be text or a translation key. The "numeric" and "alphanumeric"
+; patterns have translated default hints.
+;password_hint = "local_login_password_hint"
 
 [ChoiceAuth]
-choice_order = MozillaPersona,Shibboleth,MultiILS
+choice_order = Database,Shibboleth,MultiILS
 
 ; See the comments in library/VF/Auth/MultiAuth.php for full details
 ; on using multiple authentication methods.  Note that MultiAuth assumes login
@@ -767,8 +803,8 @@ url             = https://www.myendnoteweb.com/EndNoteWeb.html
 [Http]
 ;sslcapath = "/etc/ssl/certs"
 sslcafile = "/etc/ssl/certs/ca-bundle.crt"
-; This is required on RHEL6 with PHP 5.6 for unknown reasons. Otherwise e.g. Persona
-; login fails.
+; This is required on RHEL6 with PHP 5.6 for unknown reasons. Otherwise SSL
+; connections may fail.
 ssltransport = tls
 
 ; Spelling Suggestions
@@ -833,6 +869,11 @@ skip_numeric = true
 ;        the colon will be used in the string parsing. "/vufind" will work
 file           = /var/log/vufind2.log:alert-5,error-3,notice
 ;email          = alerts@myuniversity.edu:alert-5,error-5
+
+; Get URL from https://YOURSLACK.slack.com/apps/manage/custom-integrations
+;slack = #channel_name:alert,error
+;slackurl = https://hooks.slack.com/services/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
+;slackname = "VuFind Log" ; username messages are posted under
 
 ; This section can be used to specify a "parent configuration" from which
 ; the current configuration file will inherit.  You can chain multiple
@@ -910,7 +951,7 @@ alphabet_letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZÅÄÖ"
 ; <result_limit> most popular entries -- it only affects display order.
 ;alphabetical_order = true
 
-; This section controls the availability of export methods. 
+; This section controls the availability of export methods.
 ;
 ; Each entry may be a comma-separated list of contexts in which the export
 ; option will be presented. Valid options:
@@ -1094,7 +1135,7 @@ ead_external_link_template[narc] = "http://www.narc.fi:8080/VakkaWWW/Selaus.acti
 ead_document_order_link_template[narc] = "https://testavapaingest.narc.fi/astiaUi/palvelut/kdk_checkout.php?id={id}"
 ead_usage_permission_request_link_template[narc] = "https://testavapaingest.narc.fi/astiaUi/palvelut/kdk_askpermission.php?id={id}"
 
-; Blacklisting regexp's for record URLs 
+; Blacklisting regexp's for record URLs
 url_blacklist[] = '/btj\.com\/btjcgi\/arvo\/get_add_info\.cgi\?type=(PRES|IMAGE)/'
 url_blacklist[] = '/data\.kirjavalitys\.fi\/data\/servlets\/ProductRequestServlet/'
 url_blacklist[] = '/booky\.fi\/(image\.php\?|description\.php\?)/'
@@ -1219,6 +1260,20 @@ email_subject     = "Palautetta Finnasta"
 sender_email      = "noreply@finna.fi"
 sender_name       = "Finna-palaute"
 
+; Activate Captcha validation on select forms
+; VuFind will use reCaptcha validation to prevent bots from using certain actions of
+; your instance. See http://www.google.com/recaptcha for more information on Captcha
+; and create keys for your domain.
+; You will need to provide a sslcapath in the [Http] section for your Captcha to work.
+;[Captcha]
+;siteKey  = "get your reCaptcha key at"
+;secretKey = "https://www.google.com/recaptcha/admin/create"
+; Valid theme values: dark, light
+;theme      = light
+; Valid forms values: changePassword, email, feedback, newAccount, passwordRecovery, sms, userComments
+; Use * for all supported forms
+;forms = changePassword, email, newAccount, passwordRecovery, sms
+
 ; This section allows configuration of VuFind's social features
 [Social]
 ; Tags may be "enabled" or "disabled" (default = "enabled")
@@ -1227,7 +1282,9 @@ tags = disabled
 ; This controls the maximum length of a single tag; it should correspond with the
 ; field size in the tags database table.
 max_tag_length = 64
-tags = disabled
+; This controls whether tags are case-sensitive (true) or always forced to be
+; represented as lowercase strings (false -- the default).
+case_sensitive_tags = false
 
 ; Uncomment this section and provide your API key to enable Google Analytics
 ;[GoogleAnalytics]
@@ -1270,19 +1327,6 @@ url = https://piwik.finna.fi/
 ;token_auth = ...
 custom_variables = 1
 
-
-[bX]
-; Enter bX authentication token here to enable bX recommendations in the record view
-;token = ...
-; Source for recommendations, either global (default) or local
-;source = global
-; Maximum number of recommendations to retrieve
-;maxRecords = 5
-; Minimum score
-;threshold = 50
-; Recommender service base url
-;baseUrl = http://recommender.service.exlibrisgroup.com/service/recommender/openurl
-
 ; Normalization preview allows one to display an external record
 ; as it would be displayed in VuFind. This requires a backend,
 ; such as RecordManager, that provides the transformed record
@@ -1317,10 +1361,14 @@ sv['CC BY-NC-SA 4.0'] = "http://creativecommons.org/licenses/by-nc-sa/4.0/deed.s
 en-gb['CC BY-NC-SA 4.0'] = "http://creativecommons.org/licenses/by-nc-sa/4.0/deed.en"
 
 fi['CC BY-NC-ND 4.0'] = "http://creativecommons.org/licenses/by-nc-nd/4.0/deed.fi"
-sv['CC BY-NC_ND 4.0'] = "http://creativecommons.org/licenses/by-nc-nd/4.0/deed.sv"
+sv['CC BY-NC-ND 4.0'] = "http://creativecommons.org/licenses/by-nc-nd/4.0/deed.sv"
 en-gb['CC BY-NC-ND 4.0'] = "http://creativecommons.org/licenses/by-nc-nd/4.0/deed.en"
 
 fi['FREE ACCESS - NO-REUSE'] = "http://www.europeana.eu/portal/rights/rr-f.html"
 sv['FREE ACCESS - NO-REUSE'] = "http://www.europeana.eu/portal/rights/rr-f.html"
 en-gb['FREE ACCESS - NO-REUSE'] = "http://www.europeana.eu/portal/rights/rr-f.html"
 
+; Finna survey
+[FinnaSurvey]
+enabled = false
+url = "https://my.surveypal.com/Finnasurvey"

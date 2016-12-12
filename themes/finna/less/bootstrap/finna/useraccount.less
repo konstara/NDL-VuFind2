@@ -6,8 +6,10 @@
     h1 {
         display: inline-block;
     }
-    .finna-main-header .form-inline {
-        margin-left: 20px;
+    .finna-main-header {
+        & .form-inline {
+            margin-left: 20px;
+        }
     }
     & .useraccount-header {
         font-weight: bold;
@@ -16,11 +18,11 @@
     & #delete-account {
         margin-bottom: 20px;   
     }
-    & #pickupLocation {
+    & .pickup-location {
         margin-top: 3px;
         margin-bottom: 3px; 
     }
-    & #pickupLocations {
+    & .pickup-locations {
         overflow-y: auto;
         max-height: 280px;
         left: auto;
@@ -32,6 +34,12 @@
             left: -40px;
             right: auto;
         }
+        & a {
+            cursor: pointer;
+        }
+    }
+    & #card_name {
+        width: 205px;   
     }
     & .myresearch-profile-list {
         padding: 0px 6px 20px;
@@ -58,6 +66,7 @@
         background: linear-gradient( @gray-light, darken(@gray-light,8%));
         color: @body-bg;
     }
+
     & .online-payment-data {
         font-size: 1.2em;
         margin-bottom: 40px;
@@ -83,7 +92,7 @@
         padding-right: 0;
         padding-bottom: 0;
         border: 1px solid @gray-lighter;
-        box-shadow: 0px 15px 30px -25px @gray;
+        box-shadow: 10px 15px 30px -25px @gray;
         & #profile_form {
             margin-top: 10px;   
         }
@@ -147,9 +156,7 @@
         line-height: 1.1em;
         margin-top: 15px;
     }
-    & select#library_card {
-        display: inline-block;   
-    }
+
     & .useraccount-table {
         margin-bottom: 40px;
         border: 1px solid @gray-lighter;
@@ -354,11 +361,36 @@
     & .list-title {
          margin-bottom: 0px;   
     }
-    & .list-title, .list-description, .resource-note, .add-new-list {
+    
+    & .markdown.edit {
+        & .CodeMirror {
+            height: 300px;
+        }
+        & .markdown-preview {
+            padding: 10px;
+            background: #fafafa;
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid @gray-lighter;
+            & .preview {
+                position: absolute;
+                right: 40px;
+                background-color: white;
+                padding: 3px 9px;
+            }
+        }
+    }
+    & .markdown .editable {
+        padding: 5px;
+        & > p {
+            margin: 0;
+        }
+    }
+    
+    & .list-title, .list-description:not(.edit), .resource-note:not(.edit), .add-new-list {
             border: 1px solid transparent;
             display: inline-block;
             padding: 5px;
-            transition: all 0.2s linear;
             width: ~"-webkit-calc(100% - 30px)";
             width: ~"-moz-calc(100% - 30px)";
             width: ~"calc(100% - 30px)";
@@ -388,12 +420,34 @@
                 }
             }
         }
+        & .markdown-preview {
+            display: none;
+        }
+    }
+    & .list-description.markdown, .resource-note.markdown {
+        padding: 0;
+        & .fa {
+            margin-top: 7px;
+            margin-right: 5px;
+        }
+    }
+    & .list-title.disable {
+        &:hover, &:active, &:focus {
+            border: 1px solid transparent;
+            cursor: initial;
+        }
+    }
+    .markdown.edit > .fa-pen {
+        display: none;
     }
     & .list-title i.fa-pen {
         margin-bottom: -22px; 
     }
     & .list-description i.fa-pen {
         margin-bottom: -12px;   
+    }
+    & .list-description h1 {
+        display: inherit;
     }
     & .resource-note i.fa-pen {
         margin-bottom: -18px;   
@@ -631,6 +685,9 @@
     & .search-controls {
         margin-top: 10px;
         margin-bottom: 0px;
+        & hr {
+            border-top: 1px solid @gray-lighter;
+        }
     }
     & i.fa.fa-pen {
         margin-left: 10px;
@@ -709,5 +766,56 @@
     padding-left: 0;
     @media (max-width: @screen-xs-max) {
         margin-top: 0;
+    }
+}
+
+.own-favorite-list-button-area {
+    display: block;
+    float: left;
+    height: 36px;
+    width: 100%;
+    
+}
+
+.sortable-favorite-list {
+    & li {
+      	background: #f5f5f5;
+        padding: 5px 30px 5px 10px;
+        margin-top: 5px;
+        border-radius: 3px;
+        list-style-type: decimal;
+        list-style-position: inside;
+        &:hover {
+            cursor: move;   
+        }
+        & h4 {
+            margin: 0;
+            font-size: 14px;
+        }
+        & p {
+            margin-top: 2px;
+            margin-bottom: 0px;
+        }
+        & .fa.fa-arrow-down, & .fa.fa-arrow-up {
+            position: absolute;
+            right: 26px;
+            margin-top: 10px;
+        }
+        & .fa.fa-arrow-up {
+            margin-top: 0px;   
+        }
+    }
+    & .btn {
+        margin-bottom: 10px;
+        margin-right: 10px;
+    }
+    @media(max-width: @screen-xs-max) {
+        margin-left: 5px; 
+        margin-right: 10px;
+        & li {
+            & .fa.fa-arrow-down, & .fa.fa-arrow-up {
+                right: 32px;
+            }
+        }
     }
 }

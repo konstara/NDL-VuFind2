@@ -66,13 +66,29 @@ finna.feed = (function() {
         if (typeof id == 'undefined') {
             return;
         }
+        processLoadFeed(holder, {method: 'getFeed', id: id});
+    };
+
+    var loadFeedFromUrl = function(holder) {
+        var feedUrl = holder.data('url');
+        var id = holder.data('feed');
+
+        if (typeof feedUrl == 'undefined' || typeof id == 'undefined') {
+            return;
+        }
+        processLoadFeed(
+            holder, {method: 'getOrganisationPageFeed', url: feedUrl, id: id}
+        );
+    };
+
+    var processLoadFeed = function(holder, params) {
+        params['touch-device'] = (finna.layout.isTouchDevice() ? 1 : 0);
+
+        var url = VuFind.path + '/AJAX/JSON?' + $.param(params);
 
         // Append spinner
         holder.append('<i class="fa fa-spin fa-spinner hide"></i>');
         holder.find('.fa-spin').delay(1000).fadeIn();
-
-        var url = VuFind.path + '/AJAX/JSON?method=getFeed&id=' + id;
-        url += '&touch-device=' + (finna.layout.isTouchDevice() ? 1 : 0);
 
         $.getJSON(url)
         .done(function(response) {
@@ -155,6 +171,7 @@ finna.feed = (function() {
                     if (finna.layout.isTouchDevice()
                         && typeof settings['linkText'] == 'undefined'
                     ) {
+                        $('.carousel-text').css('padding-bottom', '30px');
                         holder.find('.slick-slide a').click(function(event) {
                             if (!$(this).closest('.slick-slide').hasClass('clicked')) {
                                 $(this).closest('.slick-slide').addClass('clicked');
@@ -234,13 +251,14 @@ finna.feed = (function() {
     };
 
     var initComponents = function() {
-        $('.feed-container').each(function() {
+        $('.feed-container[data-init!="0"]').each(function() {
             loadFeed($(this));
         });
     };
 
 
     var my = {
+        loadFeedFromUrl: loadFeedFromUrl,
         init: function() {
             initComponents();
         }

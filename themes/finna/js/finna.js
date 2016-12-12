@@ -6,7 +6,6 @@ var finna = (function() {
             var modules = [
                 'advSearch',
                 'autocomplete',
-                'bx',
                 'contentFeed',
                 'common',
                 'changeHolds',
@@ -18,11 +17,12 @@ var finna = (function() {
                 'layout',
                 'myList',
                 'openUrl',
-                'organisationInfo',
-                'persona',
+                'organisationList',
                 'primoAdvSearch',
                 'record',
                 'searchTabsRecommendations',
+                'StreetSearch',
+                'finnaSurvey'
             ];
 
             $.each(modules, function(ind, module) {
@@ -38,7 +38,7 @@ var finna = (function() {
 
 $(document).ready(function() {
     finna.init();
-    
+
     // init custom.js for custom theme
     if (typeof finnaCustomInit !== 'undefined') {
         finnaCustomInit();

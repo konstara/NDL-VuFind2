@@ -41,32 +41,32 @@ class MetaLibController extends \VuFind\Controller\AbstractSearch
     use MetaLibControllerTrait;
 
     /**
-     * Home action -- show deprecated info
+     * Home action -- show MetaLib unavailable message
      *
      * @return mixed
      */
     public function homeAction()
     {
-        return $this->depricatedInfo();
+        return $this->showMetalibUnavailableMessage();
     }
 
     /**
-     * Search action -- show deprecated info
+     * Search action -- show MetaLib unavailable message
      *
      * @return mixed
      */
     public function searchAction()
     {
-        return $this->depricatedInfo();
+        return $this->showMetalibUnavailableMessage();
     }
 
     /**
-     * Advanced search -- show deprecated info
+     * Advanced search -- show MetaLib unavailable message
      *
      * @return mixed
      */
     public function advancedAction()
     {
-        return $this->depricatedInfo();
+        return $this->showMetalibUnavailableMessage();
     }
 }

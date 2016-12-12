@@ -26,6 +26,7 @@
  * @link     http://vufind.org/wiki/vufind2:developer_manual Wiki
  */
 namespace Finna\View\Helper\Root;
+
 use Zend\ServiceManager\ServiceManager;
 
 /**
@@ -110,6 +111,7 @@ class Factory extends \VuFind\View\Helper\Root\Factory
         $locator = $sm->getServiceLocator();
         return new HeadScript(
             $locator->get('VuFindTheme\ThemeInfo'),
+            \VuFindTheme\View\Helper\Factory::getPipelineConfig($sm),
             $locator->get('Request')
         );
     }
@@ -169,7 +171,7 @@ class Factory extends \VuFind\View\Helper\Root\Factory
     public static function getOrganisationInfo(ServiceManager $sm)
     {
         $config = $sm->getServiceLocator()->get('VuFind\Config')
-            ->get('organisationInfo');
+            ->get('OrganisationInfo');
         return new OrganisationInfo($config);
     }
 
@@ -199,8 +201,9 @@ class Factory extends \VuFind\View\Helper\Root\Factory
     {
         $locator = $sm->getServiceLocator();
         $menuConfig = $locator->get('VuFind\Config')->get('navibar');
+        $organisationInfo = $locator->get('Finna\OrganisationInfo');
 
-        return new Navibar($menuConfig);
+        return new Navibar($menuConfig, $organisationInfo);
     }
 
     /**
@@ -238,6 +241,19 @@ class Factory extends \VuFind\View\Helper\Root\Factory
     public static function getMetaLib(ServiceManager $sm)
     {
         return new MetaLib();
+    }
+
+    /**
+     * Construct the Finna survey helper.
+     *
+     * @param ServiceManager $sm Service manager.
+     *
+     * @return FinnaSurvey
+     */
+    public static function getFinnaSurvey(ServiceManager $sm)
+    {
+        $config = $sm->getServiceLocator()->get('VuFind\Config')->get('config');
+        return new FinnaSurvey($config);
     }
 
     /**
@@ -401,19 +417,6 @@ class Factory extends \VuFind\View\Helper\Root\Factory
     }
 
     /**
-     * Construct the PersonaAuth view helper.
-     *
-     * @param ServiceManager $sm Service manager.
-     *
-     * @return \Finna\View\Helper\Root\PersonaAuth
-     */
-    public static function getPersonaAuth(ServiceManager $sm)
-    {
-        $locator = $sm->getServiceLocator();
-        return new PersonaAuth($locator);
-    }
-
-    /**
      * Construct the Piwik helper.
      *
      * @param ServiceManager $sm Service manager.
@@ -428,8 +431,10 @@ class Factory extends \VuFind\View\Helper\Root\Factory
         $customVars = isset($config->Piwik->custom_variables)
             ? $config->Piwik->custom_variables
             : false;
+        $request = $sm->getServiceLocator()->get('Request');
+        $router = $sm->getServiceLocator()->get('Router');
         $translator = $sm->getServiceLocator()->get('VuFind\Translator');
-        return new Piwik($url, $siteId, $customVars, $translator);
+        return new Piwik($url, $siteId, $customVars, $router, $request, $translator);
     }
 
     /**
@@ -473,8 +478,10 @@ class Factory extends \VuFind\View\Helper\Root\Factory
         $cache = $locator->get('VuFind\CacheManager')->getCache('object');
         $facetHelper = $locator->get('VuFind\HierarchicalFacetHelper');
         $resultsManager = $locator->get('VuFind\SearchResultsPluginManager');
-
-        return new OrganisationsList($cache, $facetHelper, $resultsManager);
+        $organisationInfo = $locator->get('Finna\OrganisationInfo');
+        return new OrganisationsList(
+            $cache, $facetHelper, $resultsManager, $organisationInfo
+        );
     }
 
     /**

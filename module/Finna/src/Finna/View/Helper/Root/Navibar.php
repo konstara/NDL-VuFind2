@@ -39,32 +39,11 @@ namespace Finna\View\Helper\Root;
 class Navibar extends \Zend\View\Helper\AbstractHelper
 {
     /**
-     * Browse view helper
+     * View helpers
      *
-     * @var Zend\View\Helper\Url
+     * @var array
      */
-    protected $browseHelper;
-
-    /**
-     * MetaLib view helper
-     *
-     * @var Zend\View\Helper\Url
-     */
-    protected $metaLibHelper;
-
-    /**
-     * Primo view helper
-     *
-     * @var Zend\View\Helper\Url
-     */
-    protected $primoHelper;
-
-    /**
-     * Url view helper
-     *
-     * @var Zend\View\Helper\Url
-     */
-    protected $urlHelper;
+    protected $viewHelpers = [];
 
     /**
      * Menu configuration
@@ -72,6 +51,13 @@ class Navibar extends \Zend\View\Helper\AbstractHelper
      * @var \Zend\Config\Config
      */
     protected $config;
+
+    /**
+     * Organisation info
+     *
+     * @var Finna\OrganisationInfo\OrganisationInfo
+     */
+    protected $organisationInfo;
 
     /**
      * Menu items
@@ -90,12 +76,17 @@ class Navibar extends \Zend\View\Helper\AbstractHelper
     /**
      * Constructor
      *
-     * @param Zend\Config\Config $config Menu configuration
+     * @param Zend\Config\Config $config           Menu configuration
      * custom variables
+     * custom variables
+     * @param OrganisationInfo   $organisationInfo Organisation info
      */
-    public function __construct(\Zend\Config\Config $config)
-    {
+    public function __construct(
+        \Zend\Config\Config $config,
+        \Finna\OrganisationInfo\OrganisationInfo $organisationInfo
+    ) {
         $this->config = $config;
+        $this->organisationInfo = $organisationInfo;
     }
 
     /**
@@ -133,10 +124,6 @@ class Navibar extends \Zend\View\Helper\AbstractHelper
     public function getMenuItems($lng)
     {
         if (!$this->menuItems || $lng != $this->language) {
-            $this->browseHelper = $this->getView()->plugin('browse');
-            $this->metaLibHelper = $this->getView()->plugin('metalib');
-            $this->primoHelper = $this->getView()->plugin('primo');
-            $this->urlHelper = $this->getView()->plugin('url');
             $this->language = $lng;
             $this->parseMenuConfig($lng);
         }
@@ -152,15 +139,28 @@ class Navibar extends \Zend\View\Helper\AbstractHelper
      */
     public function getMenuItemUrl(array $data)
     {
-        if (!$data['route']) {
-            return $data['url'];
+        $action = $data['action'];
+        $target = isset($action['target']) ? $action['target'] : null;
+        if (!$action || empty($action['url'])) {
+            return null;
+        }
+        if (!$action['route']) {
+            return ['url' => $action['url'], 'target' => $target];
         }
 
-        if (isset($data['routeParams'])) {
-            return $this->urlHelper->__invoke($data['url'], $data['routeParams']);
-        } else {
-            return $this->urlHelper->__invoke($data['url']);
+        try {
+            if (isset($action['routeParams'])) {
+                $url =  $this->getViewHelper('url')->__invoke(
+                    $action['url'], $action['routeParams']
+                );
+            } else {
+                $url = $this->getViewHelper('url')->__invoke($action['url']);
+            }
+            return ['url' => $url, 'target' => $target];
+        } catch (\Exception $e) {
         }
+
+        return null;
     }
 
     /**
@@ -207,6 +207,9 @@ class Navibar extends \Zend\View\Helper\AbstractHelper
         $translationEmpty = $this->getView()->plugin('translationEmpty');
 
         $parseUrl = function ($url) {
+            if (!$url) {
+                return null;
+            }
             $url = trim($url);
 
             $data = [];
@@ -239,17 +242,14 @@ class Navibar extends \Zend\View\Helper\AbstractHelper
             return $data;
         };
 
-        $this->menuItems = [];
-        foreach ($this->config as $menuKey => $items) {
-            if ($menuKey === 'Parent_Config') {
-                continue;
-            }
+        $result = [];
+        $menuConfig = $this->getMenuData($this->config);
+        $menuData = $menuConfig['menuData'];
+        $sortData = $menuConfig['sortData'];
 
-            if (!count($items)) {
-                continue;
-            }
+        foreach ($menuData as $menuKey => $items) {
             $item = [
-                'label' => "menu_$menuKey",
+                'id' => $menuKey, 'label' => "menu_$menuKey",
             ];
 
             $desc = 'menu_' . $menuKey . '_desc';
@@ -259,44 +259,19 @@ class Navibar extends \Zend\View\Helper\AbstractHelper
 
             $options = [];
             foreach ($items as $itemKey => $action) {
-                if (!$action) {
-                    continue;
-                }
                 if (!is_string($action)) {
-                    if (!isset($action[$lng])) {
-                        continue;
-                    } else {
-                        $action = $action[$lng];
-                    }
+                    $action = isset($action[$lng]) ? $action[$lng] : null;
                 }
 
-                if (strpos($action, 'metalib-', 0) === 0) {
+                if (strncmp($action, 'metalib-', 8) === 0) {
                     // Discard MetaLib menu items
                     continue;
                 }
 
-                $option = array_merge(
-                    ['label' => "menu_$itemKey"],
-                    $parseUrl($action)
-                );
-
-                if ($option['route']) {
-                    if (strpos('primo-', $option['url']) === 0) {
-                        if (!$this->primoHelper->isAvailable()) {
-                            continue;
-                        }
-                    }
-                    if ($option['url'] === 'browse-database'
-                        && !$this->browseHelper->isAvailable('Database')
-                    ) {
-                        continue;
-                    }
-                    if ($option['url'] === 'browse-journal'
-                        && !$this->browseHelper->isAvailable('Journal')
-                    ) {
-                        continue;
-                    }
-                }
+                $option = [
+                    'id' => $itemKey, 'label' => "menu_$itemKey",
+                    'action' => $parseUrl($action)
+                ];
 
                 $desc = 'menu_' . $itemKey . '_desc';
                 if (!$translationEmpty($desc)) {
@@ -308,8 +283,226 @@ class Navibar extends \Zend\View\Helper\AbstractHelper
                 continue;
             } else {
                 $item['items'] = $options;
-                $this->menuItems[] = $item;
+                $result[] = $item;
             }
         }
+
+        $menuItems = $this->sortMenuItems($result, $sortData);
+
+        foreach ($menuItems as $menuKey => $option) {
+            foreach ($option['items'] as $itemKey => $item) {
+                if (!$item['action'] || !$this->menuItemEnabled($item)) {
+                    unset($menuItems[$menuKey]['items'][$itemKey]);
+                }
+            }
+            $menuItems[$menuKey]['items']
+                = array_values($menuItems[$menuKey]['items']);
+
+            if (isset($menuItems[$menuKey]['items'])
+                && empty($menuItems[$menuKey]['items'])
+            ) {
+                unset($menuItems[$menuKey]);
+            }
+        }
+
+        $this->menuItems = $menuItems;
+    }
+
+    /**
+     * Check if menu item may be enabled.
+     *
+     * @param array $item Menu item configuration
+     *
+     * @return boolean
+     */
+    protected function menuItemEnabled($item)
+    {
+        $action = $item['action'];
+        if (!$action) {
+            return false;
+        }
+        if (empty($action['route'])) {
+            return true;
+        }
+
+        $url = $action['url'];
+
+        if (strpos($url, 'combined-') === 0) {
+            return $this->getViewHelper('combined')->isAvailable();
+        }
+        if (strpos($url, 'metalib-') === 0) {
+            return $this->getViewHelper('metalib')->isAvailable();
+        }
+        if (strpos($url, 'primo-') === 0) {
+            return $this->getViewHelper('primo')->isAvailable();
+        }
+        if ($url === 'browse-database') {
+            return $this->getViewHelper('browse')->isAvailable('Database');
+        }
+        if ($url === 'browse-journal') {
+            return $this->getViewHelper('browse')->isAvailable('Journal');
+        }
+        if ($url === 'organisationinfo-home') {
+            return $this->getViewHelper('organisationInfo')->isAvailable();
+        }
+        return true;
+    }
+
+    /**
+     * Separate menu data from menu order data (__[menu]_sort__ sections).
+     *
+     * Returns an associative array with keys:
+     *  'menuData' Menu items
+     *  'sortData' Order data
+     *
+     * @param array $config Menu configuration
+     *
+     * @return array
+     */
+    protected function getMenuData($config)
+    {
+        $menuData = $sortDataOrder = $sortData = [];
+
+        foreach ($config as $menuKey => $items) {
+            if ($menuKey === 'Parent_Config') {
+                continue;
+            }
+
+            if (!count($items)) {
+                continue;
+            }
+
+            if (preg_match('/^__(.*)_sort__$/', $menuKey, $matches)) {
+                // Sort section
+                $menuKey = $matches[1];
+                $items = $items->toArray();
+                // Re-order menu-level sort entries in descending order
+                asort($items);
+                $sortData[$menuKey] = $items;
+
+                if (isset($items['__MENU__'])) {
+                    // Top-level menu position
+                    $sortDataOrder[$items['__MENU__']] = $menuKey;
+                }
+                continue;
+            }
+            // Menu section
+            $menuData[$menuKey] = $items;
+        }
+
+        // Re-order top-level sort entries in descending order
+        $sortDataProcessed = [];
+        ksort($sortDataOrder);
+
+        foreach ($sortDataOrder as $index => $menuKey) {
+            $sortDataProcessed[$menuKey] = $sortData[$menuKey];
+            unset($sortData[$menuKey]);
+        }
+        $sortData = array_merge($sortDataProcessed, $sortData);
+
+        return ['menuData' => $menuData, 'sortData' => $sortData];
+    }
+
+    /**
+     * Sort menu items
+     *
+     * @param array $items Menu items
+     * @param array $order Ordering
+     *
+     * @return array Sorted items
+     */
+    protected function sortMenuItems($items, $order)
+    {
+        foreach ($order as $menuKey => $order) {
+            $menuPosition
+                = $this->getItemIndex($items, $menuKey);
+            if ($menuPosition === null) {
+                continue;
+            }
+            if (isset($order['__MENU__'])) {
+                // Re-position top-level menu
+                $position = $order['__MENU__'];
+                $items = $this->moveItem(
+                    $items, $menuPosition, $position
+                );
+                $menuPosition = $position;
+                unset($order['__MENU__']);
+            }
+            foreach ($order as $item => $position) {
+                // Re-position single menu item
+                if ($menuPosition === null) {
+                    continue;
+                }
+                if (!isset($items[$menuPosition])) {
+                    continue;
+                }
+                $currentPosition = $this->getItemIndex(
+                    $items[$menuPosition]['items'], $item
+                );
+                if ($currentPosition === null) {
+                    continue;
+                }
+                $items[$menuPosition]['items']
+                    = $this->moveItem(
+                        $items[$menuPosition]['items'],
+                        $currentPosition, $position
+                    );
+            }
+        }
+        return $items;
+    }
+
+    /**
+     * Get menu item index
+     *
+     * @param array  $items Menu items
+     * @param string $id    Menu item id
+     *
+     * @return mixed null|int
+     */
+    protected function getItemIndex($items, $id)
+    {
+        $cnt = 0;
+        foreach ($items as $item) {
+            if ($item['id'] === $id) {
+                return $cnt;
+            }
+            $cnt++;
+        }
+        return null;
+    }
+
+    /**
+     * Move menu item
+     *
+     * @param array $items Menu items
+     * @param int   $from  From (index)
+     * @param int   $to    To (index)
+     *
+     * @return array Items
+     */
+    protected function moveItem($items, $from, $to)
+    {
+        if ($from < 0 || $to < 0) {
+            return $items;
+        }
+        $move = array_splice($items, $from, 1);
+        array_splice($items, $to, 0, $move);
+        return $items;
+    }
+
+    /**
+     * Return view helper
+     *
+     * @param string $id Helper id
+     *
+     * @return \Zend\View\Helper
+     */
+    protected function getViewHelper($id)
+    {
+        if (!isset($this->viewHelpers[$id])) {
+            $this->viewHelpers[$id] = $this->getView()->plugin($id);
+        }
+        return $this->viewHelpers[$id];
     }
 }

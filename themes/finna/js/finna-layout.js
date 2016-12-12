@@ -1,5 +1,22 @@
-/*global VuFind,checkSaveStatuses*/
+/*global VuFind,checkSaveStatuses,action*/
 finna.layout = (function() {
+    var _fixFooterTimeout = null;
+    
+    var initMap = function(map) {
+        // Add zoom control with translated tooltips
+        L.control.zoom({
+            position:'topleft',
+            zoomInTitle: VuFind.translate('map_zoom_in'),
+            zoomOutTitle: VuFind.translate('map_zoom_out')            
+        }).addTo(map);
+
+        // Enable mouseWheel zoom on click
+        map.once('focus', function() {
+            map.scrollWheelZoom.enable();
+        });
+        map.scrollWheelZoom.disable();
+    };
+    
     var initResizeListener = function() {
         var intervalId = false;
         $(window).on("resize", function(e) {
@@ -46,36 +63,19 @@ finna.layout = (function() {
     };
 
     var initFixFooter = function() {
-        $(window).on("resize", function(e) {
-          var detectHeight = $(window).height() - $('body').height();
-          if (detectHeight > 0) {
-              var expandedFooter = $('footer').height() + detectHeight;
-              $('footer').outerHeight(expandedFooter);
-          }
-          else {
-            $('footer').height('auto');
-          }
+        $(window).resize(function(e) {
+            if (!_fixFooterTimeout) {
+                _fixFooterTimeout = setTimeout(function() {
+                    _fixFooterTimeout = null;
+                    $('footer').height('auto');
+                    var detectHeight = $(window).height() - $('body').height();
+                    if (detectHeight > 0) {
+                        var expandedFooter = $('footer').height() + detectHeight;
+                        $('footer').height(expandedFooter);
+                    }
+                }, 50);
+            }
         }).resize();
-    };
-
-    var initHideDetails = function() {
-      if ($(".record-information").height() > 350 && $(".show-details-button")[0]) {
-        $(".record-information .record-details-more").addClass('hidden');
-        $(".record-information .show-details-button").removeClass('hidden');
-        $(".description").addClass('too-long');
-      }
-      $('.show-details-button').click (function() {
-        $(".record-information .record-details-more").toggleClass('hidden');
-        $('.description .more-link.wide').click();
-        $(this).toggleClass('hidden');
-        $(".hide-details-button").toggleClass("hidden");
-      });
-      $('.hide-details-button').click (function() {
-        $(".record-information .record-details-more").toggleClass('hidden');
-        $('.description .less-link.wide').click();
-        $(this).toggleClass('hidden');
-        $(".show-details-button").toggleClass("hidden");
-      });
     };
 
     var initLocationService = function(holder) {
@@ -115,59 +115,58 @@ finna.layout = (function() {
 
       var truncation = [];
       var rowHeight = [];
-      holder.find(".truncate-field").not('.truncate-done').each(function(index) {
-        $(this).addClass('truncate-done');
+      holder.find('.truncate-field').not('.truncate-done').each(function(index) {
+        var self = $(this);
+        self.addClass('truncate-done');
         // check that truncate-field has children, where we can count line-height
-        if ($(this).children().length > 0) {
+        if (self.children().length > 0) {
           var rowCount = 3;
-          if ($(this).data("rows")) {
-            rowCount = $(this).data("rows");
+          if (self.data('rows')) {
+            rowCount = self.data('rows');
           }
 
-          if (typeof($(this).data('row-height')) !== 'undefined') {
-              rowHeight[index] = $(this).data('row-height');
+          if (typeof(self.data('row-height')) !== 'undefined') {
+              rowHeight[index] = self.data('row-height');
           } else {
-            if ($(this).children().first().is("div")) {
-              rowHeight[index] = parseFloat($(this).children().first().height());
+            if (self.children().first().is('div')) {
+              rowHeight[index] = parseFloat(self.children().first().height());
             }
             else {
-              rowHeight[index] = parseFloat($(this).children().first().css('line-height').replace('px', ''));
+              rowHeight[index] = parseFloat(self.children().first().css('line-height').replace('px', ''));
             }
           }
 
           // get the line-height of first element to determine each text line height
           truncation[index] = rowHeight[index] * rowCount;
           // truncate only if there's more than one line to hide
-          if ($(this).height() > (truncation[index] + rowHeight[index] + 1)) {
-            $(this).css('height', truncation[index] - 1 + 'px');
-            if ($( this ).hasClass("wide")) { // generate different truncate styles according to class
-              $(this).after("<div class='more-link wide'><i class='fa fa-handle-open'></i></div><div class='less-link wide'> <i class='fa fa-handle-close'></i></div>");
+          if (self.height() > (truncation[index] + rowHeight[index] + 1)) {
+            self.css('height', truncation[index] - 1 + 'px');
+            if (self.hasClass('wide')) { // generate different truncate styles according to class
+              self.after('<div class="more-link wide"><i class="fa fa-handle-open"></i></div><div class="less-link wide"> <i class="fa fa-handle-close"></i></div>');
             }
             else {
-              $(this).after("<div class='more-link'>" + VuFind.translate('show_more') + " <i class='fa fa-arrow-down'></i></div><div class='less-link'>" + VuFind.translate('show_less') + " <i class='fa fa-arrow-up'></i></div>");
+              self.after('<div class="more-link">' + VuFind.translate('show_more') + ' <i class="fa fa-arrow-down"></i></div><div class="less-link">' + VuFind.translate('show_less') + ' <i class="fa fa-arrow-up"></i></div>');
             }
             $('.less-link').hide();
 
-            var self = $(this);
-
-            $(this).nextAll('.more-link').first().click(function( event ) {
+            self.nextAll('.more-link').first().click(function(event) {
               $(this).hide();
               $(this).next('.less-link').show();
-              $(this).prev('.truncate-field').css('height','auto');
-              notifyTruncateChange(self);
+              $(this).prev('.truncate-field').css('height', 'auto');
+              notifyTruncateChange($(this));
             });
 
-            $(this).nextAll('.less-link').first().click(function( event ) {
+            self.nextAll('.less-link').first().click(function(event) {
               $(this).hide();
               $(this).prev('.more-link').show();
               $(this).prevAll('.truncate-field').first().css('height', truncation[index]-1+'px');
-              notifyTruncateChange(self);
+              notifyTruncateChange($(this));
             });
-            $(this).addClass('truncated');
+            self.addClass('truncated');
           }
-          notifyTruncateChange($(this));
+          notifyTruncateChange(self);
         }
-        $(this).trigger('truncate-done', [$(this)]);
+        self.trigger('truncate-done', [self]);
       });
     };
 
@@ -462,7 +461,8 @@ finna.layout = (function() {
         if ($('.result-view-grid')[0] != null && isTouchDevice()) {
             $('.result-view-grid').addClass('touch-device');
         }
-    }
+    };
+    
     var initImageCheck = function() {
         $(".image-popup-trigger img").each(function() {
             $(this).one("load",function() {
@@ -491,7 +491,7 @@ finna.layout = (function() {
             }
             // // show filter if 15+ organisations
             if (tree.parent().parent().attr('id') == 'side-panel-building' && tree.find('ul.jstree-container-ul > li').length > 15) {
-               $(this).prepend('<div class="building-filter"><input class="form-control" id="building_filter" placeholder="'+VuFind.translate('Organisation')+'..."></input></div>');
+               $(this).prepend('<div class="building-filter"><label for="building_filter" class="sr-only">'+VuFind.translate('Organisation')+'</label><input class="form-control" id="building_filter" placeholder="'+VuFind.translate('Organisation')+'..."></input></div>');
                initBuildingFilter();
             }
             // open facet if it has children and it is selected
@@ -508,7 +508,7 @@ finna.layout = (function() {
         }
         holder.find('select.jumpMenu').unbind('change').change(function() { $(this).closest('form').submit(); });
         holder.find('select.jumpMenuUrl').unbind('change').change(function(e) { window.location.href = $(e.target).val(); });
-    }
+    };
 
     var initSecondaryLoginField = function(labels, topClass) {
         $('#login_target').change(function() {
@@ -523,7 +523,7 @@ finna.layout = (function() {
                 group.show();
             }
         }).change();
-    }
+    };
 
     var initSideFacets = function() {
         var $container = $('.side-facets-container');
@@ -538,12 +538,14 @@ finna.layout = (function() {
             finna.dateRangeVis.init();
             initToolTips($('.sidebar'));
             initMobileNarrowSearch();
+            VuFind.lightbox.bind($('.sidebar'));
+            setupFacets();            
         })
         .fail(function() {
             $container.find('.facet-load-indicator').addClass('hidden');
             $container.find('.facet-load-failed').removeClass('hidden');
         });
-    }
+    };
 
     var initPiwikPopularSearches = function() {
         var $container = $('.piwik-popular-searches');
@@ -559,7 +561,7 @@ finna.layout = (function() {
             $container.find('.load-indicator').addClass('hidden');
             $container.find('.load-failed').removeClass('hidden');
         });
-    }
+    };
 
     var initAutoScrollTouch = function() {
       if (!navigator.userAgent.match(/iemobile/i) && isTouchDevice() && $(window).width() < 1025) {
@@ -615,19 +617,19 @@ finna.layout = (function() {
             }
         });
       });
-    }
+    };
 
     var initLoginRedirect = function() {
       if (!document.addEventListener) {
         return;
       }
       document.addEventListener('VuFind.lightbox.login', function(e) {
-        if (!e.detail.formUrl.match(/catalogLogin/) && !e.detail.formUrl.match(/\Save/) && !e.detail.formUrl.match(/%2[fF]Save/)) {
+        if (typeof action !== 'undefined' && action == 'home' && !e.detail.formUrl.match(/catalogLogin/) && !e.detail.formUrl.match(/\Save/) && !e.detail.formUrl.match(/%2[fF]Save/)) {
           window.location.href = VuFind.path + '/MyResearch/Home';
           e.preventDefault();
         }
       });
-    }
+    };
 
     var initLoadMasonry = function() {
       var ie = detectIe();
@@ -645,21 +647,100 @@ finna.layout = (function() {
       }
     };
 
+    var initOrganisationPageLinks = function() {
+        $('.organisation-page-link').not('.done').map(function() {
+            $(this).one('inview', function() {
+                var holder = $(this);
+                var organisation = $(this).data('organisation');
+                var organisationName = $(this).data('organisationName');
+                getOrganisationPageLink(organisation, organisationName, true, function(response) {
+                    holder.toggleClass('done', true);
+                    if (response) {
+                        var data = response[organisation];
+                        holder.html(data).closest('li.record-organisation').toggleClass('organisation-page-link-visible', true);
+                    }
+                });
+            });
+        });
+    };
 
+    var getOrganisationPageLink = function(organisation, organisationName, link, callback) {
+        var url = VuFind.path + '/AJAX/JSON?method=getOrganisationInfo';
+        url += '&params[action]=lookup&link=' + (link ? '1' : '0') + '&parent=' + organisation;
+        if (organisationName) {
+           url += '&parentName=' + organisationName;
+        }
+        $.getJSON(url)
+            .done(function(response) {
+                callback(response.data.items);
+            })
+            .fail(function() {
+            });
+        return callback(false);
+    };
+
+    var initOrganisationInfoWidgets = function() {
+        $('.organisation-info[data-init="1"]').map(function() {
+            var service = finna.organisationInfo();
+            var widget = finna.organisationInfoWidget();
+            widget.init($(this), service);
+            widget.loadOrganisationList();
+        });
+    };
+
+    var initIframeEmbed = function(container) {
+        if (typeof(container) == 'undefined') {
+            container = $('body');
+        }        
+        container.find('a[data-embed-iframe]').click(function(e) {
+            if (typeof $.magnificPopup.instance !== 'undefined' && $.magnificPopup.instance.isOpen) {
+                // Close existing popup (such as image-popup) first without delay so that its 
+                // state doesn't get confused by the immediate reopening.
+                $.magnificPopup.instance.st.removalDelay = 0;
+                $.magnificPopup.close();
+            }
+            $.magnificPopup.open({        
+                type: 'iframe',
+                tClose: VuFind.translate('close'),
+                items: {
+                    src: $(this).attr('href')
+                },
+                iframe: {
+                    markup: '<div class="mfp-iframe-scaler">'
+                        + '<div class="mfp-close"></div>'
+                        + '<iframe class="mfp-iframe" frameborder="0" allowfullscreen></iframe>'+
+                        + '</div>'
+                },
+                callbacks: {
+                    open: function() {
+                        if (finna.layout.isTouchDevice()) {
+                            $('.mfp-container .mfp-close, .mfp-container .mfp-arrow-right, .mfp-container .mfp-arrow-left').addClass('touch-device');
+                        }
+                    }
+                }
+            });
+            e.preventDefault();
+            return false;
+        });
+    }
+    
     var my = {
+        getOrganisationPageLink: getOrganisationPageLink,
         isTouchDevice: isTouchDevice,
+        initMap: initMap,
         initTruncate: initTruncate,
         initLocationService: initLocationService,
         initHierarchicalFacet: initHierarchicalFacet,
         initJumpMenus: initJumpMenus,
         initMobileNarrowSearch: initMobileNarrowSearch,
+        initOrganisationPageLinks: initOrganisationPageLinks,
         initSecondaryLoginField: initSecondaryLoginField,
+        initIframeEmbed: initIframeEmbed, 
         init: function() {
             initScrollRecord();
             initJumpMenus();
             initAnchorNavigationLinks();
             initFixFooter();
-            initHideDetails();
             initTruncatedRecordImageNavi();
             initTruncate();
             initContentNavigation();
@@ -681,6 +762,9 @@ finna.layout = (function() {
             initIpadCheck();
             initLoginRedirect();
             initLoadMasonry();
+            initOrganisationInfoWidgets();
+            initOrganisationPageLinks();
+            initIframeEmbed();
         }
     };
 

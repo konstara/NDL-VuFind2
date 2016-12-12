@@ -4,11 +4,15 @@
   $formats = $this->driver->getFormats();
   $format = end($formats);
   $url = $this->recordLink()->getUrl($this->driver);
+
+  // NOTE: use $info['baseUrl'] instead of serverUrl view helper when this template is
+  // rendered by scheduled alerts console action.
+  $url = isset($info['baseUrl']) ? ($info['baseUrl'].$url) : $this->serverUrl($url);
 ?>
 
 <?= $this->translate('Title'); ?>: <?= !empty($title) ? $title : $this->translate('Title not available'); ?>
 <? if (!$this->translationEmpty('Archive Repository')): ?><?= $this->transEsc('Archive Repository')?>:<? endif; ?>
-<?= implode(', ', array_map(function($str) { $this->escapeHtml($this->translate("source_$str", array(), $str)); }, $this->driver->getInstitutions())); ?>
+<?= implode(', ', array_map(function($str) { $this->escapeHtml($this->translate("source_$str", [], $str)); }, $this->driver->getInstitutions())); ?>
 <? if ($origination = $this->driver->getOrigination()): ?>
 <?= PHP_EOL . $this->transEsc('Archive Origination')?>: <?=$this->escapeHtml($origination)?>
 <? endif; ?>
@@ -30,4 +34,4 @@
 <?= PHP_EOL . $this->translate($format) ?>
 <? endif; ?>
 
-<?= $this->translate('View Full Record') . ": {$info['baseUrl']}$url"; ?>
+<?= $this->translate('View Full Record') . ": $url"; ?>
