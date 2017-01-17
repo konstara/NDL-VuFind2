@@ -207,6 +207,8 @@ class SearchController extends \VuFind\Controller\SearchController
         $view = parent::resultsAction();
         $view->browse = false;
         $this->initSavedTabs();
+        $view->fromStreetSearch = $this->getRequest()->getQuery()
+            ->get('streetsearch', false);
         return $view;
     }
 
@@ -218,6 +220,16 @@ class SearchController extends \VuFind\Controller\SearchController
     public function streetSearchAction()
     {
         return $this->createViewModel();
+    }
+
+    /**
+     * StreetSearch action alias.
+     *
+     * @return \Zend\View\Model\ViewModel
+     */
+    public function streetAction()
+    {
+        return $this->forwardTo('Search', 'StreetSearch');
     }
 
     /**
@@ -242,48 +254,50 @@ class SearchController extends \VuFind\Controller\SearchController
         $configLoader = $this->getServiceLocator()->get('VuFind\Config');
         $options = new Options($configLoader);
 
-        try {
-            $config = $config[$type];
-            $query = $this->getRequest()->getQuery();
-            if (!$query->get('limit')) {
-                $query->set('limit', $config['resultLimit'] ?: 100);
-            }
-            if (!$query->get('sort')) {
-                $query->set('sort', $config['sort'] ?: 'title');
-            }
-            if (!$query->get('type')) {
-                $query->set('type', $config['type'] ?: 'Title');
-            }
-            $queryType = $query->get('type');
-
-            $query->set('hiddenFilters', $config['filter']->toArray() ?: []);
-            $query->set(
-                'recommendOverride',
-                ['side' => ["SideFacets:Browse{$type}:CheckboxFacets:facets-browse"]]
-            );
-
-            $view = $this->forwardTo('Search', 'Results');
-
-            $view->overrideTitle = "browse_extended_$type";
-            $type = strtolower($type);
-            $view->browse = $type;
-            $view->defaultBrowseHandler = $config['type'];
-
-            $view->results->getParams()->setBrowseHandler($queryType);
-
-            // Update last search URL
-            $view->results->getParams()->getOptions()
-                ->setBrowseAction("browse-$type");
-            $this->getSearchMemory()->forgetSearch();
-            $this->rememberSearch($view->results);
-
-            $view->results->getParams()->setView('condensed');
-            $view->results->getParams()->getQuery()->setHandler($queryType);
-
-            return $view;
-        } catch (\Exception $e) {
-            $options->rememberLastView($lastView);
+        $config = $config[$type];
+        $query = $this->getRequest()->getQuery();
+        if (!$query->get('limit')) {
+            $query->set('limit', $config['resultLimit'] ?: 100);
         }
+        if (!$query->get('sort')) {
+            $query->set('sort', $config['sort'] ?: 'title');
+        }
+        if (!$query->get('type')) {
+            $query->set('type', $config['type'] ?: 'Title');
+        }
+        $queryType = $query->get('type');
+
+        $query->set('hiddenFilters', $config['filter']->toArray() ?: []);
+        $query->set(
+            'recommendOverride',
+            ['side' => ["SideFacets:Browse{$type}:CheckboxFacets:facets-browse"]]
+        );
+
+        $view = $this->forwardTo('Search', 'Results');
+
+        $view->overrideTitle = "browse_extended_$type";
+        $type = strtolower($type);
+        $view->browse = $type;
+        $view->defaultBrowseHandler = $config['type'];
+
+        $view->results->getParams()->setBrowseHandler($queryType);
+
+        // Get rid of the hidden filters from search and url params so that they
+        // they don't linger around and cause trouble with the mechanism that
+        // adds hidden filters to the searchbox for search tabs.
+        $view->results->getParams()->clearHiddenFilters();
+        $query->set('hiddenFilters', []);
+
+        // Update last search URL
+        $view->results->getParams()->getOptions()
+            ->setBrowseAction("browse-$type");
+        $this->getSearchMemory()->forgetSearch();
+        $this->rememberSearch($view->results);
+
+        $view->results->getParams()->setView('condensed');
+        $view->results->getParams()->getQuery()->setHandler($queryType);
+
+        return $view;
     }
 
     /**

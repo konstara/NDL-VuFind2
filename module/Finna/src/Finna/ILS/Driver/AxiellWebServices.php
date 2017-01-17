@@ -482,14 +482,18 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
     /**
      * Get request groups
      *
-     * @param integer $bibId    BIB ID
-     * @param array   $patronId Patron information returned by the patronLogin
+     * @param integer $bibId       BIB ID
+     * @param array   $patronId    Patron information returned by the patronLogin
      * method.
+     * @param array   $holdDetails Optional array, only passed in when getting a list
+     * in the context of placing a hold; contains most of the same values passed to
+     * placeHold, minus the patron data.  May be used to limit the request group
+     * options or may be ignored.
      *
      * @return array  False if request groups not in use or an array of
      * associative arrays with id and name keys
      */
-    public function getRequestGroups($bibId, $patronId)
+    public function getRequestGroups($bibId, $patronId, $holdDetails = null)
     {
         // Request Groups are not used for reservations
         return false;
@@ -546,7 +550,7 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
             'language'     => 'en',
             'reservationEntities' => $entityId,
             'reservationSource' => $reservationSource,
-            'reservationType' => 'normal',
+            'reservationType' => $this->regionalHold ? 'regional' : 'normal',
             'organisationId' => $organisation,
             'pickUpBranchId' => $branch,
             'validFromDate' => $validFromDate,
@@ -928,13 +932,15 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
                         // Status table
                         $statusArray = [
                            'availableForLoan' => 'Available',
+                           'fetchnoteSent' => 'On Hold',
                            'onLoan' => 'Charged',
                            //'nonAvailableForLoan' => 'Not Available',
                            'nonAvailableForLoan' => 'On Reference Desk',
                            'onRefDesk' => 'On Reference Desk',
                            'overdueLoan' => 'overdueLoan',
                            'ordered' => 'Ordered',
-                           'returnedToday' => 'returnedToday'
+                           'returnedToday' => 'returnedToday',
+                           'inTransfer' => 'In Transit'
                         ];
 
                         // Convert status text
@@ -1920,15 +1926,14 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
     protected function formatDate($dateString)
     {
         // Support also the more complex date format of the old AWS version
-        if (!preg_match('/^\d{4}-\d{2}-\d{2}/', $dateString)) {
+        if (!preg_match('/^(\d{4}-\d{2}-\d{2})/', $dateString, $matches)) {
             return $this->dateFormat->convertToDisplayDate(
                 '* M d G:i:s e Y', $dateString
             );
         }
         // remove timezone from Axiell obscure dateformat
-        $date = substr($dateString, 0, strpos("$dateString*", "+"));
-
-        return $this->dateFormat->convertToDisplayDate("Y-m-d", $date);
+        $date = $matches[1];
+        return $this->dateFormat->convertToDisplayDate('Y-m-d', $date);
     }
 
     /**

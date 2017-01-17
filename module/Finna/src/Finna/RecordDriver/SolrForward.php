@@ -156,45 +156,82 @@ class SolrForward extends \VuFind\RecordDriver\SolrDefault
     /**
      * Return all subject headings
      *
+     * @param bool $extended Whether to return a keyed array with the following
+     * keys:
+     * - heading: the actual subject heading
+     * - type: heading type
+     * - source: source vocabulary
+     *
      * @return array
      */
-    public function getAllSubjectHeadings()
+    public function getAllSubjectHeadings($extended = false)
     {
         $results = [];
         foreach ($this->getRecordXML()->SubjectTerms as $subjectTerms) {
             foreach ($subjectTerms->Term as $term) {
-                $results[] = [$term];
+                if (!$extended) {
+                    $results[] = [$term];
+                } else {
+                    $results[] = [
+                        'heading' => [$term],
+                        'type' => '',
+                        'source' => ''
+                    ];
+                }
             }
         }
         return $results;
     }
 
     /**
-     * Return an associative array of image URLs associated with this record
-     * (key = URL, value = description).
+     * Return an array of image URLs associated with this record with keys:
+     * - url         Image URL
+     * - description Description text
+     * - rights      Rights
+     *   - copyright   Copyright (e.g. 'CC BY 4.0') (optional)
+     *   - description Human readable description (array)
+     *   - link        Link to copyright info
      *
-     * @param string $size Size of requested images
+     * @param string $language Language for copyright information
      *
      * @return array
      */
-    public function getAllThumbnails($size = 'large')
+    public function getAllImages($language = 'fi')
     {
         $images = [];
 
         foreach ($this->getAllRecordsXML() as $xml) {
             foreach ($xml->ProductionEvent as $event) {
                 $attributes = $event->ProductionEventType->attributes();
-                if (!empty($attributes{'elokuva-elonet-materiaali-kuva-url'})) {
-                    $url = (string)$attributes{'elokuva-elonet-materiaali-kuva-url'};
-                    if (!empty($xml->Title->PartDesignation->Value)) {
-                        $attributes = $xml->Title->PartDesignation->Value
-                            ->attributes();
-                        $desc = (string)$attributes{'kuva-kuvateksti'};
-                    } else {
-                        $desc = '';
-                    }
-                    $images[$url] = $desc;
+                if (empty($attributes{'elokuva-elonet-materiaali-kuva-url'})) {
+                    continue;
                 }
+                $url = (string)$attributes{'elokuva-elonet-materiaali-kuva-url'};
+                if (!empty($xml->Title->PartDesignation->Value)) {
+                    $partAttrs = $xml->Title->PartDesignation->Value->attributes();
+                    $desc = (string)$partAttrs{'kuva-kuvateksti'};
+                } else {
+                    $desc = '';
+                }
+                $rights = [];
+                if (!empty($attributes{'finna-kayttooikeus'})) {
+                    $rights['copyright'] = (string)$attributes{'finna-kayttooikeus'};
+                    $link = $this->getRightsLink(
+                        strtoupper($rights['copyright']), $language
+                    );
+                    if ($link) {
+                        $rights['link'] = $link;
+                    }
+                }
+                $images[] = [
+                    'urls' => [
+                        'small' => $url,
+                        'medium' => $url,
+                        'large' => $url
+                    ],
+                    'description' => $desc,
+                    'rights' => $rights
+                ];
             }
         }
         return $images;
@@ -411,25 +448,10 @@ class SolrForward extends \VuFind\RecordDriver\SolrDefault
     }
 
     /**
-     * Return image description.
-     *
-     * @param int $index Image index
-     *
-     * @return string
-     */
-    public function getImageDescription($index = 0)
-    {
-        $images = array_values($this->getAllThumbnails());
-        if (!empty($images[$index])) {
-            return $images[$index];
-        }
-        return '';
-    }
-
-    /**
      * Return image rights.
      *
-     * @param string $language Language
+     * @param string $language       Language
+     * @param bool   $skipImageCheck Whether to check that images exist
      *
      * @return mixed array with keys:
      *   'copyright'   Copyright (e.g. 'CC BY 4.0') (optional)
@@ -437,9 +459,9 @@ class SolrForward extends \VuFind\RecordDriver\SolrDefault
      *   'link'        Link to copyright info
      *   or false if the record contains no images
      */
-    public function getImageRights($language)
+    public function getImageRights($language, $skipImageCheck = false)
     {
-        if (!$this->getAllThumbnails()) {
+        if (!$skipImageCheck && !$this->getAllImages()) {
             return false;
         }
 

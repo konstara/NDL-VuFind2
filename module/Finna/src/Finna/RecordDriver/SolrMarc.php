@@ -4,7 +4,7 @@
  *
  * PHP version 5
  *
- * Copyright (C) The National Library of Finland 2014.
+ * Copyright (C) The National Library of Finland 2014-2017.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -46,6 +46,23 @@ class SolrMarc extends \VuFind\RecordDriver\SolrMarc
      * @var \Zend\Config\Config
      */
     protected $datasourceConfig;
+
+    /**
+     * Fields that may contain subject headings, and their descriptions
+     *
+     * @var array
+     */
+    protected $subjectFields = [
+        '600' => 'personal name',
+        '610' => 'corporate name',
+        '611' => 'meeting name',
+        '630' => 'uniform title',
+        '648' => 'chronological',
+        '650' => 'topic',
+        '651' => 'geographic',
+        '653' => '',
+        '656' => 'occupation'
+    ];
 
     /**
      * Constructor
@@ -141,70 +158,24 @@ class SolrMarc extends \VuFind\RecordDriver\SolrMarc
     }
 
     /**
-     * Get all subject headings associated with this record.  Each heading is
-     * returned as an array of chunks, increasing from least specific to most
-     * specific.
+     * Return an array of image URLs associated with this record with keys:
+     * - urls        Image URLs
+     *   - small     Small image (mandatory)
+     *   - medium    Medium image (mandatory)
+     *   - large     Large image (optional)
+     * - description Description text
+     * - rights      Rights
+     *   - copyright   Copyright (e.g. 'CC BY 4.0') (optional)
+     *   - description Human readable description (array)
+     *   - link        Link to copyright info
+     *
+     * @param string $language Language for copyright information
      *
      * @return array
      */
-    public function getAllSubjectHeadings()
+    public function getAllImages($language = 'fi')
     {
-        // These are the fields that may contain subject headings:
-        $fields = [
-            '600', '610', '611', '630', '648', '650', '651', '653', '656'
-        ];
-
-        // This is all the collected data:
-        $retval = [];
-
-        // Try each MARC field one at a time:
-        foreach ($fields as $field) {
-            // Do we have any results for the current field?  If not, try the next.
-            $results = $this->getMarcRecord()->getFields($field);
-            if (!$results) {
-                continue;
-            }
-
-            // If we got here, we found results -- let's loop through them.
-            foreach ($results as $result) {
-                // Start an array for holding the chunks of the current heading:
-                $current = [];
-
-                // Get all the chunks and collect them together:
-                $subfields = $result->getSubfields();
-                if ($subfields) {
-                    foreach ($subfields as $subfield) {
-                        // Numeric subfields are for control purposes and should not
-                        // be displayed:
-                        if (!is_numeric($subfield->getCode())) {
-                            $current[] = $subfield->getData();
-                        }
-                    }
-                    // If we found at least one chunk, add a heading to our result:
-                    if (!empty($current)) {
-                        $retval[] = $current;
-                    }
-                }
-            }
-        }
-
-        // Send back everything we collected:
-        return $retval;
-    }
-
-    /**
-     * Return an associative array of image URLs associated with this record
-     * (key = URL, value = description).
-     *
-     * @param string $size Size of requested images
-     *
-     * @return array
-     */
-    public function getAllThumbnails($size = 'large')
-    {
-        $urls = [];
-        $url = '';
-        $type = '';
+        $result = [];
         foreach ($this->getMarcRecord()->getFields('856') as $url) {
             $type = $url->getSubfield('q');
             if ($type) {
@@ -213,12 +184,20 @@ class SolrMarc extends \VuFind\RecordDriver\SolrMarc
                     $address = $url->getSubfield('u');
                     if ($address && $this->urlAllowed($address->getData())) {
                         $address = $address->getData();
-                        $urls[$address] = '';
+                        $result[] = [
+                            'urls' => [
+                                'small' => $address,
+                                'medium' => $address,
+                                'large' => $address
+                            ],
+                            'description' => '',
+                            'rights' => []
+                        ];
                     }
                 }
             }
         }
-        return $urls;
+        return $result;
     }
 
     /**
@@ -242,13 +221,16 @@ class SolrMarc extends \VuFind\RecordDriver\SolrMarc
     {
         $result = [];
 
-        foreach (['050', '080', '084'] as $fieldCode) {
+        foreach (['050', '060', '080', '084'] as $fieldCode) {
             $fields = $this->getMarcRecord()->getFields($fieldCode);
             if (is_array($fields)) {
                 foreach ($fields as $field) {
                     switch ($fieldCode) {
                     case '050':
                         $classification = 'dlc';
+                        break;
+                    case '060':
+                        $classification = 'nlm';
                         break;
                     case '080':
                         $classification = 'udk';
@@ -712,7 +694,7 @@ class SolrMarc extends \VuFind\RecordDriver\SolrMarc
             $issn = $link->getSubfield('x');
             if ($isbn) {
                 $isn = $isbn->getData();
-            } else if ($issn) {
+            } elseif ($issn) {
                 $isn = $issn->getData();
             } else {
                 $isn = '';
@@ -805,7 +787,7 @@ class SolrMarc extends \VuFind\RecordDriver\SolrMarc
             $month = intval(substr($dateString, 4, 2));
             $day = intval(substr($dateString, 6, 2));
             return implode('.', [$day, $month, $year]);
-        } else if (strlen($dateString) === 6) {
+        } elseif (strlen($dateString) === 6) {
             $year = intval(substr($dateString, 0, 4));
             $month = intval(substr($dateString, 4, 2));
             return implode('/', [$month, $year]);
@@ -894,7 +876,7 @@ class SolrMarc extends \VuFind\RecordDriver\SolrMarc
     /**
      * Return SFX Object ID
      *
-     * @return string.
+     * @return string
      */
     public function getSfxObjectId()
     {
@@ -1069,7 +1051,7 @@ class SolrMarc extends \VuFind\RecordDriver\SolrMarc
             $titleFields = [];
             if ($issn = $field->getSubfield('x')) {
                 $titleFields[] = $issn->getData();
-            } else if ($isbn = $field->getSubfield('z')) {
+            } elseif ($isbn = $field->getSubfield('z')) {
                 $titleFields[] = $isbn->getData();
             }
             $title = implode(' ', $titleFields);
@@ -1093,7 +1075,7 @@ class SolrMarc extends \VuFind\RecordDriver\SolrMarc
         // If reference found, exit loop and go straight to end
         // If no reference found, check the next link type instead
         foreach ($linkTypes as $linkType) {
-            switch (trim($linkType)){
+            switch (trim($linkType)) {
             case 'oclc':
                 foreach ($linkFields as $current) {
                     if ($oclc = $this->getIdFromLinkingField($current, 'OCoLC')) {
