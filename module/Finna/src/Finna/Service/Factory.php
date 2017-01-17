@@ -120,21 +120,6 @@ class Factory extends \VuFind\Service\Factory
     }
 
     /**
-     * Construct the ILS hold logic.
-     *
-     * @param ServiceManager $sm Service manager.
-     *
-     * @return \Finna\ILS\Logic\Holds
-     */
-    public static function getILSHoldLogic(ServiceManager $sm)
-    {
-        return new \Finna\ILS\Logic\Holds(
-            $sm->get('VuFind\ILSAuthenticator'), $sm->get('VuFind\ILSConnection'),
-            $sm->get('VuFind\HMAC'), $sm->get('VuFind\Config')->get('config')
-        );
-    }
-
-    /**
      * Generic plugin manager factory (support method).
      *
      * @param ServiceManager $sm Service manager.
@@ -196,9 +181,26 @@ class Factory extends \VuFind\Service\Factory
     public static function getOnlinePayment(ServiceManager $sm)
     {
         return new \Finna\OnlinePayment\OnlinePayment(
+            $sm->get('VuFind\Http'),
             $sm->get('VuFind\DbTablePluginManager'),
             $sm->get('VuFind\Logger'),
             $sm->get('VuFind\Config')->get('datasources')
+        );
+    }
+
+    /**
+     * Construct the record loader.
+     *
+     * @param ServiceManager $sm Service manager.
+     *
+     * @return \VuFind\Record\Loader
+     */
+    public static function getRecordLoader(ServiceManager $sm)
+    {
+        return new \Finna\Record\Loader(
+            $sm->get('VuFind\Search'),
+            $sm->get('VuFind\RecordDriverPluginManager'),
+            $sm->get('VuFind\RecordCache')
         );
     }
 
@@ -224,6 +226,45 @@ class Factory extends \VuFind\Service\Factory
     public static function getSearchSpecsReader(ServiceManager $sm)
     {
         return new \Finna\Config\SearchSpecsReader(
+            $sm->get('VuFind\CacheManager')
+        );
+    }
+
+    /**
+     * Construct the SearchTabs helper.
+     *
+     * @param ServiceManager $sm Service manager.
+     *
+     * @return \VuFind\Search\SearchTabsHelper
+     */
+    public static function getSearchTabsHelper(ServiceManager $sm)
+    {
+        $config = $sm->get('VuFind\Config')->get('config');
+        $tabConfig = isset($config->SearchTabs)
+            ? $config->SearchTabs->toArray() : [];
+
+        // Remove MetaLib tab
+        unset($tabConfig['MetaLib']);
+
+        $filterConfig = isset($config->SearchTabsFilters)
+            ? $config->SearchTabsFilters->toArray() : [];
+        return new \VuFind\Search\SearchTabsHelper(
+            $sm->get('VuFind\SearchResultsPluginManager'),
+            $tabConfig, $filterConfig,
+            $sm->get('Application')->getRequest()
+        );
+    }
+
+    /**
+     * Construct the YAML reader.
+     *
+     * @param ServiceManager $sm Service manager.
+     *
+     * @return \VuFind\Config\YamlReader
+     */
+    public static function getYamlReader(ServiceManager $sm)
+    {
+        return new \Finna\Config\YamlReader(
             $sm->get('VuFind\CacheManager')
         );
     }

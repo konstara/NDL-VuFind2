@@ -243,7 +243,7 @@ echo $this->inlineScript(\Zend\View\Helper\HeadScript::SCRIPT, $script, 'SET');
             </form>
           </div>
           <? if ($rangeFacets[$title]['type'] == 'date'): ?>
-            <? $this->headScript()->appendFile('vendor/bootstrap-slider.js'); ?>
+            <? $this->headScript()->appendFile('vendor/bootstrap-slider.min.js'); ?>
             <? $this->headLink()->appendStylesheet('vendor/bootstrap-slider.min.css'); ?>
             <?
               $min = !empty($rangeFacets[$title]['values'][0]) ? min($rangeFacets[$title]['values'][0], 1400) : 1400;
@@ -374,7 +374,7 @@ JS;
         <? endif; ?>
         <? if ($title == 'usage_rights_str_mv'): ?>
           <div class="list-group-item usage-rights-info">
-            <i class="fa fa-info-big"></i><div class="info"><?=$this->translate('usage_rights_info')?></div><a class="more-info" href="<?=$this->url('content-page', ['page' => 'terms_conditions'])?>#terms"><?=$this->translate('usage_rights_info_more')?></a>
+            <i class="fa fa-info-big"></i><div class="info"><?=$this->translate('usage_rights_info')?></div><a class="more-info" href="<?=$this->url('content-page', ['page' => 'terms'])?>#terms"><?=$this->translate('usage_rights_info_more')?></a>
           </div>
         <? endif; ?>
         <? if (in_array($title, $hierarchicalFacets)): ?>

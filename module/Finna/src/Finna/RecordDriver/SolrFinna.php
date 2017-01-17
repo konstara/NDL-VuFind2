@@ -45,16 +45,24 @@ trait SolrFinna
     use FinnaRecord;
 
     /**
-     * Return an associative array of image URLs associated with this record
-     * (key = URL, value = description), if available; false otherwise.
+     * Return an array of image URLs associated with this record with keys:
+     * - urls        Image URLs
+     *   - small     Small image (mandatory)
+     *   - medium    Medium image (mandatory)
+     *   - large     Large image (optional)
+     * - description Description text
+     * - rights      Rights
+     *   - copyright   Copyright (e.g. 'CC BY 4.0') (optional)
+     *   - description Human readable description (array)
+     *   - link        Link to copyright info
      *
-     * @param string $size Size of requested images
+     * @param string $language Language for copyright information
      *
-     * @return mixed
+     * @return array
      */
-    public function getAllThumbnails($size = 'large')
+    public function getAllImages($language = 'fi')
     {
-        return false;
+        return [];
     }
 
     /**
@@ -116,6 +124,24 @@ trait SolrFinna
     public function getBuilding()
     {
         return isset($this->fields['building']) ? $this->fields['building'] : [];
+    }
+
+    /**
+     * Return geographic center point
+     *
+     * @return array lon, lat
+     */
+    public function getGeoCenter()
+    {
+        if (isset($this->fields['center_coords'])) {
+            if (strstr($this->fields['center_coords'], ',') !== false) {
+                list($lat, $lon) = explode(',', $this->fields['center_coords'], 2);
+            } else {
+                list($lon, $lat) = explode(' ', $this->fields['center_coords'], 2);
+            }
+            return ['lon' => $lon, 'lat' => $lat];
+        }
+        return [];
     }
 
     /**
@@ -214,6 +240,22 @@ trait SolrFinna
     public function getIdentifier()
     {
         return [];
+    }
+
+    /**
+     * Return image description.
+     *
+     * @param int $index Image index
+     *
+     * @return string
+     */
+    public function getImageDescription($index = 0)
+    {
+        $images = array_values($this->getAllImages());
+        if (!empty($images[$index])) {
+            return $images[$index]['description'];
+        }
+        return '';
     }
 
     /**
@@ -385,7 +427,7 @@ trait SolrFinna
 
     /**
      * Returns an array of parameter to send to Finna's cover generator.
-     * Fallbacks to VuFind's getThumbnail if no record image with the
+     * Falls back to VuFind's getThumbnail if no record image with the
      * given index was found.
      *
      * @param string $size  Size of thumbnail
@@ -395,20 +437,18 @@ trait SolrFinna
      */
     public function getRecordImage($size = 'small', $index = 0)
     {
-        if ($urls = $this->getAllThumbnails($size)) {
-            $urls = array_keys($urls);
-            if ($index == 0) {
-                $url = $urls[0];
-            } elseif (isset($urls[$index])) {
-                $url = $urls[$index];
-            } else {
-                $url = null;
-            }
-            if (!is_array($url)) {
-                $params = ['id' => $this->getUniqueId(), 'url' => $url];
+        if ($images = $this->getAllImages()) {
+            if (isset($images[$index]['urls'][$size])) {
+                $params = $images[$index]['urls'][$size];
+                if (!is_array($params)) {
+                    $params = [
+                        'url' => $params
+                    ];
+                }
                 if ($size == 'large') {
                     $params['fullres'] = 1;
                 }
+                $params['id'] = $this->getUniqueId();
                 return $params;
             }
         }
@@ -443,6 +483,58 @@ trait SolrFinna
             return $this->mainConfig['ImageRights'][$language][$copyright];
         }
         return false;
+    }
+
+    /**
+     * Returns one of three things: a full URL to a thumbnail preview of the record
+     * if an image is available in an external system; an array of parameters to
+     * send to VuFind's internal cover generator if no fixed URL exists; or false
+     * if no thumbnail can be generated.
+     *
+     * @param string $size Size of thumbnail (small, medium or large -- small is
+     * default).
+     *
+     * @return string|array|bool
+     */
+    public function getThumbnail($size = 'small')
+    {
+        $result = parent::getThumbnail($size);
+
+        if (is_array($result) && !isset($result['isbn'])) {
+            // Allow also invalid ISBNs
+            if ($isbn = $this->getFirstISBN()) {
+                $result['invisbn'] = $isbn;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Return the first ISBN found in the record.
+     *
+     * @return mixed
+     */
+    public function getFirstISBN()
+    {
+        // Get all the ISBNs and initialize the return value:
+        $isbns = $this->getISBNs();
+        $isbn13 = false;
+
+        // Loop through the ISBNs:
+        foreach ($isbns as $isbn) {
+            // Strip off any unwanted notes:
+            if ($pos = strpos($isbn, ' ')) {
+                $isbn = substr($isbn, 0, $pos);
+            }
+
+            $isbn = \VuFindCode\ISBN::normalizeISBN($isbn);
+            $length = strlen($isbn);
+            if ($length == 10 || $length == 13) {
+                return $isbn;
+            }
+        }
+        return $isbn13;
     }
 
     /**
