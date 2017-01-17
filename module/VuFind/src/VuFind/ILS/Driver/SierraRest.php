@@ -364,6 +364,9 @@ class SierraRest extends AbstractBase implements TranslatorAwareInterface,
         // already know the barcode, we can avoid one API call and get the patron
         // information right away (makeRequest renews the access token as necessary
         // which verifies the PIN code).
+
+        // First try as is
+        $username = str_replace(' ', '', $username);
         $result = $this->makeRequest(
             ['v3', 'patrons', 'find'],
             ['barcode' => $username, 'fields' => 'names,emails'],
@@ -372,7 +375,29 @@ class SierraRest extends AbstractBase implements TranslatorAwareInterface,
         );
 
         if (null === $result || !empty($result['code'])) {
-            return null;
+            // Try removing spaces
+            $username = str_replace(' ', '', $username);
+            $result = $this->makeRequest(
+                ['v3', 'patrons', 'find'],
+                ['barcode' => $username, 'fields' => 'names,emails'],
+                'GET',
+                ['cat_username' => $username, 'cat_password' => $password]
+            );
+            if (null === $result || !empty($result['code'])) {
+                // Try adding spaces
+                $username = substr_replace($username, ' ', -4, 0);
+                $username = substr_replace($username, ' ', -10, 0);
+                $username = substr_replace($username, ' ', -15, 0);
+                $result = $this->makeRequest(
+                    ['v3', 'patrons', 'find'],
+                    ['barcode' => $username, 'fields' => 'names,emails'],
+                    'GET',
+                    ['cat_username' => $username, 'cat_password' => $password]
+                );
+                if (null === $result || !empty($result['code'])) {
+                    return null;
+                }
+            }
         }
         $firstname = '';
         $lastname = '';
@@ -674,7 +699,10 @@ class SierraRest extends AbstractBase implements TranslatorAwareInterface,
                 ),
                 'position' => $entry['priority'],
                 'available' => in_array($entry['status']['code'], ['b', 'j', 'i']),
-                'in_transit' => $entry['status']['code'] == 't'
+                'in_transit' => $entry['status']['code'] == 't',
+                'volume' => $volume,
+                'publication_year' => $publicationYear,
+                'title' => $title
             ];
         }
         return $holds;
@@ -763,6 +791,24 @@ class SierraRest extends AbstractBase implements TranslatorAwareInterface,
      */
     public function getPickUpLocations($patron = false, $holdDetails = null)
     {
+        if (!empty($this->config['pickUpLocations'])) {
+            $locations = [];
+            foreach ($this->config['pickUpLocations'] as $id => $location) {
+                $locations[] = [
+                    'locationID' => $id,
+                    'locationDisplay' => $this->translateLocation(
+                        ['code' => $id, 'name' => $location]
+                    )
+                ];
+            }
+            return $locations;
+        }
+
+        return [];
+
+        // This doesn't actually work since branch ID is not the same as the pickup
+        // location code.
+        /*
         $result = $this->makeRequest(
             ['v3', 'branches'],
             ['fields' => 'id,name', 'limit' => 10000],
@@ -811,6 +857,7 @@ class SierraRest extends AbstractBase implements TranslatorAwareInterface,
         }
 
         return $locations;
+        */
     }
 
     /**
@@ -1087,14 +1134,14 @@ class SierraRest extends AbstractBase implements TranslatorAwareInterface,
                 // Fetch bib ID from item
                 $item = $this->makeRequest(
                     ['v3', 'items', $itemId],
-                    ['fields' => 'bibIds', 'deleted' => false],
+                    ['fields' => 'bibIds'],
                     'GET',
                     $patron
                 );
                 if (!empty($item['bibIds'])) {
                     $bibId = $item['bibIds'][0];
                     // Fetch bib information
-                    $bib = $this->makeRequest($bibId, 'title,publishYear', $patron);
+                    $bib = $this->getBibRecord($bibId, 'title,publishYear', $patron);
                     $title = isset($bib['title']) ? $bib['title'] : '';
                 }
             }
@@ -1350,7 +1397,7 @@ class SierraRest extends AbstractBase implements TranslatorAwareInterface,
             $apiUrl = $this->config['Catalog']['host'] . '/authorize'
                 . '?' . http_build_query($params);
 
-            // First request the login form to get the hidden fields
+            // First request the login form to get the hidden fields and cookies
             $client = $this->createHttpClient($apiUrl);
             $response = $client->send();
             $doc = new \DOMDocument();
@@ -1368,6 +1415,13 @@ class SierraRest extends AbstractBase implements TranslatorAwareInterface,
                         = $input->getAttribute('value');
                 }
             }
+
+            $postUrl = $client->getUri();
+            $cookies = $client->getCookies();
+
+            // Reset client
+            $client = $this->createHttpClient($postUrl);
+            $client->addCookie($cookies);
 
             // Allow two redirects so that we get back from CAS token verification
             // to the authorize API address.
@@ -1525,18 +1579,14 @@ class SierraRest extends AbstractBase implements TranslatorAwareInterface,
 
         $statuses = [];
         foreach ($result['entries'] as $i => $item) {
-            $location = $this->translate(
-                'location_' . $item['location']['code'],
-                null,
-                $item['location']['name']
-            );
+            $location = $this->translateLocation($item['location']);
             $available = in_array($item['status']['code'], $availableStatuses)
                 && !isset($item['status']['duedate']);
             list($status, $duedate, $notes) = $this->getItemStatus($item);
             // OPAC message
             foreach ($item['fixedFields'] as $field) {
                 if ($field['label'] == 'OPACMSG' && $field['value'] != '-') {
-                    $notes[] = $field['value'];
+                    $notes[] = $this->translateOpacMessage($field['value']);
                     break;
                 }
             }
@@ -1572,6 +1622,42 @@ class SierraRest extends AbstractBase implements TranslatorAwareInterface,
 
         usort($statuses, [$this, 'statusSortFunction']);
         return $statuses;
+    }
+
+    /**
+     * Translate location name
+     *
+     * @param array $location Location
+     *
+     * @return string
+     */
+    protected function translateLocation($location)
+    {
+        $prefix = 'location_';
+        if (!empty($this->config['Catalog']['id'])) {
+            $prefix .= $this->config['Catalog']['id'] . '_';
+        }
+        return $this->translate(
+            $prefix . $location['code'],
+            null,
+            $location['name']
+        );
+    }
+
+    /**
+     * Translate OPAC message
+     *
+     * @param string $code OPAC message code
+     *
+     * @return string
+     */
+    protected function translateOpacMessage($code)
+    {
+        $prefix = 'opacmsg_';
+        if (!empty($this->config['Catalog']['id'])) {
+            $prefix .= $this->config['Catalog']['id'] . '_';
+        }
+        return $this->translate("opacmsg_$code", null, $code);
     }
 
     /**
