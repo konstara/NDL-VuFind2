@@ -4,7 +4,7 @@
  *
  * PHP version 5
  *
- * Copyright (C) The National Library of Finland 2016
+ * Copyright (C) The National Library of Finland 2016-2017.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -1137,7 +1137,7 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
     protected function getItemStatusesForBiblio($id, $full)
     {
         $result = $this->makeRequest(
-            ['v1', 'availability', 'items'],
+            ['v1', 'availability', 'biblio', 'search'],
             ['biblionumber' => $id],
             'GET'
         );
@@ -1146,13 +1146,13 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
         }
 
         $statuses = [];
-        foreach ($result as $i => $item) {
+        foreach ($result['item_availabilities'] as $i => $item) {
             $location = $this->translate(
                 'location_' . $item['holdingbranch'],
                 null,
                 $item['holdingbranch']
             );
-            $available = $item['checkout']['available'];
+            $available = $item['availability']['available'];
             $statusCodes = $this->getItemStatusCodes($item);
             $status = $this->pickStatus($statusCodes);
             if (null !== $item['checkout']['expected_available']) {
