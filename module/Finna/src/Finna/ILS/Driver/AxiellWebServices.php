@@ -74,6 +74,20 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
     protected $defaultPickUpLocation;
 
     /**
+     * Default request group
+     *
+     * @var bool|string
+     */
+    protected $defaultRequestGroup;
+
+    /**
+     * Whether request groups are enabled
+     *
+     * @var bool
+     */
+    protected $requestGroupsEnabled;
+
+    /**
      * Regional hold
      *
      * @var Boolean
@@ -88,35 +102,35 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
     protected $arenaMember = '';
 
     /**
-     * Wsdl-file for accessing the catalgue section of AWS
+     * Wsdl file name or url for accessing the catalogue section of AWS
      *
      * @var string
      */
     protected $catalogue_wsdl = '';
 
     /**
-     * Wsdl-file for accessing the patron section of AWS
+     * Wsdl file name or url for accessing the patron section of AWS
      *
      * @var string
      */
     protected $patron_wsdl = '';
 
     /**
-     * Wsdl-file for accessing the loans section of AWS
+     * Wsdl file name or url for accessing the loans section of AWS
      *
      * @var string
      */
     protected $loans_wsdl = '';
 
     /**
-     * Wsdl-file for accessing the payment section of AWS
+     * Wsdl file name or url for accessing the payment section of AWS
      *
      * @var string
      */
     protected $payments_wsdl = '';
 
     /**
-     * Wsdl-file for accessing the reservation section of AWS
+     * Wsdl file name or url for accessing the reservation section of AWS
      *
      * @var string
      */
@@ -313,8 +327,22 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
             $this->defaultPickUpLocation = false;
         }
 
+        $this->defaultRequestGroup
+            = isset($this->config['Holds']['defaultRequestGroup'])
+            ? $this->config['Holds']['defaultRequestGroup'] : false;
+        if ($this->defaultRequestGroup === 'user-selected') {
+            $this->defaultRequestGroup = false;
+        }
+
         $this->regionalHold = isset($this->config['Holds']['regionalHold'])
           ? $this->config['Holds']['regionalHold'] : false;
+
+        $this->requestGroupsEnabled
+            = isset($this->config['Holds']['extraHoldFields'])
+        && in_array(
+            'requestGroup',
+            explode(':', $this->config['Holds']['extraHoldFields'])
+        );
 
         if (isset($this->config['Debug']['durationLogPrefix'])) {
             $this->durationLogPrefix = $this->config['Debug']['durationLogPrefix'];
@@ -375,6 +403,8 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
         $id = !empty($holdDetails['item_id'])
             ? $holdDetails['item_id'] : $holdDetails['id'];
 
+        $holdType = $this->getHoldType($holdDetails);
+
         $function = 'getReservationBranches';
         $functionResult = 'getReservationBranchesResult';
         $conf = [
@@ -384,7 +414,7 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
             'language' => $this->getLanguage(),
             'country' => 'FI',
             'reservationEntities' => $id,
-            'reservationType' => $this->regionalHold ? 'regional' : 'normal'
+            'reservationType' => $holdType
         ];
 
         $result = $this->doSOAPRequest(
@@ -475,24 +505,39 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
      */
     public function getDefaultRequestGroup($patron = false, $holdDetails = null)
     {
-        $requestGroups = $this->getRequestGroups(0, 0);
-        return $requestGroups[0]['id'];
+        return $this->defaultRequestGroup;
     }
 
     /**
      * Get request groups
      *
-     * @param integer $bibId    BIB ID
-     * @param array   $patronId Patron information returned by the patronLogin
+     * @param integer $bibId       BIB ID
+     * @param array   $patronId    Patron information returned by the patronLogin
      * method.
+     * @param array   $holdDetails Optional array, only passed in when getting a list
+     * in the context of placing a hold; contains most of the same values passed to
+     * placeHold, minus the patron data.  May be used to limit the request group
+     * options or may be ignored.
      *
      * @return array  False if request groups not in use or an array of
      * associative arrays with id and name keys
      */
-    public function getRequestGroups($bibId, $patronId)
+    public function getRequestGroups($bibId, $patronId, $holdDetails = null)
     {
-        // Request Groups are not used for reservations
-        return false;
+        if (!$this->requestGroupsEnabled) {
+            return false;
+        }
+        $requestGroups = [
+            [
+                'id'   => 'normal',
+                'name' => 'axiell_normal'
+            ],
+            [
+                'id'   => 'regional',
+                'name' => 'axiell_regional'
+            ]
+        ];
+        return $requestGroups;
     }
 
     /**
@@ -539,6 +584,8 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
         $functionResult = 'addReservationResult';
         $functionParam = 'addReservationParam';
 
+        $holdType = $this->getHoldType($holdDetails);
+
         $conf = [
             'arenaMember'  => $this->arenaMember,
             'user'         => $username,
@@ -546,7 +593,7 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
             'language'     => 'en',
             'reservationEntities' => $entityId,
             'reservationSource' => $reservationSource,
-            'reservationType' => 'normal',
+            'reservationType' => $holdType,
             'organisationId' => $organisation,
             'pickUpBranchId' => $branch,
             'validFromDate' => $validFromDate,
@@ -875,10 +922,7 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
                     foreach ($departments as $department) {
                         // Get holding data
                         $dueDate = isset($department->firstLoanDueDate)
-                            ? $this->dateFormat->convertToDisplayDate(
-                                '* M d G:i:s e Y',
-                                $department->firstLoanDueDate
-                            ) : '';
+                            ? $this->formatDate($department->firstLoanDueDate) : '';
                         $departmentName = $department->department;
                         $locationName = isset($department->location)
                             ? $department->location : '';
@@ -931,13 +975,15 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
                         // Status table
                         $statusArray = [
                            'availableForLoan' => 'Available',
+                           'fetchnoteSent' => 'On Hold',
                            'onLoan' => 'Charged',
                            //'nonAvailableForLoan' => 'Not Available',
                            'nonAvailableForLoan' => 'On Reference Desk',
                            'onRefDesk' => 'On Reference Desk',
                            'overdueLoan' => 'overdueLoan',
                            'ordered' => 'Ordered',
-                           'returnedToday' => 'returnedToday'
+                           'returnedToday' => 'returnedToday',
+                           'inTransfer' => 'In Transit'
                         ];
 
                         // Convert status text
@@ -1922,10 +1968,15 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
      */
     protected function formatDate($dateString)
     {
+        // Support also the more complex date format of the old AWS version
+        if (!preg_match('/^(\d{4}-\d{2}-\d{2})/', $dateString, $matches)) {
+            return $this->dateFormat->convertToDisplayDate(
+                '* M d G:i:s e Y', $dateString
+            );
+        }
         // remove timezone from Axiell obscure dateformat
-        $date = substr($dateString, 0, strpos("$dateString*", "+"));
-
-        return $this->dateFormat->convertToDisplayDate("Y-m-d", $date);
+        $date = $matches[1];
+        return $this->dateFormat->convertToDisplayDate('Y-m-d', $date);
     }
 
     /**
@@ -2128,6 +2179,24 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
     }
 
     /**
+     * Function for determining the type of Hold
+     *
+     * @param array $holdDetails Hold details
+     *
+     * @return string
+     */
+    protected function getHoldType($holdDetails)
+    {
+        if ($this->requestGroupsEnabled && !empty($holdDetails['requestGroupId'])
+        ) {
+            $holdType = $holdDetails['requestGroupId'];
+        } else {
+            $holdType = $this->regionalHold ? 'regional' : 'normal';
+        }
+        return $holdType;
+    }
+
+    /**
      * Sort function for sorting pickup locations
      *
      * @param array $a Pickup location
@@ -2241,6 +2310,10 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
      */
     protected function getWsdlPath($wsdl)
     {
+        if (preg_match('/^https?:/', $wsdl)) {
+            // Don't mangle a URL
+            return $wsdl;
+        }
         $file = Locator::getConfigPath($wsdl);
         if (!file_exists($file)) {
             $file = Locator::getConfigPath($wsdl, 'config/finna');

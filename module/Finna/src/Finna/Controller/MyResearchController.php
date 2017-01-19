@@ -189,6 +189,49 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
     }
 
     /**
+     * Login Action
+     *
+     * @return mixed
+     */
+    public function loginAction()
+    {
+        $config = $this->getConfig();
+
+        if (empty($config->TermsOfService->enabled)
+            || !isset($config->TermsOfService->version)
+        ) {
+            return parent::loginAction();
+        }
+
+        $cookieName = 'finnaTermsOfService';
+
+        $cookieManager = $this->serviceLocator->get('VuFind\CookieManager');
+        $cookie = $cookieManager->get($cookieName);
+        if ($cookie && $cookie === $config->TermsOfService->version) {
+            return parent::loginAction();
+        }
+
+        $fromTermsPage = false;
+        if ($this->formWasSubmitted('submit', false)
+            && $this->params()->fromPost('acceptTerms', false) === '1'
+        ) {
+            $expire = time() + 5 * 365 * 60 * 60 * 24; // 5 years
+            $cookieManager->set(
+                $cookieName, $config->TermsOfService->version, $expire
+            );
+            $this->getRequest()->getPost()->offsetUnset('submit');
+            $fromTermsPage = true;
+            $view = parent::loginAction();
+            $view->fromTermsPage = $fromTermsPage;
+            return $view;
+        }
+        $view = $this->createViewModel();
+        $view->setTemplate('myresearch/terms.phtml');
+
+        return $view;
+    }
+
+    /**
      * Send user's saved favorites from a particular list to the view
      *
      * @return mixed
@@ -213,7 +256,7 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
             return $view;
         }
 
-        $view->sortList = $this->createSortList();
+        $view->sortList = $this->createSortList($results->getListObject());
 
         return $view;
     }
@@ -358,7 +401,7 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
             = isset($config->Site->hideProfileEmailAddress)
             && $config->Site->hideProfileEmailAddress;
 
-        if ($patron = $this->catalogLogin()) {
+        if (is_array($patron = $this->catalogLogin())) {
             $view->blocks = $this->getILS()->getAccountBlocks($patron);
         }
 
@@ -785,22 +828,16 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
     }
 
     /**
-     * Create sort list for public list page.
+     * Create sort list.
      * If no sort option selected, set first one from the list to default.
      *
      * @param list $list List object
      *
      * @return array
      */
-    protected function createSortList($list = null)
+    protected function createSortList($list)
     {
-        $view = parent::mylistAction();
-        $user = $this->getUser();
         $table = $this->getTable('UserResource');
-
-        if (empty($list) && $results = $view->results) {
-            $list = $results->getListObject();
-        }
 
         $sortOptions = self::getFavoritesSortList();
         $sort = isset($_GET['sort']) ? $_GET['sort'] : false;
@@ -810,12 +847,7 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
         }
         $sortList = [];
 
-        if (empty($list)
-            || ((! $list->public
-            && $table->getCustomFavoriteOrder($list->id, $user->id) === false)
-            || ($list->public
-            && $table->getCustomFavoriteOrder($list->id) === false))
-        ) {
+        if (empty($list) || !$table->isCustomOrderAvailable($list->id)) {
             array_shift($sortOptions);
             if ($sort == 'custom_order') {
                 $sort = 'id desc';
@@ -910,10 +942,10 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
     /**
      * Change phone number and email from library info.
      *
-     * @param type $profile patron data
-     * @param type $values  form values
+     * @param array  $profile patron data
+     * @param object $values  form values
      *
-     * @return type
+     * @return bool
      */
     protected function processLibraryDataUpdate($profile, $values)
     {
@@ -921,6 +953,7 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
         $catalog = $this->getILS();
 
         $validator = new \Zend\Validator\EmailAddress();
+        $result = true;
         if ($validator->isValid($values->profile_email)) {
             //Update Email
             $result = $catalog->updateEmail($profile, $values->profile_email);

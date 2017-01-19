@@ -47,17 +47,13 @@ class Results extends \VuFind\Search\Favorites\Results
     protected function performSearch()
     {
         $authManager = $this->serviceLocator->get('VuFind\AuthManager');
-        $user = $authManager->isLoggedIn();
         $table = $this->getTable('UserResource');
         $list = $this->getListObject();
         $sort = $this->getParams()->getSort();
 
         if ($sort == 'custom_order'
             && (empty($list)
-            || ((! $list->public
-            && $table->getCustomFavoriteOrder($list->id, $user->id) === false))
-            || ($list->public
-            && $table->getCustomFavoriteOrder($list->id) === false))
+            || !$table->isCustomOrderAvailable($list->id))
         ) {
             $sort = 'id desc';
         }
@@ -70,7 +66,7 @@ class Results extends \VuFind\Search\Favorites\Results
         }
 
         $this->getParams()->setSort($sort);
-        
+
         parent::performSearch();
 
         // Other sort options are handled in the database, but format is language-

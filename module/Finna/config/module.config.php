@@ -45,19 +45,6 @@ $config = [
                     ]
                 ]
             ],
-            'content-page' => [
-                'type'    => 'Zend\Mvc\Router\Http\Segment',
-                'options' => [
-                    'route'    => '/Content/[:page]',
-                    'constraints' => [
-                        'page'     => '[a-zA-Z][a-zA-Z0-9_-]*',
-                    ],
-                    'defaults' => [
-                        'controller' => 'Contentpage',
-                        'action'     => 'Content',
-                    ]
-                ],
-            ],
             'feed-content-page' => [
                 'type'    => 'Zend\Mvc\Router\Http\Segment',
                 'options' => [
@@ -146,12 +133,10 @@ $config = [
             'record' => 'Finna\Controller\Factory::getRecordController',
         ],
         'invokables' => [
-            'adminapi' => 'Finna\Controller\AdminApiController',
             'ajax' => 'Finna\Controller\AjaxController',
-            'searchapi' => 'Finna\Controller\SearchApiController',
             'combined' => 'Finna\Controller\CombinedController',
             'comments' => 'Finna\Controller\CommentsController',
-            'contentpage' => 'Finna\Controller\ContentController',
+            'content' => 'Finna\Controller\ContentController',
             'cover' => 'Finna\Controller\CoverController',
             'error' => 'Finna\Controller\ErrorController',
             'externalauth' => 'Finna\Controller\ExternalAuthController',
@@ -170,6 +155,11 @@ $config = [
             'listpage' => 'Finna\Controller\ListController',
         ],
     ],
+    'controller_plugins' => [
+        'factories' => [
+            'recaptcha' => 'Finna\Controller\Plugin\Factory::getRecaptcha',
+        ],
+    ],
     'service_manager' => [
         'allow_override' => true,
         'factories' => [
@@ -185,8 +175,11 @@ $config = [
             'VuFind\ILSHoldLogic' => 'Finna\Service\Factory::getILSHoldLogic',
             'VuFind\DbTablePluginManager' => 'Finna\Service\Factory::getDbTablePluginManager',
             'VuFind\AuthManager' => 'Finna\Auth\Factory::getManager',
+            'VuFind\RecordLoader' => 'Finna\Service\Factory::getRecordLoader',
             'VuFind\SearchResultsPluginManager' => 'Finna\Service\Factory::getSearchResultsPluginManager',
             'VuFind\SearchSpecsReader' => 'Finna\Service\Factory::getSearchSpecsReader',
+            'VuFind\SearchTabsHelper' => 'Finna\Service\Factory::getSearchTabsHelper',
+            'VuFind\YamlReader' => 'Finna\Service\Factory::getYamlReader',
         ],
         'invokables' => [
             'VuFind\HierarchicalFacetHelper' => 'Finna\Search\Solr\HierarchicalFacetHelper',
@@ -206,9 +199,6 @@ $config = [
                     'multiils' => 'Finna\Auth\Factory::getMultiILS',
                     'shibboleth' => 'Finna\Auth\Factory::getShibboleth'
                 ],
-                'invokables' => [
-                    'mozillapersona' => 'Finna\Auth\MozillaPersona'
-                ],
             ],
             'autocomplete' => [
                 'factories' => [
@@ -227,7 +217,6 @@ $config = [
                     'comments-record' => 'Finna\Db\Table\CommentsRecord',
                     'due-date-reminder' => 'Finna\Db\Table\DueDateReminder',
                     'fee' => 'Finna\Db\Table\Fee',
-                    'metalibSearch' => 'Finna\Db\Table\MetaLibSearch',
                     'search' => 'Finna\Db\Table\Search',
                     'session' => 'Finna\Db\Table\Session',
                     'transaction' => 'Finna\Db\Table\Transaction',
@@ -257,7 +246,6 @@ $config = [
             ],
             'search_backend' => [
                 'factories' => [
-                    'MetaLib' => 'Finna\Search\Factory\MetaLibBackendFactory',
                     'Primo' => 'Finna\Search\Factory\PrimoBackendFactory',
                     'Solr' => 'Finna\Search\Factory\SolrDefaultBackendFactory',
                 ],
@@ -277,7 +265,6 @@ $config = [
                 'factories' => [
                     'combined' => 'Finna\Search\Results\Factory::getCombined',
                     'favorites' => 'Finna\Search\Results\Factory::getFavorites',
-                    'metalib' => 'Finna\Search\Results\Factory::getMetaLib',
                     'solr' => 'Finna\Search\Results\Factory::getSolr',
                     'primo' => 'Finna\Search\Results\Factory::getPrimo',
                 ]
@@ -290,7 +277,6 @@ $config = [
             ],
             'recorddriver' => [
                 'factories' => [
-                    'metalib' => 'Finna\RecordDriver\Factory::getMetaLib',
                     'solrdefault' => 'Finna\RecordDriver\Factory::getSolrDefault',
                     'solrmarc' => 'Finna\RecordDriver\Factory::getSolrMarc',
                     'solread' => 'Finna\RecordDriver\Factory::getSolrEad',
@@ -316,12 +302,6 @@ $config = [
             ],
         ],
         'recorddriver_tabs' => [
-            'Finna\RecordDriver\MetaLib' => [
-                'tabs' => [
-                    'Details' => 'StaffViewArray'
-                ],
-                'defaultTab' => null,
-            ],
             'Finna\RecordDriver\SolrDefault' => [
                 'tabs' => [
                     'Holdings' => 'HoldingsILS',
@@ -422,7 +402,8 @@ $staticRoutes = [
     'MetaLib/Home', 'MetaLib/Search', 'MetaLib/Advanced',
     'MyResearch/SaveCustomOrder',
     'OrganisationInfo/Home',
-    'PCI/Home', 'PCI/Search', 'PCI/Record'
+    'PCI/Home', 'PCI/Search', 'PCI/Record',
+    'Search/StreetSearch'
 ];
 
 $routeGenerator = new \VuFind\Route\RouteGenerator();
@@ -431,7 +412,7 @@ $routeGenerator->addDynamicRoutes($config, $dynamicRoutes);
 $routeGenerator->addStaticRoutes($config, $staticRoutes);
 
 // API routes
-$config['router']['routes']['searchApi'] = [
+/*$config['router']['routes']['searchApi'] = [
     'type' => 'Zend\Mvc\Router\Http\Literal',
     'verb' => 'get,post,options',
     'options' => [
@@ -472,6 +453,6 @@ $config['router']['routes']['searchApiRecordv1'] = [
             'action'     => 'record',
         ]
     ]
-];
+];*/
 
 return $config;

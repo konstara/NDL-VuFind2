@@ -112,7 +112,7 @@ class Bootstrapper
             $routeMatch = $event->getRouteMatch();
             $controller = $routeMatch->getParam('controller');
             $action = $routeMatch->getParam('action');
-            if ($controller == 'AJAX'
+            if (($controller == 'AJAX' && $action != 'SystemStatus')
                 || ($controller == 'Record' && $action == 'AjaxTab')
             ) {
                 $response = $event->getResponse();
@@ -200,6 +200,9 @@ class Bootstrapper
             if (($language = $request->getPost()->get('mylang', false))
                 || ($language = $request->getQuery()->get('lng', false))
             ) {
+                $translator = $sm->get('VuFind\Translator');
+                $language = $translator->getLocale();
+
                 // Update finna_language of logged-in user
                 if (($user = $sm->get('VuFind\AuthManager')->isLoggedIn())
                     && $user->finna_language != $language
