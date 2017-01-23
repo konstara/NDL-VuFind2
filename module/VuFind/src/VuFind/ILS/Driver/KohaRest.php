@@ -32,7 +32,7 @@ use VuFind\Exception\ILS as ILSException;
 /**
  * VuFind Driver for Koha, using REST API
  *
- * Minimum Koha Version: master as of 3 Nov 2016
+ * Minimum Koha Version: work in progress as of 23 Jan 2017
  *
  * @category VuFind
  * @package  ILS_Drivers
@@ -426,6 +426,18 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
                     $transaction['title'] = $bib['title'];
                 }
             }
+
+            $dueStatus = false;
+            $now = time();
+            $dueTimeStamp = strtotime($entry['date_due']);
+            if (is_numeric($dueTimeStamp)) {
+                if ($now > $dueTimeStamp) {
+                    $dueStatus = 'overdue';
+                } else if ($now > $dueTimeStamp - (1 * 24 * 60 * 60)) {
+                    $dueStatus = 'due';
+                }
+            }
+
             $transaction = [
                 'id' => isset($item['biblionumber']) ? $item['biblionumber'] : '',
                 'checkout_id' => $entry['issue_id'],
@@ -433,6 +445,7 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
                 'duedate' => $this->dateConverter->convertToDisplayDate(
                     'Y-m-d H:i:s', $entry['date_due']
                 ),
+                'dueStatus' => $dueStatus,
                 'renew' => $entry['renewals'],
                 'renewable' => $renewStatusCode != 403
             ];
@@ -722,11 +735,21 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
         }
         $level = isset($data['level']) ? $data['level'] : 'copy';
         if ('title' == $data['level']) {
-            //$bib = $this->getBibRecord($id);
-            // TODO: How to check?
-
+            $result = $this->makeRequest(
+                ['v1', 'availability', 'biblio', 'hold'],
+                ['biblionumber' => $id, 'borrowernumber' => $patron['id']],
+                'GET',
+                $patron
+            );
+            return !empty($result[0]['availability']['available']);
         }
-        return true;
+        $result = $this->makeRequest(
+            ['v1', 'availability', 'item', 'hold'],
+            ['itemnumber' => $data['item_id'], 'borrowernumber' => $patron['id']],
+            'GET',
+            $patron
+        );
+        return !empty($result[0]['availability']['available']);
     }
 
     /**
@@ -839,7 +862,9 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
         }
         $fines = [];
         foreach ($result as $entry) {
-            if ($entry['accounttype'] == 'Pay') {
+            if ($entry['accounttype'] == 'Pay'
+                || $entry['amountoutstanding'] == 0
+            ) {
                 continue;
             }
             $bibId = null;
@@ -1052,7 +1077,7 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
 
         $this->debug(
             '[' . round(microtime(true) - $startTime, 4) . 's]'
-            . " GET request $apiUrl" . PHP_EOL . 'response: ' . PHP_EOL
+            . " $method request $apiUrl" . PHP_EOL . 'response: ' . PHP_EOL
             . $result
         );
 
@@ -1141,24 +1166,25 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
             ['biblionumber' => $id],
             'GET'
         );
-        if (empty($result)) {
+        if (empty($result[0])) {
             return [];
         }
 
         $statuses = [];
-        foreach ($result['item_availabilities'] as $i => $item) {
+        foreach ($result[0]['item_availabilities'] as $i => $item) {
             $location = $this->translate(
                 'location_' . $item['holdingbranch'],
                 null,
                 $item['holdingbranch']
             );
-            $available = $item['availability']['available'];
+            $avail = $item['availability'];
+            $available = $avail['available'];
             $statusCodes = $this->getItemStatusCodes($item);
             $status = $this->pickStatus($statusCodes);
-            if (null !== $item['checkout']['expected_available']) {
+            if (isset($avail['unavailabilities']['Item::CheckedOut']['date_due'])) {
                 $duedate = $this->dateConverter->convertToDisplayDate(
                     'Y-m-d H:i:s',
-                    $item['checkout']['expected_available']
+                    $avail['unavailabilities']['Item::CheckedOut']['date_due']
                 );
             } else {
                 $duedate = null;
@@ -1176,11 +1202,11 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
                 'duedate' => $duedate,
                 'number' => $item['enumchron'],
                 'barcode' => $item['barcode'],
-                'notes' => $item['itemnotes'],
+                'item_notes' => [$item['itemnotes']],
                 'sort' => $i
             ];
 
-            if ($item['hold']['available'] && $this->itemHoldAllowed($item)) {
+            if ($this->itemHoldAllowed($item)) {
                 $entry['is_holdable'] = true;
                 $entry['level'] = 'copy';
                 $entry['addLink'] = true;
@@ -1205,40 +1231,64 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
     protected function getItemStatusCodes($item)
     {
         $statuses = [];
-        if ($item['checkout']['available']) {
+        if ($item['availability']['available']) {
             $statuses[] = 'On Shelf';
-        } elseif ($item['local_use']['available']
-            || $item['onsite_checkout']['available']
-        ) {
-            $statuses[] = 'On Reference Desk';
-        } else {
-            foreach (['local_use', 'checkout'] as $type) {
-                foreach ($item[$type]['description'] as $description) {
-                    switch ($description) {
-                    case 'onloan':
+        } elseif (isset($item['availability']['unavailabilities'])) {
+            foreach ($item['availability']['unavailabilities'] as $key => $reason) {
+                if (strncmp($key, 'Item::', 6) == 0) {
+                    $status = substr($key, 6);
+                    switch ($status) {
+                    case 'CheckedOut':
                         $overdue = false;
-                        if (isset($item[$type]['expected_available'])) {
+                        if (!empty($reason['date_due'])) {
                             $duedate = $this->dateConverter->convert(
                                 'Y-m-d H:i:s',
                                 'U',
-                                $item[$type]['expected_available']
+                                $reason['date_due']
                             );
                             $overdue = $duedate < time();
                         }
                         $statuses[] = $overdue ? 'Overdue' : 'Charged';
                         break;
-                    case 'reserved':
+                    case 'Lost':
+                        $statuses[] = 'Lost--Library Applied';
+                        break;
+                    case 'NotForLoan':
+                    case 'NotForLoanForcing':
+                        if (isset($reason['code'])) {
+                            switch ($reason['code']) {
+                            case 'Not For Loan':
+                                $statuses[] = 'On Reference Desk';
+                                break;
+                            default:
+                                $statuses[] = $reason['code'];
+                                break;
+                            }
+                        } else {
+                            $statuses[] = 'On Reference Desk';
+                        }
+                    }
+                } elseif (strncmp($key, 'Hold::', 6) == 0) {
+                    $status = substr($key, 6);
+                    switch ($status) {
+                    case 'Held':
                         $statuses[] = 'On Hold';
                         break;
-                    default:
-                        $this->debug(
-                            "Unhandled item status in $type: '$description'"
-                        );
+                    case 'Waiting':
+                        $statuses[] = 'On Holdshelf';
                         break;
                     }
                 }
             }
+            if (empty($statuses)) {
+                $statuses[] = 'Not Available';
+            }
+        } else {
+            $this->error(
+                "Unable to determine status for item: " . print_r($item, true)
+            );
         }
+
         if (empty($statuses)) {
             $statuses[] = 'No information available';
         }
@@ -1271,7 +1321,16 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
      */
     protected function itemHoldAllowed($item)
     {
-        return true;
+        $unavail = isset($item['availability']['unavailabilities'])
+            ? $item['availability']['unavailabilities'] : [];
+        if (!isset($unavail['Item::NotForLoan'])
+            && !isset($unavail['Item::Withdrawn'])
+            && !isset($unavail['Item::Lost'])
+            && !isset($unavail['Hold::NotHoldable'])
+        ) {
+            return true;
+        }
+        return false;
     }
 
     /**
