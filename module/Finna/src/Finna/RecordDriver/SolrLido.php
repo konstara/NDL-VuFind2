@@ -169,38 +169,9 @@ class SolrLido extends \VuFind\RecordDriver\SolrDefault
             if (empty($resourceSet->resourceRepresentation->linkResource)) {
                 continue;
             }
-            $urls = [];
-            foreach ($resourceSet->resourceRepresentation as $representation) {
-                $attributes = $representation->attributes();
-                $size = '';
-                switch ($attributes->type)
-                {
-                case 'thumb':
-                    $size = 'small';
-                    break;
-                case 'large':
-                case 'zoomview':
-                    $size = 'large';
-                    break;
-                }
 
-                $url = (string)$representation->linkResource;
-                if (!$size) {
-                    $urls['small'] = $urls['medium'] = $urls['large'] = $url;
-                } else {
-                    $urls[$size] = $url;
-                }
-            }
-
-            if (!isset($urls['small'])) {
-                $urls['small'] = isset($urls['medium']) ? $urls['medium']
-                    : $urls['large'];
-            }
-            if (!isset($urls['medium'])) {
-                $urls['medium'] = isset($urls['small']) ? $urls['small']
-                    : $urls['large'];
-            }
-
+            // Process rights first since we may need to duplicate them if there
+            // are multiple images in the set (non-standard)
             $rights = [];
             if (!empty($resourceSet->rightsResource->rightsType->conceptID)) {
                 $conceptID = $resourceSet->rightsResource->rightsType
@@ -217,9 +188,60 @@ class SolrLido extends \VuFind\RecordDriver\SolrDefault
                 }
             }
             if (!empty($resourceSet->rightsResource->rightsType->term)) {
-                $rights['description'][]
-                    = (string)$resourceSet->rightsResource->rightsType->term;
+                $term = (string)$resourceSet->rightsResource->rightsType->term;
+                if (!isset($rights['copyright']) || $rights['copyright'] !== $term) {
+                    $rights['description'][] = $term;
+                }
             }
+
+            if (empty($rights)) {
+                $rights = $defaultRights;
+            }
+
+            $urls = [];
+            foreach ($resourceSet->resourceRepresentation as $representation) {
+                $attributes = $representation->attributes();
+                $size = '';
+                switch ($attributes->type)
+                {
+                case 'image_thumb':
+                case 'thumb':
+                    $size = 'small';
+                    break;
+                case 'image_master':
+                case 'large':
+                case 'zoomview':
+                    $size = 'large';
+                    break;
+                }
+
+                $url = (string)$representation->linkResource;
+                if (!$size) {
+                    if ($urls) {
+                        // We already have URL's, store them in the results first.
+                        // This shouldn't happen unless there are multiple images
+                        // without type in the same set.
+                        $result[] = [
+                            'urls' => $urls,
+                            'description' => '',
+                            'rights' => $rights
+                        ];
+                    }
+                    $urls['small'] = $urls['medium'] = $urls['large'] = $url;
+                } else {
+                    $urls[$size] = $url;
+                }
+            }
+
+            if (!isset($urls['small'])) {
+                $urls['small'] = isset($urls['medium']) ? $urls['medium']
+                    : $urls['large'];
+            }
+            if (!isset($urls['medium'])) {
+                $urls['medium'] = isset($urls['small']) ? $urls['small']
+                    : $urls['large'];
+            }
+
             $result[] = [
                 'urls' => $urls,
                 'description' => '',
