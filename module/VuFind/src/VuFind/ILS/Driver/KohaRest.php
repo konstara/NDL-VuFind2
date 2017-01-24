@@ -175,7 +175,7 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
      */
     public function getStatus($id)
     {
-        return $this->getItemStatusesForBiblio($id, false);
+        return $this->getItemStatusesForBiblio($id);
     }
 
     /**
@@ -192,7 +192,7 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
     {
         $items = [];
         foreach ($ids as $id) {
-            $items[] = $this->getItemStatusesForBiblio($id, false);
+            $items[] = $this->getItemStatusesForBiblio($id);
         }
         return $items;
     }
@@ -214,7 +214,7 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
      */
     public function getHolding($id, array $patron = null)
     {
-        return $this->getItemStatusesForBiblio($id, true);
+        return $this->getItemStatusesForBiblio($id, $patron);
     }
 
     /**
@@ -1013,7 +1013,7 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
      * authentication error
      */
     protected function makeRequest($hierarchy, $params = false, $method = 'GET',
-        $patron = false, $returnCode = false
+        $patron = null, $returnCode = false
     ) {
         if ($patron) {
             // Clear current patron cookie if it's not specific to the given patron
@@ -1075,16 +1075,23 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
 
         $result = $response->getBody();
 
+        $fullUrl = $apiUrl;
+        if ($method == 'GET') {
+            $fullUrl .= '?' . $client->getRequest()->getQuery()->toString();
+        }
         $this->debug(
             '[' . round(microtime(true) - $startTime, 4) . 's]'
-            . " $method request $apiUrl" . PHP_EOL . 'response: ' . PHP_EOL
+            . " $method request $fullUrl" . PHP_EOL . 'response: ' . PHP_EOL
             . $result
         );
 
         // Handle errors as complete failures only if the API call didn't return
         // valid JSON that the caller can handle
         $decodedResult = json_decode($result, true);
-        if (!$response->isSuccess() && null === $decodedResult && !$returnCode) {
+        if (!$response->isSuccess()
+            && (null === $decodedResult || !empty($decodedResult['error']))
+            && !$returnCode
+        ) {
             $params = $method == 'GET'
                 ? $client->getRequest()->getQuery()->toString()
                 : $client->getRequest()->getPost()->toString();
@@ -1152,21 +1159,21 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
      * This is responsible for retrieving the status information of a certain
      * record.
      *
-     * @param string $id   The record id to retrieve the holdings for
-     * @param bool   $full Whether to retrieve full holdings or just enough for
-     * status information in results screen
+     * @param string $id     The record id to retrieve the holdings for
+     * @param array  $patron Patron information, if available
      *
      * @return array An associative array with the following keys:
      * id, availability (boolean), status, location, reserve, callnumber.
      */
-    protected function getItemStatusesForBiblio($id, $full)
+    protected function getItemStatusesForBiblio($id, $patron = null)
     {
         $result = $this->makeRequest(
             ['v1', 'availability', 'biblio', 'search'],
             ['biblionumber' => $id],
-            'GET'
+            'GET',
+            $patron
         );
-        if (empty($result[0])) {
+        if (empty($result[0]['item_availabilities'])) {
             return [];
         }
 
@@ -1183,7 +1190,7 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
             $status = $this->pickStatus($statusCodes);
             if (isset($avail['unavailabilities']['Item::CheckedOut']['date_due'])) {
                 $duedate = $this->dateConverter->convertToDisplayDate(
-                    'Y-m-d H:i:s',
+                    'Y-m-d',
                     $avail['unavailabilities']['Item::CheckedOut']['date_due']
                 );
             } else {
@@ -1206,10 +1213,10 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
                 'sort' => $i
             ];
 
-            if ($this->itemHoldAllowed($item)) {
+            if ($patron && $this->itemHoldAllowed($item)) {
                 $entry['is_holdable'] = true;
                 $entry['level'] = 'copy';
-                $entry['addLink'] = true;
+                $entry['addLink'] = 'check';
             } else {
                 $entry['is_holdable'] = false;
             }
@@ -1242,7 +1249,7 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
                         $overdue = false;
                         if (!empty($reason['date_due'])) {
                             $duedate = $this->dateConverter->convert(
-                                'Y-m-d H:i:s',
+                                'Y-m-d',
                                 'U',
                                 $reason['date_due']
                             );
