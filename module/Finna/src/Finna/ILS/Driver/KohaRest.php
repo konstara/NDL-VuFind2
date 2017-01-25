@@ -63,6 +63,136 @@ class KohaRest extends \VuFind\ILS\Driver\KohaRest
     }
 
     /**
+     * Update patron's phone number
+     *
+     * @param array  $patron Patron array
+     * @param string $phone  Phone number
+     *
+     * @throws ILSException
+     *
+     * @return array Associative array of the results
+     */
+    public function updatePhone($patron, $phone)
+    {
+        $request = [
+            'mobile' => $phone
+        ];
+        list($code, $result) = $this->makeRequest(
+            ['v1', 'patrons', $patron['id']],
+            json_encode($request),
+            'PUT',
+            $patron,
+            true
+        );
+        if ($code != 202 && $code != 204) {
+            return  [
+                'success' => false,
+                'status' => 'Changing the phone number failed',
+                'sys_message' => isset($result['error']) ? $result['error'] : $code
+            ];
+        }
+
+        return [
+            'success' => true,
+            'status' => $code == 202
+                ? 'request_change_done' : 'request_change_accepted',
+            'sys_message' => ''
+        ];
+    }
+
+    /**
+     * Update patron's email address
+     *
+     * @param array  $patron Patron array
+     * @param String $email  Email address
+     *
+     * @throws ILSException
+     *
+     * @return array Associative array of the results
+     */
+    public function updateEmail($patron, $email)
+    {
+        $request = [
+            'email' => $email
+        ];
+        list($code, $result) = $this->makeRequest(
+            ['v1', 'patrons', $patron['id']],
+            json_encode($request),
+            'PUT',
+            $patron,
+            true
+        );
+        if ($code != 202 && $code != 204) {
+            return  [
+                'success' => false,
+                'status' => 'Changing the email address failed',
+                'sys_message' => isset($result['error']) ? $result['error'] : $code
+            ];
+        }
+
+        return [
+            'success' => true,
+            'status' => $code == 202
+                ? 'request_change_done' : 'request_change_accepted',
+            'sys_message' => ''
+        ];
+    }
+
+    /**
+     * Update patron contact information
+     *
+     * @param array $patron  Patron array
+     * @param array $details Associative array of patron contact information
+     *
+     * @throws ILSException
+     *
+     * @return array Associative array of the results
+     */
+    public function updateAddress($patron, $details)
+    {
+        $addressFields = isset($this->config['updateAddress']['fields'])
+            ? $this->config['updateAddress']['fields'] : [];
+        $addressFields = array_map(
+            function ($item) {
+                $parts = explode(':', $item, 2);
+                return isset($parts[1]) ? $parts[1] : '';
+            },
+            $addressFields
+        );
+        $addressFields = array_flip($addressFields);
+
+        // Pick the configured fields from the request
+        $request = [];
+        foreach ($details as $key => $value) {
+            if (isset($addressFields[$key])) {
+                $request[$key] = $value;
+            }
+        }
+
+        list($code, $result) = $this->makeRequest(
+            ['v1', 'patrons', $patron['id']],
+            json_encode($details),
+            'PUT',
+            $patron,
+            true
+        );
+        if ($code != 202 && $code != 204) {
+            return  [
+                'success' => false,
+                'status' => 'Changing the contact information failed',
+                'sys_message' => isset($result['error']) ? $result['error'] : $code
+            ];
+        }
+
+        return [
+            'success' => true,
+            'status' => $code == 202
+                ? 'request_change_done' : 'request_change_accepted',
+            'sys_message' => ''
+        ];
+    }
+
+    /**
      * Return total amount of fees that may be paid online.
      *
      * @param array $patron Patron
