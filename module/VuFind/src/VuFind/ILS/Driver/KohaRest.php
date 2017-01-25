@@ -375,7 +375,7 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
         return [
             'firstname' => $result['firstname'],
             'lastname' => $result['surname'],
-            'phone' => $result['phone'],
+            'phone' => $result['mobile'],
             'email' => $result['email'],
             'address1' => $result['address'],
             'address2' => $result['address2'],
