@@ -299,9 +299,9 @@
       $blockILLRequest = !$checkILLRequest && isset($row['addILLRequestLink']) && $row['addILLRequestLink'] === 'block';
     ?>
     <div vocab="http://schema.org/" typeof="Offer" class="copy-details <?=$holdingsDetails?> row">
-      <? if (isset($row['branch']) && isset($row['department'])): ?>
+      <? if (isset($row['branch'])): ?>
       <div class="copy-title col-sm-6">
-        <span class="branch"><?=$row['branch']?></span><span class="department">, <?=$row['department']?></span>
+        <span class="branch"><?=$row['branch']?></span><? if (!empty($row['department'])): ?><span class="department">, <?=$row['department']?></span><? endif ?>
       </div>
       <? else: ?>
       <div class="copy-title col-sm-6">

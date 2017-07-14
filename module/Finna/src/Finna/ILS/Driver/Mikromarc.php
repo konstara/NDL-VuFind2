@@ -59,6 +59,8 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
      */
     protected $dateConverter;
 
+    protected $translator;
+
     /**
      * Institution settings for the order of organisations
      *
@@ -88,9 +90,10 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
      *
      * @param \VuFind\Date\Converter $dateConverter Date converter object
      */
-    public function __construct(\VuFind\Date\Converter $dateConverter
+    public function __construct(\VuFind\Date\Converter $dateConverter, $translator
     ) {
         $this->dateConverter = $dateConverter;
+        $this->translator = $translator;
     }
 
     /**
@@ -317,7 +320,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
                 'checkout' => '',
                 'id' => isset($entry['MarcRecordId'])
                    ? $entry['MarcRecordId'] : null,
-                'item_id' => $entry['Id']
+                'item_id' => $entry['ItemId']
             ];
             if (!empty($entry['MarcRecordTitle'])) {
                 $fine['title'] = $entry['MarcRecordTitle'];
@@ -885,34 +888,56 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
         if (empty($result)) {
             return [];
         }
-        
+
         $statuses = [];
+        $organisationTotal = [];
         foreach ($result as $i => $item) {
             $status = $item['ItemStatus'];
             if ($status == 'Discarded') {
                 continue;
             }
-            
+
             $unitId = $item['BelongToUnitId'];
-            $location = $this->getLibraryUnit($unitId);
-            if ($location === null) {
-                $location = $unitId;
+            if (!$unit = $this->getLibraryUnit($unitId)) {
+                continue;
             }
+            $organisationName = $unit['organisationName'];
             $locationName = $this->translate(
-                'location_' . $location['name'],
+                'location_' . $unit['name'],
                 null,
-                $location['name']
+                $unit['name']
             );
             
             $available = $item['ItemStatus'] === 'AvailableForLoan';
             $statusCode = $this->getItemStatusCode($item);
 
+            if (isset($organisationTotal[$unitId])) {
+                $organisationTotal[$unitId]['total']++;
+                if ($available) {
+                    $organisationTotal[$unitId]['available']++;
+                }
+                $organisationTotal[$unitId]['reservations']
+                    += $item['ReservationQueueLength'];
+                continue;
+            }
+
+            $organisationTotal[$unit['branch']] = [
+               'available' => $available ? 1 : 0,
+               'total' => 1,
+               'reservations' => $item['ReservationQueueLength'],
+            ];
+
+            $unit = $this->getLibraryUnit($unitId);
+            
             $entry = [
                 'id' => $id,
                 'item_id' => $item['Id'],
-                'location' => $locationName,
-                'locationId' => $unitId,
-                'parentId' => $location['parent'],
+                'parentId' => $unit['parent'],
+                'holdings_id' => $unit['organisation'],
+                'location' => $organisationName,
+                'organisation_id' => $unit['organisation'],
+                'branch' => $locationName,
+                'branch_id' => $unit['branch'],
                 'availability' => $available,
                 'status' => $statusCode,
                 'status_array' => [$statusCode],
@@ -921,22 +946,70 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
                 'duedate' => null,
                 'barcode' => $item['Barcode'],
                 'item_notes' => [isset($items['notes']) ? $item['notes'] : null],
-                'sort' => $i
+                'is_holdable' =>  false
             ];
-
-            if ($patron && $this->itemHoldAllowed($item)) {
-                $entry['is_holdable'] = true;
-                $entry['level'] = 'copy';
-                $entry['addLink'] = 'check';
-            } else {
-                $entry['is_holdable'] = false;
-            }
 
             $statuses[] = $entry;
         }
 
+        foreach ($statuses as &$status) {
+            $status['availabilityInfo']
+                = $organisationTotal[$status['branch_id']];
+        }
+
         usort($statuses, [$this, 'statusSortFunction']);
+
+        $summary = $this->getHoldingsSummary($statuses);
+        $statuses[] = $summary;
+        
         return $statuses;
+    }
+
+    /**
+     * Return summary of holdings items.
+     *
+     * @param array $holdings Parsed holdings items
+     *
+     * @return array summary
+     */
+    protected function getHoldingsSummary($holdings)
+    {
+        $holdable = false;
+        $availableTotal = $itemsTotal = $orderedTotal = $reservationsTotal = 0;
+        $locations = [];
+        foreach ($holdings as $item) {
+            if (!empty($item['availability'])) {
+                $availableTotal++;
+            }
+            $itemsTotal += $item['availabilityInfo']['total'];
+            
+            if (isset($item['availabilityInfo']['ordered'])) {
+                $orderedTotal += $item['availabilityInfo']['ordered'];
+            }
+            
+            $reservationsTotal += $item['availabilityInfo']['reservations'];
+            
+            $locations[$item['location']] = true;
+
+            if ($item['is_holdable']) {
+                $holdable = true;
+            }
+        }
+
+        // Since summary data is appended to the holdings array as a fake item,
+        // we need to add a few dummy-fields that VuFind expects to be
+        // defined for all elements.
+        return [
+           'available' => $availableTotal,
+           'ordered' => $orderedTotal,
+           'total' => $itemsTotal,
+           'reservations' => $reservationsTotal,
+           'locations' => count($locations),
+           'holdable' => $holdable,
+           'availability' => null,
+           'callnumber' => null,
+           'location' => null
+        ];
     }
 
     /**
@@ -1003,21 +1076,41 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
 
         $units = [];
         foreach ($result as $unit) {
-            $units[$unit['Id']] = [
+            $id = $unit['Id'];
+            $units[$id] = [
+                'id' => $id,
                 'name' => $unit['Name'],
                 'parent' => $unit['ParentUnitId'],
                 'department' => $unit['IsDepartment']
             ];
         }
+        
+        foreach ($units as $key => &$unit) {
+            $parent = !empty($units[$unit['parent']])
+                ? $units[$unit['parent']] : null;
 
-        // Prepend parent name to department names
-        foreach ($units as &$unit) {
-            if (!$unit['department']
-                || !$unit['parent'] || !isset($units[$unit['parent']])
-            ) {
+            // Branch and organisation
+            $unit['branch'] = $key;
+            $organisationId = 1;
+            $organisationName = null;
+            if (!empty($this->config['Holdings']['organisationId'])) {
+                $organisationId = $this->config['Holdings']['organisationId'];
+                $organisationName
+                    = $this->translator->translate("source_$organisationId");
+            } else if ($parent && $parent['department']) {
+                $organisationId = $parent['parent'];
+                $organisationName = $this->getLibraryUnit($parent['id'])['name'];
+            }
+            
+            $unit['organisation'] = $organisationId;
+            $unit['organisationName'] = $organisationName;
+            
+            if (!$unit['department'] || !$parent) {
                 continue;
             }
-            $parentName = $units[$unit['parent']]['name'];
+
+            // Prepend parent name to department names
+            $parentName = $parent['name'];
             $unitName = $unit['name'];
             if (strpos(trim($unitName), trim($parentName)) === 0) {
                 continue;
@@ -1025,6 +1118,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             $unit['name'] = "$parentName - $unitName";
         }
 
+        error_log(var_export($units, true));
         $this->putCachedData($cacheKey, $units);
         
         return $units;
@@ -1055,7 +1149,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
         $unit = $this->getLibraryUnit($id);
         return $unit ? $unit['name'] : null;
     }
-       
+    
     /**
      * Get patron's blocks, if any
      *
@@ -1334,9 +1428,6 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
      */
     protected function statusSortFunction($a, $b)
     {
-        $locationA = $a['location'];
-        $locationB = $b['location'];
-        
         $key = 'parentId';
 
         $sortOrder = $this->holdingsOrganisationOrder;
@@ -1357,6 +1448,6 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             return 1;
         }
 
-        return strcmp($locationA, $locationB);
+        return strcmp($a['branch'], $b['branch']);
     }
 }

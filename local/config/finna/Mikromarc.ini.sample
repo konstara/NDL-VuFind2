@@ -31,6 +31,12 @@ extraHoldFields = pickUpLocation
 ; By default the holdings location list is sorted alphabetically. This setting can be
 ; used to manually set the order by entering location IDs as a colon-separated list.
 ;holdingsOrganisationOrder = 1:2:3
+; Top-level organisation id used in grouping holdings.
+; Translation "source_<organisationId>" is used as the display string.
+; NOTE: this setting is needed only when the library unit hierarchy consists of 2 levels
+; (1. branch, 2. department). Comment out if the hierarchy also includes the organisation.
+; (1. organisation, 2. branch, 3. department)
+; organisationId = 
 
 [Loans]
 renewalLimit = 3

@@ -93,7 +93,8 @@ class Factory
     public static function getMikromarc(ServiceManager $sm)
     {
         $driver = new Mikromarc(
-            $sm->getServiceLocator()->get('VuFind\DateConverter')
+            $sm->getServiceLocator()->get('VuFind\DateConverter'),
+            $sm->getServiceLocator()->get('VuFind\Translator')
         );
         $driver->setCacheStorage(
             $sm->getServiceLocator()->get('VuFind\CacheManager')->getCache('object')
