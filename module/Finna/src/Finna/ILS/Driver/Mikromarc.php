@@ -925,6 +925,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
                'available' => $available ? 1 : 0,
                'total' => 1,
                'reservations' => $item['ReservationQueueLength'],
+               'displayText' => $statusCode
             ];
 
             $unit = $this->getLibraryUnit($unitId);
@@ -954,7 +955,10 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
 
         foreach ($statuses as &$status) {
             $status['availabilityInfo']
-                = $organisationTotal[$status['branch_id']];
+                = array_merge(
+                    ['displayText' => $status['status']],
+                    $organisationTotal[$status['branch_id']]
+                );
         }
 
         usort($statuses, [$this, 'statusSortFunction']);
