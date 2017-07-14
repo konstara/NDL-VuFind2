@@ -1122,7 +1122,6 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             $unit['name'] = "$parentName - $unitName";
         }
 
-        error_log(var_export($units, true));
         $this->putCachedData($cacheKey, $units);
         
         return $units;
@@ -1344,13 +1343,15 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
 
         // Result pagination.
         $page = 0;
-        $maxPages = 10;
+        $maxPages = !empty($this->config['Catalog']['pageLimit']) ?
+            $this->config['Catalog']['pageLimit'] : 10;
+
         if (false == $params) {
             $params = [];
         }
 
         $data = [];
-        while (true && $page < $maxPages) {
+        while ($page < $maxPages) {
             // Append '$skip' parameter straight to the url
             // so that Zend does not urlencode the $-sign (this would break
             // the pagination).
