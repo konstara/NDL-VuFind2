@@ -215,7 +215,12 @@
               </select>
             </div>
             <div class="col-sm-4">
-              <i class="fa fa-info-big"></i> <?=$this->translate('checkout_history_description_html')?>
+              <i class="fa fa-info-big"></i> <?=$this->translate('checkout_history_description')?>
+              <ul class='list-bullets'>
+                <? foreach ($updateCheckoutHistory['options'] as $key => $value): ?>
+                <li><?= $this->transEsc("{$value}_description")?></li>
+                <? endforeach ?>
+              </ul>
             </div>
           <? else: ?>
             <div class="col-sm-8 profile-text-value"><?=$this->transEsc($this->profile['checkout_history'] ? 'checkout_history_active' : 'checkout_history_inactive') ?></div>

@@ -362,7 +362,64 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             ) : '';
 
         $name = explode(',', $result['Name'], 2);
-        
+
+        $messagingSettings = [];
+        $messageTypes = [
+            'Item_Checkout' => 'checkoutNotice',
+            'Item_Due' => 'dueDateNotice',
+            'Reminders' => 'reminders'
+        ];
+
+        $type = 'reminders';
+        $messagingSettings[$type] = [
+           'type' => $type,
+           'settings' => [
+               'transport_types' => [
+                  'type' => 'boolean',
+                  'active' => !$result['RefuseReminderMessages'],
+                  'readonly' => false
+               ]
+           ]
+        ];
+
+        $checkoutNoticeFormat = $result['ReceiptMessageFormat'];
+        $type = 'checkoutNotice';
+        $messagingSettings[$type] = [
+           'type' => $type,
+           'settings' => [
+               'transport_types' => [
+                  'type' => 'select',
+                  'value' => $checkoutNoticeFormat,
+                  'options' => [
+                     'Paper' => [
+                        'name' => $this->translate('messaging_settings_option_print'),
+                        'value' => 'Paper',
+                        'active' => $checkoutNoticeFormat == 'Paper'
+                     ],
+                     'Email' => [
+                        'name' => $this->translate('messaging_settings_option_email'),
+                        'value' => 'Email',
+                        'active' => $checkoutNoticeFormat == 'Email'
+                     ]
+                  ]
+               ]
+           ]
+        ];
+
+        $type = 'dueDateNotice';
+        $messagingSettings[$type] = [
+           'type' => $type,
+           'settings' => [
+               'transport_types' => [
+                  'type' => 'multiselect',
+                  'options' => [
+                     'sms' => ['active' => $result['LettersBySMS']],
+                     'email' => ['active' => $result['LettersByEmail']]
+                  ]
+               ]
+           ]
+        ];
+
         $profile = [
             'firstname' => trim($name[1]),
             'lastname' => ucfirst(trim($name[0])),
@@ -372,8 +429,11 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             'address2' => $result['MainAddrLine2'],
             'zip' => $result['MainZip'],
             'city' => $result['MainPlace'],
-            'expiration_date' => $expirationDate
+            'expiration_date' => $expirationDate,
+            'checkout_history' => $result['StoreBorrowerHistory'] ? 0 : 1,
+            'messagingServices' => $messagingSettings
         ];
+
         $profile = array_merge($patron, $profile);
         
         $this->putCachedData($cacheKey, $profile);
@@ -835,6 +895,56 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
     }
 
     /**
+     * Update patron's phone number
+     *
+     * @param array  $patron Patron array
+     * @param string $phone  Phone number
+     *
+     * @throws ILSException
+     *
+     * @return array Associative array of the results
+     */
+    public function updatePhone($patron, $phone)
+    {
+        $code = $this->updatePatronInfo($patron, ['MainPhone' => $phone]);
+        if ($code !== 200) {
+            return  [
+                'success' => false,
+                'status' => 'Changing the email address failed'
+            ];
+        }
+        return [
+            'success' => true,
+            'status' => 'request_change_accepted'
+        ];
+    }
+
+    /**
+     * Update patron's email address
+     *
+     * @param array  $patron Patron array
+     * @param String $email  Email address
+     *
+     * @throws ILSException
+     *
+     * @return array Associative array of the results
+     */
+    public function updateEmail($patron, $email)
+    {
+        $code = $this->updatePatronInfo($patron, ['MainEmail' => $email]);
+        if ($code !== 200) {
+            return  [
+                'success' => false,
+                'status' => 'Changing the email address failed'
+            ];
+        }
+        return [
+            'success' => true,
+            'status' => 'request_change_accepted'
+        ];
+    }
+
+    /**
      * Update patron contact information
      *
      * @param array $patron  Patron array
@@ -850,9 +960,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             'address1' => 'MainAddrLine1',
             'address2' => 'MainAddrLine2',
             'zip' => 'MainZip',
-            'city' => 'MainPlace',
-            'phone' => 'MainPhone',
-            'email' => 'MainEmail'
+            'city' => 'MainPlace'
         ];
 
         $request = [];
@@ -864,13 +972,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             $request[$field] = $val;
         }
 
-        list($code, $result) = $this->makeRequest(
-            ['odata',
-             'Borrowers(' . $patron['id'] . ')'],
-            json_encode($request),
-            'PATCH',
-            true
-        );
+        $code = $this->updatePatronInfo($patron, $request);
 
         if ($code != 200) {
             $message = 'An error has occurred';
@@ -879,8 +981,114 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             ];
         }
         $this->putCachedData($this->getPatronCacheKey($patron, 'profile'), null);
+        
+        return ['success' => true, 'status' => 'request_change_done'];
+    }
 
-        return ['success' => true, 'status' => 'request_change_accepted'];
+    /**
+     * Update Patron Transaction History State
+     *
+     * Enable or disable patron's transaction history
+     *
+     * @param array $patron The patron array from patronLogin
+     * @param mixed $state  Any of the configured values
+     *
+     * @return array Associative array of the results
+     */
+    public function updateTransactionHistoryState($patron, $state)
+    {
+        $code = $this->updatePatronInfo(
+            $patron, ['StoreBorrowerHistory' => ($state == 0)]
+        );
+
+        if ($code !== 200) {
+            return  [
+                'success' => false,
+                'status' => 'Changing the checkout history state failed'
+            ];
+        }
+        $this->putCachedData($this->getPatronCacheKey($patron, 'profile'), null);
+        
+        return [
+            'success' => true,
+            'status' => 'request_change_accepted',
+            'sys_message' => ''
+        ];
+    }
+
+    /**
+     * Update patron messaging settings
+     *
+     * @param array $patron  Patron array
+     * @param array $details Associative array of messaging settings
+     *
+     * @throws ILSException
+     *
+     * @return array Associative array of the results
+     */
+    public function updateMessagingSettings($patron, $details)
+    {
+
+        $settings = [];
+        if (isset($details['reminders'])) {
+            $settings['RefuseReminderMessages']
+                = !$details['reminders']['settings']['transport_types']['active']; 
+        }
+        if (isset($details['checkoutNotice'])) {
+            $settings['ReceiptMessageFormat']
+                = $details['checkoutNotice']['settings']['transport_types']['value'];
+        }
+        if (isset($details['dueDateNotice'])) {
+            $options = $details['dueDateNotice']['settings']
+                ['transport_types']['options'];
+            if (isset($options['sms']['active'])) {
+                $settings['LettersBySMS'] = $options['sms']['active'];
+            }
+            if (isset($options['email']['active'])) {
+                $settings['LettersByEmail'] = $options['email']['active'];
+            }
+        }
+        
+        $code = $this->updatePatronInfo($patron, $settings);
+
+        echo var_export($settings, true);
+        echo "code: $code";
+
+        if ($code !== 200) {
+            return  [
+                'success' => false,
+                'status' => 'Changing the preferences failed',
+            ];
+        }
+        $this->putCachedData($this->getPatronCacheKey($patron, 'profile'), null);
+
+        return [
+            'success' => true,
+            'status' => 'request_change_accepted',
+            'sys_message' => ''
+        ];
+    }
+
+    /**
+     * Helper method to determine whether or not a certain method can be
+     * called on this driver.  Required method for any smart drivers.
+     *
+     * @param array $patron Patron array
+     * @param array $info   Array of new profile key => value pairs
+     *
+     * @return int result HTTP code
+     */ 
+    protected function updatePatronInfo($patron, $info)
+    {
+        list($code, $result) = $this->makeRequest(
+            ['odata',
+             'Borrowers(' . $patron['id'] . ')'],
+            json_encode($info),
+            'PATCH',
+            true
+        );
+
+        return $code;
     }
 
     /**

@@ -62,8 +62,9 @@ pattern = "numeric"
 
 ; Uncomment the following lines to enable updating of address information.
 ; Choose a method on how to update the address information (driver, email or url).
+; Only 'driver' is currently supported.
 [updateAddress]
-method = driver
+method = email
 ; emailAddress is required for the email method
 ;emailAddress =
 ; Uncomment the following lines to change which fields are included in the form
@@ -75,8 +76,8 @@ fields[] = Address:address1
 fields[] = Address:address2
 fields[] = Zip:zip
 fields[] = City:city
-fields[] = Phone:phone
-fields[] = Email:email
+;fields[] = Phone:phone
+;fields[] = Email:email
 ; url is required for the url method. url can be a single address or an array of
 ; language-specific addresses. First example is a single one:
 ;url = http://address.of.change.form
@@ -84,6 +85,25 @@ fields[] = Email:email
 ;url[fi] = http://address.of.change.form/finnish
 ;url[sv] = http://address.of.change.form/swedish
 ;url[en-gb] = http://address.of.change.form/english
+
+; Uncomment the following lines to enable updating of email address.
+; Choose a method on how to update the email address.
+; Only 'driver' is currently supported.
+[updateEmail]
+method = driver
+
+; Uncomment the following lines to enable updating of phone number.
+; Choose a method on how to update the phone number.
+; Only 'driver' is currently supported.
+[updatePhone]
+method = driver
+
+; Changing of checkout history state is enabled if method parameter is set. Only
+; valid value is 'driver'.
+[updateTransactionHistoryState]
+method = driver
+options[0] = checkout_history_forever
+options[1] = checkout_history_never
 
 ; Sort options for transaction history.
 [TransactionHistorySortList]
