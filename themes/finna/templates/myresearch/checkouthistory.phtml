@@ -34,7 +34,9 @@
             <?=$this->render('search/controls/sort.phtml')?>
           </div>
           <div class="col-xs-4 col-xs-pull-8 col-sm-4 col-sm-pull-0 col-md-3 hidden-print">
+            <? if ($this->purgeHistory): ?>
             <a class="btn btn-primary" href="<?=$this->url('myresearch-purgecheckouthistory');?>" data-lightbox><?=$this->transEsc('checkout_history_purge')?></a>
+            <? endif ?>
           </div>
           <div class="col-xs-12 col-sm-4 col-sm-pull-8 col-md-4 col-md-pull-8">
             <?=$paginator ? $this->paginationControl($paginator, 'Sliding', 'Helpers/pagination-simple.phtml') : ''?>

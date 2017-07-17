@@ -85,3 +85,7 @@ fields[] = Email:email
 ;url[sv] = http://address.of.change.form/swedish
 ;url[en-gb] = http://address.of.change.form/english
 
+; Sort options for transaction history.
+[TransactionHistorySortList]
+checkout desc = sort_date_desc
+checkout asc = sort_date_asc

@@ -343,7 +343,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
      */
     public function getMyProfile($patron)
     {
-        $cacheKey = $this->getProfileCacheKey($patron);
+        $cacheKey = $this->getPatronCacheKey($patron, 'profile');
         if ($profile = $this->getCachedData($cacheKey)) {
             return $profile;
         }
@@ -463,12 +463,20 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
                 ['odata', "BorrowerLoans($checkedOutId)", 'Default.RenewLoan'],
                 false, 'POST', true
             );
-            
+
             if ($code != 200 || $result['ServiceCode'] != 'LoanRenewed') {
+                $map = [
+                   'ReservedForOtherBorrower' => 'renew_item_requested'
+                ];
+                $errorCode = isset($result['error']['code'])
+                    ? $result['error']['code'] : null;
+                $sysMsg = isset($map[$errorCode]) ? $map[$errorCode] : null;
                 $finalResult['details'][$checkedOutId] = [
                     'item_id' => $checkedOutId,
-                    'success' => false
+                    'success' => false,
+                    'sysMessage' => $sysMsg
                 ];
+                
             } else {
                 $newDate = $this->dateConverter->convertToDisplayDate(
                     'U', strtotime($result['DueTime'])
@@ -478,6 +486,11 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
                     'success' => true,
                     'new_date' => $newDate
                 ];
+                $this->putCachedData(
+                    $this->getPatronCacheKey(
+                        $renewDetails['patron'], 'transactionHistory'
+                    ), null
+                );
             }
         }
         return $finalResult;
@@ -530,6 +543,109 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
         return $holds;
     }
 
+    /**
+     * Get Patron Transaction History
+     *
+     * This is responsible for retrieving all historical transactions
+     * (i.e. checked out items)
+     * by a specific patron.
+     *
+     * @param array $patron The patron array from patronLogin
+     * @param array $params Retrieval params that may contain the following keys:
+     *   start  Start offset (0-based)
+     *   limit  Maximum number of records to return
+     *   sort   Sorting order, one of:
+     *          checkout asc
+     *          checkout desc
+     *          return asc
+     *          return desc
+     *          due asc
+     *          due desc
+     *
+     * @throws DateException
+     * @throws ILSException
+     * @return array        Array of the patron's transactions on success.
+     */
+    public function getMyTransactionHistory($patron, $params)
+    {
+        $extractHistory = function ($history, $start, $limit, $sort) {
+            if ($sort == 'checkout desc') {
+                $history = array_reverse($history);
+            }
+            return array_slice($history, $start, $start+$limit);
+        };
+        
+        $cacheKey = $this->getPatronCacheKey($patron, 'transactionHistory');
+        $history = $this->getCachedData($cacheKey);
+        $reverseHistory = $params['sort'] == 'checkout desc';
+        if ($history !== null) {
+            $history['transactions'] = $extractHistory(
+               $history['transactions'], $params['start'], $params['limit'],
+               $reverseHistory
+            );
+            return $history;
+        }
+        
+        $request = [
+            '$filter' => 'BorrowerId eq ' . $patron['id']
+        ];
+
+        $result = $this->makeRequest(
+            ['odata', 'BorrowerServiceHistories'],
+            $request
+        );
+
+        $history = [
+            'count' => count($result),                   
+            'transactions' => [],
+            'sortList' => isset($this->config['TransactionHistorySortList'])
+               ? $this->config['TransactionHistorySortList'] : null
+        ];
+
+        if (!$result) {
+            return $history;
+        }
+
+        $serviceCodeMap = [
+            'Returned' => 'returndate',
+            'OnLoan' => 'checkoutdate',
+            'LoanRenewed' => 'checkoutdate'
+        ];
+
+        foreach ($result as $entry) {
+            $code = $entry['ServiceCode'];
+            if (!isset($serviceCodeMap[$code])) {
+                continue;
+            }
+
+            $transaction = [
+                'id' => $entry['MarcRecordId'],
+            ];
+
+            $entryTime = $this->dateConverter->convertToDisplayDate(
+                'U', strtotime($entry['ServiceTime'])
+            );
+
+            $transaction[$serviceCodeMap[$code]] = $entryTime;
+            if (isset($item['MarcRecordTitle'])) {
+                $transaction['title'] = $entry['MarcRecordTitle'];
+            }
+
+            $transaction['title'] = "marcid: " . $entry['MarcRecordId'];
+            
+            $history['transactions'][] = $transaction;
+        }
+
+        $this->putCachedData($cacheKey, $history);
+
+        $history['transactions'] = $extractHistory(
+           $history['transactions'], $params['start'], $params['limit'],
+           $reverseHistory
+        );
+        
+        return $history;
+    }
+    
     /**
      * Place Hold
      *
@@ -762,7 +878,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
                 'success' => false, 'status' => $message
             ];
         }
-        $this->putCachedData($this->getProfileCacheKey($patron), null);
+        $this->putCachedData($this->getPatronCacheKey($patron, 'profile'), null);
 
         return ['success' => true, 'status' => 'request_change_accepted'];
     }
@@ -1173,9 +1289,9 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
      *
      * @return string
      */
-    protected function getProfileCacheKey($patron)
+    protected function getPatronCacheKey($patron, $action)
     {
-        return 'mikromarc|profile|'
+        return "mikromarc|$action|"
             . md5(implode('|', [$patron['cat_username'], $patron['cat_password']]));
     }
     
@@ -1303,7 +1419,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
      * authentication error
      */
     protected function makeRequest($hierarchy, $params = false, $method = 'GET',
-        $returnCode = false
+        $returnCode = false, $limit = 100
     ) {
         // Set up the request
         $conf = $this->config['Catalog'];
@@ -1352,35 +1468,20 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
 
         $data = [];
         while ($page < $maxPages) {
-            // Append '$skip' parameter straight to the url
-            // so that Zend does not urlencode the $-sign (this would break
-            // the pagination).
-
             $client->setUri($apiUrl);
-            if ($page > 0) {
-                $client->setUri($apiUrl . '?$skip=' . $page*100);
-            }
-
             $response = $client->send();
-
             $result = $response->getBody();
 
-            $fullUrl = $apiUrl;
-            if ($method == 'GET') {
-                $fullUrl .= ($page ? '&' : '?')
-                    . $client->getRequest()->getQuery()->toString();
-            }
-            
             $this->debug(
                 '[' . round(microtime(true) - $startTime, 4) . 's]'
-                . " GET request $fullUrl" . PHP_EOL . 'response: ' . PHP_EOL
+                . " GET request $apiUrl" . PHP_EOL . 'response: ' . PHP_EOL
                 . $result
             );
             
             // Handle errors as complete failures only if the API call didn't return
             // valid JSON that the caller can handle
             $decodedResult = json_decode($result, true);
-            
+
             if (!$response->isSuccess()
                 && (null === $decodedResult || !empty($decodedResult['error']))
                 && !$returnCode
@@ -1400,18 +1501,22 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             }
 
             // More results available?
-            $next = !empty($decodedResult['@odata.nextLink']);
+            if ($next = !empty($decodedResult['@odata.nextLink'])) {
+                $client->setParameterPost([]);
+                $client->setParameterGet([]);
+                $apiUrl = $decodedResult['@odata.nextLink'];
+            }
             
             if (isset($decodedResult['value'])) {
                 $decodedResult = $decodedResult['value'];
             }
 
-            if (!$next && $page == 0) {
+            if ($page == 0) {
                 $data = $decodedResult;
-            } else if ($next) {    
+            } else {    
                 $data = array_merge($data, $decodedResult);
             }
-            
+
             if (!$next) {
                 break;
             }

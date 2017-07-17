@@ -240,40 +240,8 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
         $limit = isset($config->Catalog->checkout_history_page_size)
             ? $config->Catalog->checkout_history_page_size : 50;
 
-        // Handle sorting
         $currentSort = $this->getRequest()->getQuery('sort', 'checkout desc');
-        $view->sortList = [
-            'checkout desc' => [
-                'desc' => 'sort_checkout_date_desc',
-                'url' => '?sort=checkout%20desc',
-                'selected' => $currentSort == 'checkout desc'
-            ],
-            'checkout asc' => [
-                'desc' => 'sort_checkout_date_asc',
-                'url' => '?sort=checkout%20asc',
-                'selected' => $currentSort == 'checkout asc'
-            ],
-            'return desc' => [
-                'desc' => 'sort_return_date_desc',
-                'url' => '?sort=return%20desc',
-                'selected' => $currentSort == 'return desc'
-            ],
-            'return asc' => [
-                'desc' => 'sort_return_date_asc',
-                'url' => '?sort=return%20asc',
-                'selected' => $currentSort == 'return asc'
-            ],
-            'duedate desc' => [
-                'desc' => 'sort_duedate_desc',
-                'url' => '?sort=duedate%20desc',
-                'selected' => $currentSort == 'duedate desc'
-            ],
-            'duedate asc' => [
-                'desc' => 'sort_duedate_asc',
-                'url' => '?sort=duedate%20asc',
-                'selected' => $currentSort == 'duedate asc'
-            ]
-        ];
+
         // Get checkout history details:
         $params = [
             'start' => ($page - 1) * $limit,
@@ -295,6 +263,26 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
         $view->transactions = $transactions;
         $view->paginator = $paginator;
         $view->count = $result['count'];
+
+        // Handle sorting
+        if (!empty($result['sortList'])) {
+            $sortList = $result['sortList'];
+            $sortData = [];
+            if (!isset($sortList[$currentSort])) {
+                $currentSort = $sortList[0];
+            }
+            foreach ($sortList as $key => $label) {
+                $sortData[$key] = [
+                   'desc' => $label,
+                   'url' => '?sort=' . urlencode($key),
+                   'selected' => $currentSort == $key
+                ];
+            }
+            $view->sortList = $sortData;
+        }
+        $view->purgeHistory
+            = $catalog->checkFunction('purgeTransactionhistory', $patron);
+
         return $view;
     }
 
