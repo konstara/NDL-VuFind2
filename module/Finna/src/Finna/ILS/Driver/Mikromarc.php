@@ -292,15 +292,32 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
      */
     public function getMyFines($patron)
     {
-        $result = $this->makeRequest(
-            ['BorrowerDebts', $patron['cat_username'], '1', '0']
+        // TODO: check if ciAccountEntryStatus = 0 (all units) ?
+
+        
+        // All fines, ciAccountEntryStatus = 2
+        $allFines = $this->makeRequest(
+            ['BorrowerDebts', $patron['cat_username'], '2', '0']
         );
 
-        if (empty($result)) {
+        if (empty($allFines)) {
             return [];
         }
+
+        // Payable fines, ciAccountEntryStatus = 1
+        $payableFines = $this->makeRequest(
+            ['BorrowerDebts', $patron['cat_username'], '1', '0']
+        );
+        $payableIds = array_map(
+            function ($fine) {
+                return $fine['Id'];
+            }, $payableFines
+        );
+
+        $payableIds = array_slice($payableIds, 0, 1);
+        
         $fines = [];
-        foreach ($result as $entry) {
+        foreach ($allFines as $entry) {
             $createDate = !empty($entry['DeptDate'])
                 ? $this->dateConverter->convertToDisplayDate(
                     'U', strtotime($entry['DeptDate'])
@@ -320,7 +337,8 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
                 'checkout' => '',
                 'id' => isset($entry['MarcRecordId'])
                    ? $entry['MarcRecordId'] : null,
-                'item_id' => $entry['ItemId']
+                'item_id' => $entry['ItemId'],
+                'payableOnline' => in_array($entry['Id'], $payableIds)
             ];
             if (!empty($entry['MarcRecordTitle'])) {
                 $fine['title'] = $entry['MarcRecordTitle'];
@@ -344,7 +362,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
     public function getMyProfile($patron)
     {
         $cacheKey = $this->getPatronCacheKey($patron, 'profile');
-        if ($profile = $this->getCachedData($cacheKey)) {
+        if (false && $profile = $this->getCachedData($cacheKey)) {
             return $profile;
         }
         
@@ -363,62 +381,79 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
 
         $name = explode(',', $result['Name'], 2);
 
+
+        $messagingConf = isset($this->config['messaging'])
+            ? $this->config['messaging'] : null;
+        
         $messagingSettings = [];
         $messageTypes = [
             'Item_Checkout' => 'checkoutNotice',
             'Item_Due' => 'dueDateNotice',
-            'Reminders' => 'reminders'
-        ];
-
-        $type = 'reminders';
-        $messagingSettings[$type] = [
-           'type' => $type,
-           'settings' => [
-               'transport_types' => [
-                  'type' => 'boolean',
-                  'active' => !$result['RefuseReminderMessages'],
-                  'readonly' => false
-               ]
-           ]
-        ];
-
-        $checkoutNoticeFormat = $result['ReceiptMessageFormat'];
-        $type = 'checkoutNotice';
-        $messagingSettings[$type] = [
-           'type' => $type,
-           'settings' => [
-               'transport_types' => [
-                  'type' => 'select',
-                  'value' => $checkoutNoticeFormat,
-                  'options' => [
-                     'Paper' => [
-                        'name' => $this->translate('messaging_settings_option_print'),
-                        'value' => 'Paper',
-                        'active' => $checkoutNoticeFormat == 'Paper'
-                     ],
-                     'Email' => [
-                        'name' => $this->translate('messaging_settings_option_email'),
-                        'value' => 'Email',
-                        'active' => $checkoutNoticeFormat == 'Email'
-                     ]
-                  ]
-               ]
-           ]
+            'Notifications' => 'notifications'
         ];
 
         $type = 'dueDateNotice';
+        $dueDateNoticeActive = !$result['RefuseReminderMessages'];
         $messagingSettings[$type] = [
            'type' => $type,
            'settings' => [
-               'transport_types' => [
-                  'type' => 'multiselect',
-                  'options' => [
-                     'sms' => ['active' => $result['LettersBySMS']],
-                     'email' => ['active' => $result['LettersByEmail']]
-                  ]
-               ]
+              'digest' => [ 
+                 'type' => 'boolean',
+                 'readonly' => false,
+                 'active' => $dueDateNoticeActive,
+                 'label' => 'messaging_settings_option_' .
+                    ($dueDateNoticeActive ? 'active' : 'inactive'),
+                 'hideTitle' => true
+              ]
            ]
         ];
+
+        if (!empty($messagingConf['checkoutNotice'])) {
+            $checkoutNoticeFormat = $result['ReceiptMessageFormat'];
+            $type = 'checkoutNotice';
+            $options = [];
+            foreach ($messagingConf['checkoutNotice'] as $option) {
+                list($key, $label) = explode(':', $option);
+                $options[$key] = [
+                   'name' => $this->translate("messaging_settings_option_$label"),
+                   'value' => $key,
+                   'active' => $checkoutNoticeFormat == $key
+                ];
+            }
+            $messagingSettings[$type] = [
+               'type' => $type,
+               'settings' => [
+                  'transport_types' => [
+                     'type' => 'select',
+                     'value' => $checkoutNoticeFormat,
+                     'options' => $options
+                  ]
+               ]
+            ];
+        }
+
+        if (!empty($messagingConf['notifications'])) {
+            $type = 'notifications';
+            $map = ['Email' => 'LettersByEmail', 'SMS' => 'LettersBySMS'];
+            $options = [];
+            foreach ($messagingConf['notifications'] as $option) {
+                list($key, $label) = explode(':', $option);
+                $options[$key] = [
+                   'name' => $this->translate("messaging_settings_option_$label"),
+                   'value' => $key,
+                   'active' => $result[$map[$key]],
+                ];
+            }
+            $messagingSettings[$type] = [
+               'type' => $type,
+               'settings' => [
+                  'transport_types' => [
+                     'type' => 'multiselect',
+                     'options' => $options
+                  ]
+               ]
+            ];
+        }
 
         $profile = [
             'firstname' => trim($name[1]),
@@ -705,7 +740,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
         
         return $history;
     }
-    
+
     /**
      * Place Hold
      *
@@ -1028,31 +1063,27 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
      */
     public function updateMessagingSettings($patron, $details)
     {
-
         $settings = [];
-        if (isset($details['reminders'])) {
+        if (!empty($details['dueDateNotice'])) {
             $settings['RefuseReminderMessages']
-                = !$details['reminders']['settings']['transport_types']['active']; 
+                = !$details['dueDateNotice']['settings']['digest']['active']; 
         }
         if (isset($details['checkoutNotice'])) {
             $settings['ReceiptMessageFormat']
                 = $details['checkoutNotice']['settings']['transport_types']['value'];
         }
-        if (isset($details['dueDateNotice'])) {
-            $options = $details['dueDateNotice']['settings']
+        if (isset($details['notifications'])) {
+            $options = $details['notifications']['settings']
                 ['transport_types']['options'];
-            if (isset($options['sms']['active'])) {
-                $settings['LettersBySMS'] = $options['sms']['active'];
+            if (!empty($options['SMS'])) {
+                $settings['LettersBySMS'] = $options['SMS']['active'];
             }
-            if (isset($options['email']['active'])) {
-                $settings['LettersByEmail'] = $options['email']['active'];
+            if (!empty($options['Email'])) {
+                $settings['LettersByEmail'] = $options['Email']['active'];
             }
         }
-        
-        $code = $this->updatePatronInfo($patron, $settings);
 
-        echo var_export($settings, true);
-        echo "code: $code";
+        $code = $this->updatePatronInfo($patron, $settings);
 
         if ($code !== 200) {
             return  [

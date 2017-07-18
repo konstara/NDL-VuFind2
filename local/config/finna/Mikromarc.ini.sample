@@ -98,6 +98,15 @@ method = driver
 [updatePhone]
 method = driver
 
+; Transport methods for messaging services.
+; Format of the methods is name:label.
+; Method name needs to be supported by the API.
+[messaging]
+checkoutNotice[] = Email:email
+;checkoutNotice[] = Paper:paper
+notifications[] = Email:email
+notifications[] = SMS:sms
+
 ; Changing of checkout history state is enabled if method parameter is set. Only
 ; valid value is 'driver'.
 [updateTransactionHistoryState]
