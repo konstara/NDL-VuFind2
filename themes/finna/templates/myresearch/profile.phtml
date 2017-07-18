@@ -150,7 +150,7 @@
             <div class="col-sm-8 profile-text-value"><?=$this->escapeHtml($this->profile['address1']) ?></div>
           <? endif; ?>
         <? endif; ?>
-        <? if (!empty($this->profile['address2']) && !$updateAddress): ?>
+        <? if (!empty($this->profile['address2'])): ?>
           <div class="col-sm-4 profile-title"><?=$this->transEsc('Address') ?> 2:</div>
           <div class="col-sm-8 profile-text-value"><?=$this->escapeHtml($this->profile['address2']) ?></div>
         <? endif; ?>
