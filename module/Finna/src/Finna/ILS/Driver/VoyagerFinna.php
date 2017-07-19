@@ -563,27 +563,6 @@ trait VoyagerFinna
     }
 
     /**
-     * Get Patron Fines
-     *
-     * This is responsible for retrieving all fines by a specific patron.
-     *
-     * @param array $patron The patron array from patronLogin
-     *
-     * @throws DateException
-     * @throws ILSException
-     * @return mixed        Array of the patron's fines on success.
-     */
-    public function getMyFines($patron)
-    {
-        try {
-            $fines = parent::getMyFines($patron);
-            return $this->markOnlinePayableFines($fines);
-        } catch (ILSException $e) {
-            return false;
-        }
-    }
-
-    /**
      * Mark fees as paid.
      *
      * This is called after a successful online payment.
@@ -837,14 +816,14 @@ trait VoyagerFinna
         ;
         $accruedType = 'Accrued Fine';
 
-        foreach ($fines as $fine) {
+        foreach ($fines as &$fine) {
             $payableOnline = true;
             if (isset($fine['fine'])) {
-                if ($fine['fine'] == $accruedType) {
-                    $fine['blockPayment'] = true;
-                    $payableOnline = false;
-                } else {
-                    $payableOnline = in_array($fine['fine'], $nonPayable);
+                $accruedFine = $fine['fine'] == $accruedType;
+                $payableOnline
+                    = !in_array($fine['fine'], $nonPayable) && !$accruedFine;
+                if (!$payableOnline && !$accruedFine) {
+                    $fine['blockPayment'] = true;                    
                 }
             }
             $fine['payableOnline'] = $payableOnline;

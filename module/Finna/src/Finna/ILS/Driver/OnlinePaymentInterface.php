@@ -40,6 +40,5 @@ interface OnlinePaymentInterface
 {
     public function getOnlinePaymentRegistrationParams();
 
-    public function markOnlinePayableFines($fines);
     public function registerOnlinePayment($patronId, $amount, $currency, $params);
 }
