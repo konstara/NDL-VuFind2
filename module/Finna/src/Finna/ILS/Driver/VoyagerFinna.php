@@ -790,18 +790,32 @@ trait VoyagerFinna
             : is_callable([$this, $method]);
     }
 
+    /**
+     * Returns a list of parameters that are required for registering
+     * online payments to the ILS. The parameters are configured in
+     * OnlinePayment > registrationParams.
+     *
+     * @return array
+     */
     public function getOnlinePaymentRegistrationParams()
     {
         return ['host', 'port', 'userId', 'password', 'locationCode'];
     }
 
     /**
-     * Support method for getMyFines.
+     * Support method for getMyFines that augments the fines with 
+     * extra information. The driver may also append the information
+     * in getMyFines implement markOnlinePayableFines as a stub.
      *
-     * Appends booleans 'blockPayment' and 'payableOnline' to a fine.
+     * The following keys are appended to each fine:
+     * - payableOnline <boolean> May the fine be payed online?
+     *
+     * The following keys are appended when required:
+     * - blockPayment <boolean> True if the fine prevents starting
+     * the payment process. 
      *
      * @param array $fines Processed fines.
-     *
+      *
      * @return array $fines Fines.
      */
     protected function markOnlinePayableFines($fines)
@@ -823,6 +837,8 @@ trait VoyagerFinna
                 $payableOnline
                     = !in_array($fine['fine'], $nonPayable) && !$accruedFine;
                 if (!$payableOnline && !$accruedFine) {
+                    // A non-payable fine that is not a
+                    // accrued fine blocks the payment
                     $fine['blockPayment'] = true;                    
                 }
             }

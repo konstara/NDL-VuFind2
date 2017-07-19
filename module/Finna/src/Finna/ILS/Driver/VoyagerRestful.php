@@ -38,7 +38,6 @@ use PDO, PDOException;
  * @link     https://vufind.org/wiki/development:plugins:ils_drivers Wiki
  */
 class VoyagerRestful extends \VuFind\ILS\Driver\VoyagerRestful
-    implements OnlinePaymentInterface
 {
     use VoyagerFinna;
     use OnlinePaymentTrait;

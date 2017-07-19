@@ -43,7 +43,6 @@ use VuFind\Exception\ILS as ILSException;
  * @link     https://vufind.org/wiki/development:plugins:ils_drivers Wiki
  */
 class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
-    OnlinePaymentInterface,
     \VuFindHttp\HttpServiceAwareInterface,
     \VuFind\I18n\Translator\TranslatorAwareInterface, \Zend\Log\LoggerAwareInterface
 {
@@ -345,14 +344,15 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
                 'id' => isset($entry['MarcRecordId'])
                    ? $entry['MarcRecordId'] : null,
                 'item_id' => $entry['ItemId'],
+                // Append payment information
                 'payableOnline' => in_array($entry['Id'], $payableIds)
             ];
             if (!empty($entry['MarcRecordTitle'])) {
                 $fine['title'] = $entry['MarcRecordTitle'];
             }
             $fines[] = $fine;
-
         }
+
         return $fines;
     }
 
@@ -1107,20 +1107,49 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
         ];
     }
 
+    /**
+     * Returns a list of parameters that are required for registering
+     * online payments to the ILS. The parameters are configured in
+     * OnlinePayment > registrationParams.
+     *
+     * @return array
+     */
     public function getOnlinePaymentRegistrationParams()
     {
         return [];
     }
 
+    /**
+     * Support method for getMyFines that augments the fines with 
+     * extra information. The driver may also append the information
+     * in getMyFines implement markOnlinePayableFines as a stub.
+     *
+     * The following keys are appended to each fine:
+     * - payableOnline <boolean> May the fine be payed online?
+     *
+     * The following keys are appended when required:
+     * - blockPayment <boolean> True if the fine prevents starting
+     * the payment process. 
+     *
+     * @param array $fines Processed fines.
+      *
+     * @return array $fines Fines.
+     */
     public function markOnlinePayableFines($fines)
     {
-        return array_map(
-            function ($fine) {
-                $fines['payableOnline'] = false;
-            }, $fines
-        );
+        return $fines;
     }
 
+    /**
+     * Registers an online payment to the ILS.
+     *
+     * @param string $patronId Patron ID
+     * @param int    $amount   Total amount paid
+     * @param string $currency Currency
+     * @param array  $params   Registration configuration parameters
+     *
+     * @return boolean success
+     */    
     public function registerOnlinePayment($patronId, $amount, $currency, $params)
     {
         return true;

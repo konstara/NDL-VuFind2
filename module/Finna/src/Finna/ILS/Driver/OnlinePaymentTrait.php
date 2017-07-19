@@ -46,6 +46,47 @@ use Zend\Validator\EmailAddress as EmailAddressValidator;
 trait OnlinePaymentTrait
 {
     /**
+     * Returns a list of parameters that are required for registering
+     * online payments to the ILS. The parameters are configured in
+     * OnlinePayment > registrationParams.
+     *
+     * @return array
+     */
+    abstract public function getOnlinePaymentRegistrationParams();
+
+    /**
+     * Support method for getMyFines that augments the fines with 
+     * extra information. The driver may also append the information
+     * in getMyFines implement markOnlinePayableFines as a stub.
+     *
+     * The following keys are appended to each fine:
+     * - payableOnline <boolean> May the fine be payed online?
+     *
+     * The following keys are appended when required:
+     * - blockPayment <boolean> True if the fine prevents starting
+     * the payment process. 
+     *
+     * @param array $fines Processed fines.
+      *
+     * @return array $fines Fines.
+     */
+    abstract public function markOnlinePayableFines($fines);
+
+    /**
+     * Registers an online payment to the ILS.
+     *
+     * @param string $patronId Patron ID
+     * @param int    $amount   Total amount paid
+     * @param string $currency Currency
+     * @param array  $params   Registration configuration parameters
+     *
+     * @return boolean success
+     */    
+    abstract public function registerOnlinePayment(
+        $patronId, $amount, $currency, $params
+    );
+
+    /**
      * Get Patron Fines
      *
      * This is responsible for retrieving all fines by a specific patron.
@@ -180,11 +221,12 @@ trait OnlinePaymentTrait
     }
     
     /**
-     * Helper method to determine whether online payment is supported in this driver.
+     * Helper method for validating online payment configuration.
      *
+     * @param boolean $throwException Throw an ILSException if the
+     * configuration is not valid.
+     
      * @return bool
-     *
-     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
     protected function validateOnlinePaymentConfig($throwException = false)
     {
