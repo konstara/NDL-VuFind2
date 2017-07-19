@@ -43,9 +43,12 @@ use VuFind\Exception\ILS as ILSException;
  * @link     https://vufind.org/wiki/development:plugins:ils_drivers Wiki
  */
 class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
+    OnlinePaymentInterface,
     \VuFindHttp\HttpServiceAwareInterface,
     \VuFind\I18n\Translator\TranslatorAwareInterface, \Zend\Log\LoggerAwareInterface
 {
+    use OnlinePaymentTrait;
+
     use \VuFindHttp\HttpServiceAwareTrait;
     use \VuFind\I18n\Translator\TranslatorAwareTrait;
     use \VuFind\Log\LoggerAwareTrait {
@@ -134,6 +137,12 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
      */
     public function getConfig($function, $params = null)
     {
+        if ($function == 'onlinePayment'
+            && $config = $this->getOnlinePaymentConfig()
+        ) {
+            return $config;
+        }
+
         return isset($this->config[$function])
             ? $this->config[$function] : false;
     }
@@ -314,8 +323,6 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             }, $payableFines
         );
 
-        $payableIds = array_slice($payableIds, 0, 1);
-        
         $fines = [];
         foreach ($allFines as $entry) {
             $createDate = !empty($entry['DeptDate'])
@@ -1100,6 +1107,25 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
         ];
     }
 
+    public function getOnlinePaymentRegistrationParams()
+    {
+        return [];
+    }
+
+    public function markOnlinePayableFines($fines)
+    {
+        return array_map(
+            function ($fine) {
+                $fines['payableOnline'] = false;
+            }, $fines
+        );
+    }
+
+    public function registerOnlinePayment($patronId, $amount, $currency, $params)
+    {
+        return true;
+    }
+
     /**
      * Helper method to determine whether or not a certain method can be
      * called on this driver.  Required method for any smart drivers.
@@ -1212,6 +1238,10 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
      */
     public function supportsMethod($method, $params)
     {
+        if ($method == 'markFeesAsPaid') {
+            return $this->supportsOnlinePayment();
+        }
+
         // Special case: change password is only available if properly configured.
         if ($method == 'changePassword') {
             return isset($this->config['changePassword']);
