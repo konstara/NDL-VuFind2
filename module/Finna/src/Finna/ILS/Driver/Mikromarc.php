@@ -302,7 +302,6 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
     {
         // TODO: check if ciAccountEntryStatus = 0 (all units) ?
 
-        
         // All fines, ciAccountEntryStatus = 2
         $allFines = $this->makeRequest(
             ['BorrowerDebts', $patron['cat_username'], '2', '0']
@@ -312,6 +311,14 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             return [];
         }
 
+        // All non-paid fines
+        $allFines = array_filter(
+            $allFines,
+            function ($fine) {
+                return $fine['State'] === 'Unpaid';
+            }
+        );
+        
         // Payable fines, ciAccountEntryStatus = 1
         $payableFines = $this->makeRequest(
             ['BorrowerDebts', $patron['cat_username'], '1', '0']
