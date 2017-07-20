@@ -574,8 +574,10 @@ trait VoyagerFinna
      * @throws ILSException
      * @return boolean success
      */
-    public function registerOnlinePayment($patronId, $amount, $currency, $params)
+    public function registerOnlinePayment($patron, $amount, $currency, $params)
     {
+        $patronId = $patron['cat_username'];
+        
         $sip = new SIP2();
         $sip->error_detection = false;
         $sip->msgTerminator = "\r";
@@ -834,6 +836,8 @@ trait VoyagerFinna
             $payableOnline = true;
             if (isset($fine['fine'])) {
                 $accruedFine = $fine['fine'] == $accruedType;
+                $fine['accruedFine'] = $accruedFine;
+
                 $payableOnline
                     = !in_array($fine['fine'], $nonPayable) && !$accruedFine;
                 if (!$payableOnline && !$accruedFine) {

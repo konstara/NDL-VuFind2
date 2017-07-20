@@ -335,6 +335,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
                 $type = $this->feeTypeMappings[$type];
             }
             $amount = $entry['Remainder']*100;
+            $fineId = isset($entry['Id']) ? $entry['Id'] : null;
             $fine = [
                 'amount' => $amount,
                 'balance' => $amount,
@@ -345,10 +346,11 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
                    ? $entry['MarcRecordId'] : null,
                 'item_id' => $entry['ItemId'],
                 // Append payment information
-                'payableOnline' => in_array($entry['Id'], $payableIds)
+                'payableOnline' => $fineId && in_array($fineId, $payableIds),
+                'fineId' => $fineId
             ];
             if (!empty($entry['MarcRecordTitle'])) {
-                $fine['title'] = $entry['MarcRecordTitle'];
+                $fine['title'] = $entry['Id'] . ': ' . $entry['MarcRecordTitle'];
             }
             $fines[] = $fine;
         }
@@ -1143,15 +1145,56 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
     /**
      * Registers an online payment to the ILS.
      *
-     * @param string $patronId Patron ID
+     * @param array  $patron Patron
      * @param int    $amount   Total amount paid
      * @param string $currency Currency
      * @param array  $params   Registration configuration parameters
      *
      * @return boolean success
      */    
-    public function registerOnlinePayment($patronId, $amount, $currency, $params)
+    public function registerOnlinePayment($patron, $amount, $currency, $params)
     {
+        $fines = $this->getMyFines($patron);
+        $payableFines = array_filter(
+            $fines, function ($fine) {
+                return $fine['payableOnline'];
+            }
+        );
+        $total = array_reduce(
+            $payableFines, function ($carry, $fine) {
+                $carry += $fine['amount'];
+                return $carry;
+            }
+        );
+
+        if ($total != $amount) {
+            return 'fines_updated';
+        }
+        
+        $success = true;
+        $errorIds = [];
+        foreach ($payableFines as $fine) {
+            $fineId = $fine['fineId'];
+            $request = ['Amount' => $fine['amount']/100.0];
+  
+            list($code, $result) = $this->makeRequest(
+                ['BorrowerDebts', $patron['cat_username'], $fineId],
+                json_encode($request),
+                'POST', true
+            );
+            if ($code !== 200) {
+                $errorIds[] = $fineId;
+                $this->error(
+                    "Registration error for fine $fineId "
+                    . "(HTTP status $code): $result"
+                );
+            }
+        }
+        
+        if (!empty($errorIds)) {
+            return 'Registration failed for fines: ' . implode(',', $errorIds);
+        }
+
         return true;
     }
 

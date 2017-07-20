@@ -75,7 +75,7 @@ trait OnlinePaymentTrait
     /**
      * Registers an online payment to the ILS.
      *
-     * @param string $patronId Patron ID
+     * @param array  $patron   Patron
      * @param int    $amount   Total amount paid
      * @param string $currency Currency
      * @param array  $params   Registration configuration parameters
@@ -83,7 +83,7 @@ trait OnlinePaymentTrait
      * @return boolean success
      */    
     abstract public function registerOnlinePayment(
-        $patronId, $amount, $currency, $params
+        $patron, $amount, $currency, $params
     );
 
     /**
@@ -190,7 +190,7 @@ trait OnlinePaymentTrait
         };
 
         $result = $this->registerOnlinePayment(
-            $patronId, $amount, $currency, $params
+            $patron, $amount, $currency, $params
         );
         if ($result === true) {
             $cacheId = "blocks_$patronId";
