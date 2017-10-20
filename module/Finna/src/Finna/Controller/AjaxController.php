@@ -1153,6 +1153,10 @@ class AjaxController extends \VuFind\Controller\AjaxController
             $lang = 'fi';
         }
 
+        $organisationInfo = $this->serviceLocator->get('VuFind\Config')
+            ->get('OrganisationInfo');
+        $params['orgType'] = strpos($organisationInfo->General->url, 'museot.fi')
+        ? 'museum' : 'library';
         $service = $this->serviceLocator->get('Finna\OrganisationInfo');
         try {
             $response = $service->query($parent, $params, $buildings);

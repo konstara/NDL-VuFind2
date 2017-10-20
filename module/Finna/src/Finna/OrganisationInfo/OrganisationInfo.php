@@ -214,81 +214,86 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
             $this->logError("Missing parent");
             return false;
         }
+        if ($params['orgType'] == 'library') {
+            $target = isset($params['target']) ? $params['target'] : 'widget';
+            $action = isset($params['action']) ? $params['action'] : 'list';
 
-        $target = isset($params['target']) ? $params['target'] : 'widget';
-        $action = isset($params['action']) ? $params['action'] : 'list';
+            $id = null;
+            if (isset($params['id'])) {
+                $id = $params['id'];
+            }
+            $consortium
+                = isset($params['consortium']) ? $params['consortium'] : null;
 
-        $id = null;
-        if (isset($params['id'])) {
-            $id = $params['id'];
-        }
-        $consortium
-            = isset($params['consortium']) ? $params['consortium'] : null;
-
-        $now = false;
-        if (isset($params['periodStart'])) {
-            $now = strtotime($params['periodStart']);
+            $now = false;
+            if (isset($params['periodStart'])) {
+                $now = strtotime($params['periodStart']);
+                if ($now === false) {
+                    $this->logError(
+                        'Error parsing periodStart: ' . $params['periodStart']
+                    );
+                }
+            }
             if ($now === false) {
-                $this->logError(
-                    'Error parsing periodStart: ' . $params['periodStart']
+                $now = time();
+            }
+
+            $weekDay = date('N', $now);
+            $startDate = $weekDay == 1
+                ? $now : strtotime('last monday', $now);
+
+            $endDate = $weekDay == 7
+                ? $now : strtotime('next sunday', $now);
+
+            $schedules = $action == 'list' || !empty($params['periodStart']);
+
+            if ($action == 'details') {
+                $dir = isset($params['dir']) && in_array($params['dir'], ['1', '-1'])
+                    ? $params['dir'] : 0;
+                $startDate = strtotime("{$dir} Week", $startDate);
+                $endDate = strtotime("{$dir} Week", $endDate);
+            }
+
+            $weekNum = date('W', $startDate);
+            $startDate = date('Y-m-d', $startDate);
+            $endDate = date('Y-m-d', $endDate);
+
+            $url = $this->config->General->url;
+
+            if ($action == 'lookup') {
+                $link = $params['link'];
+                $parentName = $params['parentName'];
+                return $this->lookupAction($parent, $link, $parentName);
+            } elseif ($action == 'consortium') {
+                $response = $this->consortiumAction(
+                    $parent, $buildings, $target, $startDate, $endDate, $params
                 );
+                if ($response) {
+                    $response['id'] = $id;
+                    $response['weekNum'] = $weekNum;
+                }
+                return $response;
+            } else if ($action == 'details') {
+                $allServices = !empty($params['allServices']);
+                $fullDetails = !empty($params['fullDetails']);
+                $response = $this->detailsAction(
+                    $id, $target, $schedules, $startDate, $endDate,
+                    $fullDetails, $allServices
+                );
+
+                if ($response) {
+                    $response['weekNum'] = $weekNum;
+                }
+                return $response;
             }
+
+            $this->logError("Unknown action: $action");
+            return false;
+        } else {
+            $id = '123';
+            $action = 'finna_org_perustiedot.php';
+            $response = $this->fetchMuseumData($id, $action);
         }
-        if ($now === false) {
-            $now = time();
-        }
-
-        $weekDay = date('N', $now);
-        $startDate = $weekDay == 1
-            ? $now : strtotime('last monday', $now);
-
-        $endDate = $weekDay == 7
-            ? $now : strtotime('next sunday', $now);
-
-        $schedules = $action == 'list' || !empty($params['periodStart']);
-
-        if ($action == 'details') {
-            $dir = isset($params['dir']) && in_array($params['dir'], ['1', '-1'])
-                ? $params['dir'] : 0;
-            $startDate = strtotime("{$dir} Week", $startDate);
-            $endDate = strtotime("{$dir} Week", $endDate);
-        }
-
-        $weekNum = date('W', $startDate);
-        $startDate = date('Y-m-d', $startDate);
-        $endDate = date('Y-m-d', $endDate);
-
-        $url = $this->config->General->url;
-
-        if ($action == 'lookup') {
-            $link = $params['link'];
-            $parentName = $params['parentName'];
-            return $this->lookupAction($parent, $link, $parentName);
-        } elseif ($action == 'consortium') {
-            $response = $this->consortiumAction(
-                $parent, $buildings, $target, $startDate, $endDate, $params
-            );
-            if ($response) {
-                $response['id'] = $id;
-                $response['weekNum'] = $weekNum;
-            }
-            return $response;
-        } else if ($action == 'details') {
-            $allServices = !empty($params['allServices']);
-            $fullDetails = !empty($params['fullDetails']);
-            $response = $this->detailsAction(
-                $id, $target, $schedules, $startDate, $endDate,
-                $fullDetails, $allServices
-            );
-
-            if ($response) {
-                $response['weekNum'] = $weekNum;
-            }
-            return $response;
-        }
-
-        $this->logError("Unknown action: $action");
-        return false;
     }
 
     /**
@@ -1102,5 +1107,73 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
         }
 
         return null;
+    }
+
+    /**
+     * Fetch data from Museot.fi API
+     *
+     * @param int    $id     Finna-organisation ID
+     * @param string $action String which states the action performed
+     *
+     * @return mixed result or false on error.
+     */
+    protected function fetchMuseumData($id, $action)
+    {
+        $url = $this->config->General->url . '/' . $action . '?'
+            . 'finna_org_id=' . $id;
+
+        $cacheDir = $this->cacheManager->getCache('organisation-info')
+            ->getOptions()->getCacheDir();
+
+        $localFile = "$cacheDir/" . md5($url) . '.json';
+        $maxAge = isset($this->config->General->cachetime)
+            ? $this->config->General->cachetime : 10;
+
+        $response = false;
+        if ($maxAge) {
+            if (is_readable($localFile)
+                && time() - filemtime($localFile) < $maxAge * 60
+            ) {
+                $response = file_get_contents($localFile);
+            }
+        }
+        if (!$response) {
+            $client = $this->http->createClient($url);
+            $result = $client->setMethod('GET')->send();
+            if ($result->isSuccess()) {
+                if ($result->getStatusCode() != 200) {
+                    $this->logError(
+                        'Error querying organisation info, response code '
+                        . $result->getStatusCode() . ", url: $url"
+                    );
+                    return false;
+                }
+            } else {
+                $this->logError(
+                    'Error querying organisation info: '
+                    . $result->getStatusCode() . ': ' . $result->getReasonPhrase()
+                    . ", url: $url"
+                );
+                return false;
+            }
+
+            $response = $result->getBody();
+            if ($maxAge) {
+                file_put_contents($localFile, $response);
+            }
+        }
+
+        if (!$response) {
+            return false;
+        }
+
+        $response = json_decode($response, true);
+        $jsonError = json_last_error();
+        if ($jsonError !== JSON_ERROR_NONE) {
+            $this->logError("Error decoding JSON: $jsonError (url: $url)");
+            return false;
+        }
+
+        return $response;
     }
 }
