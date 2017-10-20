@@ -1904,4 +1904,34 @@ class SolrMarc extends \VuFind\RecordDriver\SolrMarc
         }
         return $results;
     }
+
+    /**
+     * Get article host data from field 773, subfields t,g,d
+     *
+     * @return array
+     */
+    public function getArticleHostInfo()
+    {
+        $results = [];
+        foreach ($this->getMarcRecord()->getFields('773') as $field) {
+            $subfields = [];
+            if ($field->getSubfield('t')) {
+                $subfields[] = $this->stripTrailingPunctuation(
+                    $field->getSubfield('t')->getData(), "-"
+                );
+            }
+            if ($field->getSubfield('g')) {
+                $subfields[] = $this->stripTrailingPunctuation(
+                    $field->getSubfield('g')->getData()
+                );
+            }
+            if ($field->getSubfield('d')) {
+                $subfields[] = $this->stripTrailingPunctuation(
+                    $field->getSubfield('d')->getData(), "-"
+                );
+            }
+            $results[] = implode(', ', $subfields);
+        }
+        return $results;
+    }
 }
