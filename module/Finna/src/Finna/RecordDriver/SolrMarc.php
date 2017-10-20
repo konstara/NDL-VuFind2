@@ -1917,17 +1917,17 @@ class SolrMarc extends \VuFind\RecordDriver\SolrMarc
             $subfields = [];
             if ($field->getSubfield('t')) {
                 $subfields[] = $this->stripTrailingPunctuation(
-                    $field->getSubfield('t')->getData(), "-"
+                    $field->getSubfield('t')->getData(), '-'
                 );
             }
             if ($field->getSubfield('g')) {
                 $subfields[] = $this->stripTrailingPunctuation(
-                    $field->getSubfield('g')->getData()
+                    $field->getSubfield('g')->getData(), '-'
                 );
             }
             if ($field->getSubfield('d')) {
                 $subfields[] = $this->stripTrailingPunctuation(
-                    $field->getSubfield('d')->getData(), "-"
+                    $field->getSubfield('d')->getData(), '-'
                 );
             }
             $results[] = implode(', ', $subfields);
