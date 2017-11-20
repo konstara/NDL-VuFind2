@@ -766,7 +766,7 @@ class RecordDataFormatterFactory
             ]
         );
         $spec->setTemplateLine(
-            'Published In Issue', 'getArticleHostInfo', 'data-transEsc.phtml',
+            'Published In Issue', 'getHostRecords', 'data-hostInfo.phtml',
             [
                 'context' => ['class' => 'record-article-host']
             ]

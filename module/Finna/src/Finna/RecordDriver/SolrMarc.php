@@ -544,6 +544,7 @@ class SolrMarc extends \VuFind\RecordDriver\SolrMarc
      *   id
      *   title
      *   reference
+     *   Place, publisher, and date of publication
      *
      * @return array
      */
@@ -554,6 +555,7 @@ class SolrMarc extends \VuFind\RecordDriver\SolrMarc
             $id = '';
             $title = '';
             $reference = '';
+            $publishingInfo = '';
             $subfields = $field->getSubfields();
             foreach ($subfields as $subfield) {
                 $subfieldCode = $subfield->getCode();
@@ -572,13 +574,19 @@ class SolrMarc extends \VuFind\RecordDriver\SolrMarc
                 case 'g':
                     $reference = $subfield->getData();
                     break;
+                case 'd':
+                    $publishingInfo = $this->stripTrailingPunctuation(
+                        $subfield->getData(), '.-'
+                    );
+                    break;
                 }
             }
 
             $result[] = [
                 'id' => $id,
                 'title' => $title,
-                'reference' => $reference
+                'reference' => $reference,
+                'publishingInfo' => $publishingInfo
             ];
         }
         return $result;
@@ -1901,36 +1909,6 @@ class SolrMarc extends \VuFind\RecordDriver\SolrMarc
                     );
                 }
             }
-        }
-        return $results;
-    }
-
-    /**
-     * Get article host data from field 773, subfields t,g,d
-     *
-     * @return array
-     */
-    public function getArticleHostInfo()
-    {
-        $results = [];
-        foreach ($this->getMarcRecord()->getFields('773') as $field) {
-            $subfields = [];
-            if ($field->getSubfield('t')) {
-                $subfields[] = $this->stripTrailingPunctuation(
-                    $field->getSubfield('t')->getData(), '-'
-                );
-            }
-            if ($field->getSubfield('g')) {
-                $subfields[] = $this->stripTrailingPunctuation(
-                    $field->getSubfield('g')->getData(), '-'
-                );
-            }
-            if ($field->getSubfield('d')) {
-                $subfields[] = $this->stripTrailingPunctuation(
-                    $field->getSubfield('d')->getData(), '-'
-                );
-            }
-            $results[] = implode(', ', $subfields);
         }
         return $results;
     }
