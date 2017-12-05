@@ -11,10 +11,10 @@
       <? if (!empty($event['date'])): ?><?=$this->escapeHtml($event['date'])?><br/><? elseif ($event['type'] != 'käyttö' && $event['type'] != 'näyttely'): ?> <?=$this->transEsc('undated')?><? endif; ?>
       <? if (!empty($event['method'])): ?><?=$this->escapeHtml($event['method'])?><br/><? endif; ?>
       <? if (!empty($event['materials'])): ?>
-        <?=implode('<br/>', array_map([$this, 'escapeHtml'], $event['materials']))?><br>
+        <?=implode('<br/>', array_map([$this, 'escapeHtml'], $event['materials']))?><br/>
       <? endif; ?>
       <? if (!empty($event['places'])): ?>
-        <?=implode('<br/>', array_map([$this, 'escapeHtml'], $event['places']))?><br>
+        <?=implode('<br/>', array_map([$this, 'escapeHtml'], $event['places']))?><br/>
       <? endif; ?>
       <? if (!empty($event['culture'])): ?><?=$this->escapeHtml($event['culture'])?><br/><? endif; ?>
       <? if (!empty($event['actors'])): ?>
