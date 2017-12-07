@@ -27,7 +27,6 @@
  * @link     http://vufind.org/wiki/vufind2:developer_manual Wiki
  */
 namespace Finna\OrganisationInfo;
-use Zend\Config\Config;
 
 /**
  * Service for querying Kirjastohakemisto database.
@@ -260,6 +259,7 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
 
             $url = $this->config->General->url;
 
+<<<<<<< HEAD
             if ($action == 'lookup') {
                 $link = $params['link'];
                 $parentName = $params['parentName'];
@@ -280,6 +280,28 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
                     $id, $target, $schedules, $startDate, $endDate,
                     $fullDetails, $allServices
                 );
+=======
+        if ($action == 'lookup') {
+            $link = $params['link'];
+            $parentName = $params['parentName'];
+            return $this->lookupAction($parent, $link, $parentName);
+        } elseif ($action == 'consortium') {
+            $response = $this->consortiumAction(
+                $parent, $buildings, $target, $startDate, $endDate, $params
+            );
+            if ($response) {
+                $response['id'] = $id;
+                $response['weekNum'] = $weekNum;
+            }
+            return $response;
+        } elseif ($action == 'details') {
+            $allServices = !empty($params['allServices']);
+            $fullDetails = !empty($params['fullDetails']);
+            $response = $this->detailsAction(
+                $id, $target, $schedules, $startDate, $endDate,
+                $fullDetails, $allServices
+            );
+>>>>>>> master
 
                 if ($response) {
                     $response['weekNum'] = $weekNum;
@@ -457,7 +479,6 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
                         }
                     }
                 }
-
             }
         }
         if (!empty($finna)) {

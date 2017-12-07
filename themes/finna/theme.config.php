@@ -45,7 +45,7 @@ return [
             'systemMessages' => 'Finna\View\Helper\Root\Factory::getSystemMessages',
             'translation' => 'Finna\View\Helper\Root\Factory::getTranslation',
             'proxyurl' => 'Finna\View\Helper\Root\Factory::getProxyUrl',
-            'recordlink' =>  'Finna\View\Helper\Root\Factory::getRecordLink',
+            'recordlink' => 'Finna\View\Helper\Root\Factory::getRecordLink',
         ],
         'invokables' => [
             'barcode' => 'Finna\View\Helper\Root\Barcode',
@@ -77,7 +77,7 @@ return [
         'finna.js',
         'finna-autocomplete.js',
         'finna-combined-results.js',
-        'image-popup.js',
+        'finna-image-popup.js',
         'finna-adv-search.js',
         'finna-daterange-vis.js',
         'finna-feed.js',
