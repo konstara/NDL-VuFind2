@@ -20,7 +20,8 @@ finna.organisationInfoPage = (function finnaOrganisationInfoPage() {
         var cnt = 0;
         $.each(response.list, function countItem(ind, obj) {
           organisationList[obj.id] = obj;
-          if (obj.type === 'library' || obj.type === 'other') {
+          if (obj.type === 'library' || obj.type === 'other'
+            || obj.type == 'museum') {
             cnt++;
           }
         });
@@ -282,9 +283,13 @@ finna.organisationInfoPage = (function finnaOrganisationInfoPage() {
 
       holder.find('.email-contact').show();
     }
-    if ('homepage' in data) {
-      holder.find('.office-website > a').attr('href', data.homepage);
-      holder.find('.office-website').show();
+    if (data.details.museum == false) {
+      if ('homepage' in data) {
+        holder.find('.office-website > a').attr('href', data.homepage);
+        holder.find('.office-website').show();
+      }
+    } else {
+      holder.find('.contact-info-header').html(data.details.museumContact);
     }
 
     if ('routeUrl' in data) {
@@ -314,7 +319,6 @@ finna.organisationInfoPage = (function finnaOrganisationInfoPage() {
     }
 
     var openToday = false;
-
     if ('schedules' in data.openTimes) {
       $.each(data.openTimes.schedules, function handleSchedule(ind, obj) {
         if ('today' in obj && 'times' in obj && obj.times.length) {
@@ -350,6 +354,47 @@ finna.organisationInfoPage = (function finnaOrganisationInfoPage() {
       holder.find('.building-name').text(data.name).show();
     } else {
       img.hide();
+    }
+    if (data.details.museum == true) {
+      var img = holder.find('.extra-image');
+      if ('pictures' in data.details) {
+        var src = data.details.pictures[1].url;
+        img.show();
+        if (img.attr('src') !== src) {
+          img.attr('src', src);
+          img.fadeTo(0, 0);
+          img.on('load', function onLoadImage() {
+            $(this).stop(true, true).fadeTo(300, 1);
+          });
+        } else {
+          img.fadeTo(300, 1);
+        }
+      } else {
+        img.hide();
+      }
+
+      var img = holder.find('.extra-image-2');
+      if ('pictures' in data.details) {
+        var src = data.details.pictures[2].url;
+        img.show();
+        if (img.attr('src') !== src) {
+          img.attr('src', src);
+          img.fadeTo(0, 0);
+          img.on('load', function onLoadImage() {
+            $(this).stop(true, true).fadeTo(300, 1);
+          });
+        } else {
+          img.fadeTo(300, 1);
+        }
+      } else {
+        img.hide();
+      }
+    } else {
+      var img2 = holder.find('.extra-image-2');
+      var img = holder.find('.extra-image');
+
+      img.hide();
+      img2.hide();
     }
 
     if ('buildingYear' in data.details) {

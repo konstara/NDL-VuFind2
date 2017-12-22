@@ -1114,34 +1114,38 @@ class AjaxController extends \VuFind\Controller\AjaxController
         $cookieName = 'organisationInfoId';
         $cookieManager = $this->serviceLocator->get('VuFind\CookieManager');
         $cookie = $cookieManager->get($cookieName);
+        $organisationInfo = $this->serviceLocator->get('VuFind\Config')
+            ->get('OrganisationInfo');
+        $params['orgType'] = strpos($organisationInfo->General->url, 'museot.fi')
+            ? 'museum' : 'library';
+        if ($params['orgType'] == 'library') {
+            $action = $params['action'];
+            $buildings = isset($params['buildings'])
+                ? explode(',', $params['buildings']) : null;
 
-        $action = $params['action'];
-        $buildings = isset($params['buildings'])
-            ? explode(',', $params['buildings']) : null;
-
-        $key = $parent;
-        if ($action == 'details') {
-            if (!isset($params['id'])) {
-                return $this->handleError('getOrganisationInfo: missing id');
+            $key = $parent;
+            if ($action == 'details') {
+                if (!isset($params['id'])) {
+                    return $this->handleError('getOrganisationInfo: missing id');
+                }
+                if (isset($params['id'])) {
+                    $id = $params['id'];
+                    $expire = time() + 365 * 60 * 60 * 24; // 1 year
+                    $cookieManager->set($cookieName, $id, $expire);
+                }
             }
-            if (isset($params['id'])) {
-                $id = $params['id'];
-                $expire = time() + 365 * 60 * 60 * 24; // 1 year
-                $cookieManager->set($cookieName, $id, $expire);
+
+            if (!isset($params['id']) && $cookie) {
+                $params['id'] = $cookie;
+            }
+
+            if ($action == 'lookup') {
+                $link = isset($reqParams['link']) ? $reqParams['link'] : '0';
+                $params['link'] = $link === '1';
+                $params['parentName'] = isset($reqParams['parentName'])
+                    ? $reqParams['parentName'] : null;
             }
         }
-
-        if (!isset($params['id']) && $cookie) {
-            $params['id'] = $cookie;
-        }
-
-        if ($action == 'lookup') {
-            $link = isset($reqParams['link']) ? $reqParams['link'] : '0';
-            $params['link'] = $link === '1';
-            $params['parentName'] = isset($reqParams['parentName'])
-                ? $reqParams['parentName'] : null;
-        }
-
         $lang = $this->serviceLocator->get('VuFind\Translator')->getLocale();
         $map = ['en-gb' => 'en'];
 
@@ -1152,10 +1156,6 @@ class AjaxController extends \VuFind\Controller\AjaxController
             $lang = 'fi';
         }
 
-        $organisationInfo = $this->serviceLocator->get('VuFind\Config')
-            ->get('OrganisationInfo');
-        $params['orgType'] = strpos($organisationInfo->General->url, 'museot.fi')
-        ? 'museum' : 'library';
         $service = $this->serviceLocator->get('Finna\OrganisationInfo');
         try {
             $response = $service->query($parent, $params, $buildings);

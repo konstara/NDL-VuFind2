@@ -5,7 +5,7 @@
  *
  * PHP version 5
  *
- * Copyright (C) The National Library of Finland 2016.
+ * Copyright (C) The National Library of Finland 2016-2018.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -23,6 +23,7 @@
  * @category VuFind
  * @package  Content
  * @author   Samuli Sillanpää <samuli.sillanpaa@helsinki.fi>
+ * @author   Konsta Raunio <konsta.raunio@helsinki.fi>
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     http://vufind.org/wiki/vufind2:developer_manual Wiki
  */
@@ -35,6 +36,7 @@ namespace Finna\OrganisationInfo;
  * @category VuFind
  * @package  Content
  * @author   Samuli Sillanpää <samuli.sillanpaa@helsinki.fi>
+ * @author   Konsta Raunio <konsta.raunio@helsinki.fi>
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     http://vufind.org/wiki/vufind2:developer_manual Wiki
  */
@@ -213,10 +215,11 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
             $this->logError("Missing parent");
             return false;
         }
-        if ($params['orgType'] == 'library') {
-            $target = isset($params['target']) ? $params['target'] : 'widget';
-            $action = isset($params['action']) ? $params['action'] : 'list';
 
+        $target = isset($params['target']) ? $params['target'] : 'widget';
+        $action = isset($params['action']) ? $params['action'] : 'list';
+
+        if ($params['orgType'] == 'library') {
             $id = null;
             if (isset($params['id'])) {
                 $id = $params['id'];
@@ -259,12 +262,11 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
 
             $url = $this->config->General->url;
 
-<<<<<<< HEAD
             if ($action == 'lookup') {
                 $link = $params['link'];
                 $parentName = $params['parentName'];
                 return $this->lookupAction($parent, $link, $parentName);
-            } elseif ($action == 'consortium') {
+            } else if ($action == 'consortium') {
                 $response = $this->consortiumAction(
                     $parent, $buildings, $target, $startDate, $endDate, $params
                 );
@@ -280,28 +282,6 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
                     $id, $target, $schedules, $startDate, $endDate,
                     $fullDetails, $allServices
                 );
-=======
-        if ($action == 'lookup') {
-            $link = $params['link'];
-            $parentName = $params['parentName'];
-            return $this->lookupAction($parent, $link, $parentName);
-        } elseif ($action == 'consortium') {
-            $response = $this->consortiumAction(
-                $parent, $buildings, $target, $startDate, $endDate, $params
-            );
-            if ($response) {
-                $response['id'] = $id;
-                $response['weekNum'] = $weekNum;
-            }
-            return $response;
-        } elseif ($action == 'details') {
-            $allServices = !empty($params['allServices']);
-            $fullDetails = !empty($params['fullDetails']);
-            $response = $this->detailsAction(
-                $id, $target, $schedules, $startDate, $endDate,
-                $fullDetails, $allServices
-            );
->>>>>>> master
 
                 if ($response) {
                     $response['weekNum'] = $weekNum;
@@ -311,10 +291,17 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
 
             $this->logError("Unknown action: $action");
             return false;
-        } else {
-            $id = '123';
-            $action = 'finna_org_perustiedot.php';
-            $response = $this->fetchMuseumData($id, $action);
+        } else if ($params['orgType'] == 'museum') {
+            $id = $this->matchMuseumId($parent);
+            $response = $this->museumAction(
+                $id, 'finna_org_perustiedot.php', $params, $target
+            );
+            if ($response == null) {
+                return false;
+            } else {
+                $response['id'] = $id;
+                return $response;
+            }
         }
     }
 
@@ -1131,15 +1118,257 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
     }
 
     /**
-     * Fetch data from Museot.fi API
+     * Query museum info for organisation page
      *
      * @param int    $id     Finna-organisation ID
      * @param string $action String which states the action performed
+     * @param array  $params Query parameters
+     * @param string $target page|widget
      *
-     * @return mixed result or false on error.
+     * @return array
      */
-    protected function fetchMuseumData($id, $action)
+    protected function museumAction($id, $action, $params, $target)
     {
+        $response = $this->fetchMuseumData($id, $action, $params);
+        if ($response['museot'] == null) {
+            $this->logError(
+                'Error reading consortium info: ' .
+                var_export($params, true)
+            );
+            return false;
+        }
+
+        $language = $this->language;
+        $json = $response['museot'][0];
+        $consortium = $finna = [];
+        $publish = $json['finna_publish'];
+        if ($publish == 1) {
+            $consortium['museum'] = true;
+            $consortium['name'] = $json['name'][$language];
+            $consortium['description'] = $json['description'][$language];
+            $consortium['finna']['service_point'] = $id;
+            $consortium['finna']['finna_coverage'] = $json['coverage'];
+            $consortium['finna']['usage_perc'] = $json['coverage'];
+            $consortium['finna']['usage_info'] = $json['usage_rights'][$language];
+            foreach ($json['links'] as $field => $key) {
+                $consortium['finna']['finnaLink'][$field]['name']
+                    = $key['link_info']['link_text_'.$language.''];
+                $consortium['finna']['finnaLink'][$field]['value']
+                    = $key['link_info']['link_url_'.$language.''];
+            }
+            if (!empty($json['image'])) {
+                $consortium['logo']['small'] = $json['image'];
+            }
+            $result = ['consortium' => $consortium];
+            //Organisation details
+            $details['name'] = $json['name'][$language];
+            $details['openNow'] = false;
+            $today = date('d.m');
+            $currentHour = date('H:i');
+
+            $details['openTimes']['schedules'][0]['times'][0]['opens']
+                = $json['opening_time']['mon_start'];
+            $details['openTimes']['schedules'][0]['times'][0]['closes']
+                = $json['opening_time']['mon_end'];
+            $details['openTimes']['schedules'][0]['day'] = 'Ma';
+            $details['openTimes']['schedules'][0]['date']
+                = date('d.m', strtotime('monday this week'));
+            if ($today == $details['openTimes']['schedules'][0]['date']) {
+                $details['openTimes']['schedules'][0]['today'] = true;
+                if ($currentHour >= $json['opening_time']['mon_start']
+                    && $currentHour <= $json['opening_time']['mon_end']
+                ) {
+                    $details['openNow'] = true;
+                    $details['openTimes']['openNow'] = true;
+                }
+            }
+            $details['openTimes']['schedules'][1]['times'][0]['opens']
+                = $json['opening_time']['tue_start'];
+            $details['openTimes']['schedules'][1]['times'][0]['closes']
+                = $json['opening_time']['tue_end'];
+            $details['openTimes']['schedules'][1]['day'] = 'Ti';
+            $details['openTimes']['schedules'][1]['date']
+                = date('d.m', strtotime('tuesday this week'));
+            if ($today == $details['openTimes']['schedules'][1]['date']) {
+                $details['openTimes']['schedules'][1]['today'] = true;
+                if ($currentHour >= $json['opening_time']['tue_start']
+                    && $currentHour <= $json['opening_time']['tue_end']
+                ) {
+                    $details['openNow'] = true;
+                    $details['openTimes']['openNow'] = true;
+                }
+            }
+
+            $details['openTimes']['schedules'][2]['times'][0]['opens']
+                = $json['opening_time']['wed_start'];
+            $details['openTimes']['schedules'][2]['times'][0]['closes']
+                = $json['opening_time']['wed_end'];
+            $details['openTimes']['schedules'][2]['day'] = 'Ke';
+            $details['openTimes']['schedules'][2]['date']
+                = date('d.m', strtotime('wednesday this week'));
+            if ($today == $details['openTimes']['schedules'][2]['date']) {
+                $details['openTimes']['schedules'][2]['today'] = true;
+                if ($currentHour >= $json['opening_time']['wed_start']
+                    && $currentHour <= $json['opening_time']['wed_end']
+                ) {
+                    $details['openNow'] = true;
+                    $details['openTimes']['openNow'] = true;
+                }
+            }
+
+            $details['openTimes']['schedules'][3]['times'][0]['opens']
+                = $json['opening_time']['thu_start'];
+            $details['openTimes']['schedules'][3]['times'][0]['closes']
+                = $json['opening_time']['thu_end'];
+            $details['openTimes']['schedules'][3]['day'] = 'To';
+            $details['openTimes']['schedules'][3]['date']
+                = date('d.m', strtotime('thursday this week'));
+            if ($today == $details['openTimes']['schedules'][3]['date']) {
+                $details['openTimes']['schedules'][3]['today'] = true;
+                if ($currentHour >= $json['opening_time']['thu_start']
+                    && $currentHour <= $json['opening_time']['thu_end']
+                ) {
+                    $details['openNow'] = true;
+                    $details['openTimes']['openNow'] = true;
+                }
+            }
+
+            $details['openTimes']['schedules'][4]['times'][0]['opens']
+                = $json['opening_time']['fri_start'];
+            $details['openTimes']['schedules'][4]['times'][0]['closes']
+                = $json['opening_time']['fri_end'];
+            $details['openTimes']['schedules'][4]['day'] = 'Pe';
+            $details['openTimes']['schedules'][4]['date']
+                = date('d.m', strtotime('friday this week'));
+            if ($today == $details['openTimes']['schedules'][4]['date']) {
+                $details['openTimes']['schedules'][4]['today'] = true;
+                if ($currentHour >= $json['opening_time']['fri_start']
+                    && $currentHour <= $json['opening_time']['fri_end']
+                ) {
+                    $details['openNow'] = true;
+                    $details['openTimes']['openNow'] = true;
+                }
+            }
+
+            $details['openTimes']['schedules'][5]['times'][0]['opens']
+                = $json['opening_time']['sat_start'];
+            $details['openTimes']['schedules'][5]['times'][0]['closes']
+                = $json['opening_time']['sat_end'];
+            $details['openTimes']['schedules'][5]['day'] = 'La';
+            $details['openTimes']['schedules'][5]['date']
+                = date('d.m', strtotime('saturday this week'));
+            if ($today == $details['openTimes']['schedules'][5]['date']) {
+                $details['openTimes']['schedules'][5]['today'] = true;
+                if ($currentHour >= $json['opening_time']['sat_start']
+                    && $currentHour <= $json['opening_time']['sat_end']
+                ) {
+                    $details['openNow'] = true;
+                    $details['openTimes']['openNow'] = true;
+                }
+            }
+
+            $details['openTimes']['schedules'][6]['times'][0]['opens']
+                = $json['opening_time']['sun_start'];
+            $details['openTimes']['schedules'][6]['times'][0]['closes']
+                = $json['opening_time']['sun_end'];
+            $details['openTimes']['schedules'][6]['day'] = 'Su';
+            $details['openTimes']['schedules'][6]['date']
+                = date('d.m', strtotime('sunday this week'));
+            if ($today == $details['openTimes']['schedules'][6]['date']) {
+                $details['openTimes']['schedules'][6]['today'] = true;
+                if ($currentHour >= $json['opening_time']['sun_start']
+                    && $currentHour <= $json['opening_time']['sun_end']
+                ) {
+                    $details['openNow'] = true;
+                    $details['openTimes']['openNow'] = true;
+                }
+            }
+
+            $details['openTimes']['museum'] = true;
+            $result['weekNum'] = date('W');
+            $details['openTimes']['currentWeek'] = true;
+            $details['address']['coordinates']['lon'] = $json['longitude'];
+            $details['address']['coordinates']['lat'] = $json['latitude'];
+            if (!empty($details['address'])) {
+                $details['address']['street'] = $json['address'];
+                $mapUrl = $this->config->General->mapUrl;
+                $routeUrl = $this->config->General->routeUrl;
+                $replace['street'] = $details['address']['street'];
+                $replace['city'] = preg_replace(
+                    '/[0-9,]+/', '', $json['post_office']
+                );
+                foreach ($replace as $param => $val) {
+                    $mapUrl = str_replace(
+                        '{' . $param . '}', rawurlencode($val), $mapUrl
+                    );
+                    $routeUrl = str_replace(
+                        '{' . $param . '}', rawurlencode($val), $routeUrl
+                    );
+                }
+                $details['mapUrl'] = $mapUrl;
+                $details['routeUrl'] = $routeUrl;
+                $details['address']['zipcode']
+                    = preg_replace('/\D/', '', $json['post_office']);
+                $details['address']['city'] = $replace['city'];
+
+            }
+            $phones = [];
+            foreach ($json['contact_infos'] as $field => $key) {
+                $phones[]
+                    = ['name' => $key['contact_info']['place_'.$language.''],
+                     'number' => $key['contact_info']['phone_email_'.$language.'']];
+            }
+            $phones['museum'] = true;
+            try {
+                $result['phone'] = $this->viewRenderer->partial(
+                    "Helpers/organisation-info-phone-{$target}.phtml",
+                    ['phones' => $phones]
+                );
+            } catch (\Exception $e) {
+                $this->logError($e->getmessage());
+            }
+            if (!empty($json['image2'])) {
+                $result['pictures'][0]['url'] = $json['image2'];
+            }
+            if (!empty($json['image3'])) {
+                $result['pictures'][1]['url'] = $json['image3'];
+            }
+            if (!empty($json['image4'])) {
+                $result['pictures'][2]['url'] = $json['image4'];
+            }
+
+            $details['type'] = 'museum';
+            $result['slogan'] = $json['opening_info'][$language];
+            $result['museum'] = true;
+            if ($language == 'fi') {
+                $result['museumContact'] = 'Yhteystiedot';
+            } else if ($language == 'sv') {
+                $result['museumContact'] = 'Kontakt';
+            } else {
+                $result['museumContact'] = 'Contact';
+            }
+
+            $result['list'][0] = $details;
+
+            //$result['list'] = $this->parseList($target, $response);
+        } else if ($publish == 0) {
+            $result = false;
+        }
+        return $result;
+    }
+
+    /**
+     * Fetch data from cache or Museot.fi API
+     *
+     * @param int    $id     Finna-organisation ID
+     * @param string $action String which states the action performed
+     * @param array  $params Query parameters
+     *
+     * @return mixed museum data or false on error.
+     */
+    protected function fetchMuseumData($id, $action, $params)
+    {
+
         $url = $this->config->General->url . '/' . $action . '?'
             . 'finna_org_id=' . $id;
 
@@ -1196,5 +1425,29 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
         }
 
         return $response;
+    }
+
+    /**
+     * Get Museo ID for Finna
+     *
+     * @param string $finna_id Finna-organisation ID
+     *
+     * @return int
+     */
+    protected function matchMuseumId($finna_id)
+    {
+        $idlist = [];
+        $idlist = [
+            '201' => 'forssan museo',
+            '202' => 'museo2',
+            '203' => 'museomuseo',
+            '123' => 'lusto'
+        ];
+        $key = array_search($finna_id, $idlist);
+        if (empty($key)) {
+            return null;
+        } else {
+            return $key;
+        }
     }
 }
