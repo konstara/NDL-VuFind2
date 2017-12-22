@@ -42,7 +42,6 @@ finna.organisationInfoWidget = (function finnaOrganisationInfoWidget() {
 
     if (!found) {
       id = finna.common.getField(data.consortium.finna, 'service_point');
-      //console.log(id);
       if (!id) {
         id = menu.find('li input').eq(0).val();
       }
