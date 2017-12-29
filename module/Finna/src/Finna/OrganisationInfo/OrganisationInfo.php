@@ -1181,10 +1181,13 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
             $details['openTimes']['museum'] = true;
             $result['weekNum'] = date('W');
             $details['openTimes']['currentWeek'] = true;
-            $details['address']['coordinates']['lon'] = $json['longitude'];
-            $details['address']['coordinates']['lat'] = $json['latitude'];
-            if (!empty($json['address'])) {
-                $details['address']['street'] = $json['address'];
+            $details['address']['coordinates']['lon']
+                = !empty($json['longitude']) ? $json['longitude'] : '';
+            $details['address']['coordinates']['lat']
+                = !empty($json['latitude']) ? $json['latitude'] : '';
+            $details['address']['street']
+                = !empty($json['address']) ? $json['address'] : '';
+            if (!empty($details['address'])) {
                 $mapUrl = $this->config->General->mapUrl;
                 $routeUrl = $this->config->General->routeUrl;
                 $replace['street'] = $details['address']['street'];
@@ -1204,7 +1207,6 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
                 $details['address']['zipcode']
                     = preg_replace('/\D/', '', $json['post_office']);
                 $details['address']['city'] = $replace['city'];
-
             }
             $phones = [];
             foreach ($json['contact_infos'] as $field => $key) {
