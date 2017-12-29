@@ -1233,7 +1233,9 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
                 $result['pictures'][2]['url'] = $json['image4'];
             }
             $details['type'] = 'museum';
-            $result['scheduleDescriptions'][0] = $json['opening_info'][$language];
+            $result['scheduleDescriptions'][0]
+                = !empty($json['opening_info'][$language])
+                    ? $json['opening_info'][$language] : '';
             $result['museum'] = true;
             if ($language == 'fi') {
                 $result['museumContact'] = 'Yhteystiedot';
