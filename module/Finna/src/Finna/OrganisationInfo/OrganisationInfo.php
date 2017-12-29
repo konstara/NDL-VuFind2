@@ -1137,12 +1137,13 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
             );
             return false;
         }
-
+        $i = 0;
         $language = $this->language;
         $json = $response['museot'][0];
         $consortium = $finna = [];
         $publish = $json['finna_publish'];
         if ($publish == 1) {
+            //Consortium info
             $consortium['museum'] = true;
             $consortium['name'] = $json['name'][$language];
             $consortium['description'] = $json['description'][$language];
@@ -1160,136 +1161,29 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
                 $consortium['logo']['small'] = $json['image'];
             }
             $result = ['consortium' => $consortium];
-            //Organisation details
+            //Details info
             $details['name'] = $json['name'][$language];
             $details['openNow'] = false;
             $today = date('d.m');
             $currentHour = date('H:i');
-
-            $details['openTimes']['schedules'][0]['times'][0]['opens']
-                = $json['opening_time']['mon_start'];
-            $details['openTimes']['schedules'][0]['times'][0]['closes']
-                = $json['opening_time']['mon_end'];
-            $details['openTimes']['schedules'][0]['day'] = 'Ma';
-            $details['openTimes']['schedules'][0]['date']
-                = date('d.m', strtotime('monday this week'));
-            if ($today == $details['openTimes']['schedules'][0]['date']) {
-                $details['openTimes']['schedules'][0]['today'] = true;
-                if ($currentHour >= $json['opening_time']['mon_start']
-                    && $currentHour <= $json['opening_time']['mon_end']
-                ) {
+            $days = [
+                0 => 'monday', 1 => 'tuesday', 2 => 'wednesday',
+                3 => 'thursday', 4 => 'friday', 5 => 'saturday', 6 => 'sunday'
+            ];
+            foreach ($days as $day => $key) {
+                $details['openTimes']['schedules'][$day]
+                    = $this->getMuseumDaySchedule($key, $json);
+                if ($details['openTimes']['schedules'][$day]['openNow'] == true) {
                     $details['openNow'] = true;
                     $details['openTimes']['openNow'] = true;
                 }
             }
-            $details['openTimes']['schedules'][1]['times'][0]['opens']
-                = $json['opening_time']['tue_start'];
-            $details['openTimes']['schedules'][1]['times'][0]['closes']
-                = $json['opening_time']['tue_end'];
-            $details['openTimes']['schedules'][1]['day'] = 'Ti';
-            $details['openTimes']['schedules'][1]['date']
-                = date('d.m', strtotime('tuesday this week'));
-            if ($today == $details['openTimes']['schedules'][1]['date']) {
-                $details['openTimes']['schedules'][1]['today'] = true;
-                if ($currentHour >= $json['opening_time']['tue_start']
-                    && $currentHour <= $json['opening_time']['tue_end']
-                ) {
-                    $details['openNow'] = true;
-                    $details['openTimes']['openNow'] = true;
-                }
-            }
-
-            $details['openTimes']['schedules'][2]['times'][0]['opens']
-                = $json['opening_time']['wed_start'];
-            $details['openTimes']['schedules'][2]['times'][0]['closes']
-                = $json['opening_time']['wed_end'];
-            $details['openTimes']['schedules'][2]['day'] = 'Ke';
-            $details['openTimes']['schedules'][2]['date']
-                = date('d.m', strtotime('wednesday this week'));
-            if ($today == $details['openTimes']['schedules'][2]['date']) {
-                $details['openTimes']['schedules'][2]['today'] = true;
-                if ($currentHour >= $json['opening_time']['wed_start']
-                    && $currentHour <= $json['opening_time']['wed_end']
-                ) {
-                    $details['openNow'] = true;
-                    $details['openTimes']['openNow'] = true;
-                }
-            }
-
-            $details['openTimes']['schedules'][3]['times'][0]['opens']
-                = $json['opening_time']['thu_start'];
-            $details['openTimes']['schedules'][3]['times'][0]['closes']
-                = $json['opening_time']['thu_end'];
-            $details['openTimes']['schedules'][3]['day'] = 'To';
-            $details['openTimes']['schedules'][3]['date']
-                = date('d.m', strtotime('thursday this week'));
-            if ($today == $details['openTimes']['schedules'][3]['date']) {
-                $details['openTimes']['schedules'][3]['today'] = true;
-                if ($currentHour >= $json['opening_time']['thu_start']
-                    && $currentHour <= $json['opening_time']['thu_end']
-                ) {
-                    $details['openNow'] = true;
-                    $details['openTimes']['openNow'] = true;
-                }
-            }
-
-            $details['openTimes']['schedules'][4]['times'][0]['opens']
-                = $json['opening_time']['fri_start'];
-            $details['openTimes']['schedules'][4]['times'][0]['closes']
-                = $json['opening_time']['fri_end'];
-            $details['openTimes']['schedules'][4]['day'] = 'Pe';
-            $details['openTimes']['schedules'][4]['date']
-                = date('d.m', strtotime('friday this week'));
-            if ($today == $details['openTimes']['schedules'][4]['date']) {
-                $details['openTimes']['schedules'][4]['today'] = true;
-                if ($currentHour >= $json['opening_time']['fri_start']
-                    && $currentHour <= $json['opening_time']['fri_end']
-                ) {
-                    $details['openNow'] = true;
-                    $details['openTimes']['openNow'] = true;
-                }
-            }
-
-            $details['openTimes']['schedules'][5]['times'][0]['opens']
-                = $json['opening_time']['sat_start'];
-            $details['openTimes']['schedules'][5]['times'][0]['closes']
-                = $json['opening_time']['sat_end'];
-            $details['openTimes']['schedules'][5]['day'] = 'La';
-            $details['openTimes']['schedules'][5]['date']
-                = date('d.m', strtotime('saturday this week'));
-            if ($today == $details['openTimes']['schedules'][5]['date']) {
-                $details['openTimes']['schedules'][5]['today'] = true;
-                if ($currentHour >= $json['opening_time']['sat_start']
-                    && $currentHour <= $json['opening_time']['sat_end']
-                ) {
-                    $details['openNow'] = true;
-                    $details['openTimes']['openNow'] = true;
-                }
-            }
-
-            $details['openTimes']['schedules'][6]['times'][0]['opens']
-                = $json['opening_time']['sun_start'];
-            $details['openTimes']['schedules'][6]['times'][0]['closes']
-                = $json['opening_time']['sun_end'];
-            $details['openTimes']['schedules'][6]['day'] = 'Su';
-            $details['openTimes']['schedules'][6]['date']
-                = date('d.m', strtotime('sunday this week'));
-            if ($today == $details['openTimes']['schedules'][6]['date']) {
-                $details['openTimes']['schedules'][6]['today'] = true;
-                if ($currentHour >= $json['opening_time']['sun_start']
-                    && $currentHour <= $json['opening_time']['sun_end']
-                ) {
-                    $details['openNow'] = true;
-                    $details['openTimes']['openNow'] = true;
-                }
-            }
-
             $details['openTimes']['museum'] = true;
             $result['weekNum'] = date('W');
             $details['openTimes']['currentWeek'] = true;
             $details['address']['coordinates']['lon'] = $json['longitude'];
             $details['address']['coordinates']['lat'] = $json['latitude'];
-            if (!empty($details['address'])) {
+            if (!empty($json['address'])) {
                 $details['address']['street'] = $json['address'];
                 $mapUrl = $this->config->General->mapUrl;
                 $routeUrl = $this->config->General->routeUrl;
@@ -1336,9 +1230,8 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
             if (!empty($json['image4'])) {
                 $result['pictures'][2]['url'] = $json['image4'];
             }
-
             $details['type'] = 'museum';
-            $result['slogan'] = $json['opening_info'][$language];
+            $result['scheduleDescriptions'][0] = $json['opening_info'][$language];
             $result['museum'] = true;
             if ($language == 'fi') {
                 $result['museumContact'] = 'Yhteystiedot';
@@ -1347,10 +1240,8 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
             } else {
                 $result['museumContact'] = 'Contact';
             }
-
+            $details['id'] = $id;
             $result['list'][0] = $details;
-
-            //$result['list'] = $this->parseList($target, $response);
         } else if ($publish == 0) {
             $result = false;
         }
@@ -1449,5 +1340,42 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
         } else {
             return $key;
         }
+    }
+
+    /**
+     * Date-data handling function for museums
+     *
+     * @param string $day  weekday
+     * @param array  $json data from museum api
+     *
+     * @return array
+     */
+    protected function getMuseumDaySchedule($day, $json)
+    {
+        $return = [];
+        $today = date('d.m');
+        $currentHour = date('H:i');
+        $dayShortcode = substr($day, 0, 3);
+        if (empty($json['opening_time']["{$dayShortcode}_start"])
+            && empty($json['opening_time']["{$dayShortcode}_end"])
+        ) {
+            $return['closed'] = true;
+        } else {
+            $return['times'][0]['closes']
+                = $json['opening_time']["{$dayShortcode}_end"];
+            $return['times'][0]['opens']
+                = $json['opening_time']["{$dayShortcode}_start"];
+        }
+        $return['day'] = $this->translator->translate('day-name-short-' . $day);
+        $return['date'] = date('d.m', strtotime("{$day} this week"));
+        if ($today == $return['date']) {
+            $return['today'] = true;
+            if ($currentHour >= $json['opening_time']["{$dayShortcode}_start"]
+                && $currentHour <= $json['opening_time']["{$dayShortcode}_end"]
+            ) {
+                $return['openNow'] = true;
+            }
+        }
+        return $return;
     }
 }

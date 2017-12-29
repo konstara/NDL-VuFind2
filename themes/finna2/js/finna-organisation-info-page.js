@@ -383,24 +383,6 @@ finna.organisationInfoPage = (function finnaOrganisationInfoPage() {
         img.hide();
         img2.hide();
       }
-
-      //var img = holder.find('.extra-image-2');
-      //if ('pictures' in data.details) {
-      //  var src = data.details.pictures[2].url;
-      //  img.show();
-      //  if (img.attr('src') !== src) {
-      //    img.attr('src', src);
-      //    img.fadeTo(0, 0);
-      //    img.on('load', function onLoadImage() {
-      //      $(this).stop(true, true).fadeTo(300, 1);
-      //    });
-      //  } else {
-      //    img.fadeTo(300, 1);
-      //  }
-      //} else {
-      //  img.hide();
-      //}
-
     } else {
       var img2 = holder.find('.extra-image-2');
       var img = holder.find('.extra-image');
