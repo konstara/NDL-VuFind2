@@ -4,6 +4,8 @@ enabled = 0
 ; Kirjastohakemisto API URL
 url = "https://api.kirjastot.fi/v3"
 
+; Museoliiton API URL
+; url = "https://museot.fi/xml"
 
 ; Language settings.
 ; Language codes are given in Kirjastohakemisto format (fi, sv, en...)
