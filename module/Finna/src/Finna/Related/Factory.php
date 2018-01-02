@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
  * @category VuFind
  * @package  Related_Records
@@ -26,6 +26,7 @@
  * @link     http://vufind.org/wiki/vufind2:building_a_related_record_module Wiki
  */
 namespace Finna\Related;
+
 use Zend\ServiceManager\ServiceManager;
 
 /**
@@ -41,6 +42,18 @@ use Zend\ServiceManager\ServiceManager;
  */
 class Factory
 {
+    /**
+     * Factory for Nothing module.
+     *
+     * @param ServiceManager $sm Service manager.
+     *
+     * @return Similar
+     */
+    public static function getNothing(ServiceManager $sm)
+    {
+        return new Nothing();
+    }
+
     /**
      * Factory for SimilarDeferred module.
      *

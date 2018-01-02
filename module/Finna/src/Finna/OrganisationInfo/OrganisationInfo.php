@@ -18,7 +18,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
  * @category VuFind
  * @package  Content
@@ -27,7 +27,6 @@
  * @link     http://vufind.org/wiki/vufind2:developer_manual Wiki
  */
 namespace Finna\OrganisationInfo;
-use Zend\Config\Config;
 
 /**
  * Service for querying Kirjastohakemisto database.
@@ -273,7 +272,7 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
                 $response['weekNum'] = $weekNum;
             }
             return $response;
-        } else if ($action == 'details') {
+        } elseif ($action == 'details') {
             $allServices = !empty($params['allServices']);
             $fullDetails = !empty($params['fullDetails']);
             $response = $this->detailsAction(
@@ -306,7 +305,6 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
     protected function lookupAction($parent, $link = false, $parentName = null)
     {
         // Check if consortium is found in Kirjastohakemisto
-        $parents = explode(',', $parent);
         $params = [
             'finna:id' => $parent,
             'lang' => $this->language
@@ -453,7 +451,6 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
                         }
                     }
                 }
-
             }
         }
         if (!empty($finna)) {

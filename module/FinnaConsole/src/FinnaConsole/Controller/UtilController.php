@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
  * @category VuFind
  * @package  Controller
@@ -40,6 +40,16 @@ namespace FinnaConsole\Controller;
  */
 class UtilController extends \VuFindConsole\Controller\UtilController
 {
+    /**
+     * Sends reminders for expiring user accounts
+     *
+     * @return \Zend\Console\Response
+     */
+    public function accountExpirationRemindersAction()
+    {
+        return $this->runService('Finna\AccountExpirationReminders');
+    }
+
     /**
      * Sends due date reminders.
      *
@@ -128,6 +138,16 @@ class UtilController extends \VuFindConsole\Controller\UtilController
     public function verifyRecordLinksAction()
     {
         return $this->runService('Finna\VerifyRecordLinks');
+    }
+
+    /**
+     * Verify resource metadata.
+     *
+     * @return \Zend\Console\Response
+     */
+    public function verifyResourceMetadataAction()
+    {
+        return $this->runService('Finna\VerifyResourceMetadata');
     }
 
     /**

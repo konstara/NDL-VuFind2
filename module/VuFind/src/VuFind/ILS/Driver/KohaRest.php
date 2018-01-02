@@ -26,6 +26,7 @@
  * @link     https://vufind.org/wiki/development:plugins:ils_drivers Wiki
  */
 namespace VuFind\ILS\Driver;
+
 use VuFind\Exception\Date as DateException;
 use VuFind\Exception\ILS as ILSException;
 
@@ -462,7 +463,7 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
             if (is_numeric($dueTimeStamp)) {
                 if ($now > $dueTimeStamp) {
                     $dueStatus = 'overdue';
-                } else if ($now > $dueTimeStamp - (1 * 24 * 60 * 60)) {
+                } elseif ($now > $dueTimeStamp - (1 * 24 * 60 * 60)) {
                     $dueStatus = 'due';
                 }
             }
@@ -550,6 +551,112 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
     }
 
     /**
+     * Get Patron Transaction History
+     *
+     * This is responsible for retrieving all historical transactions
+     * (i.e. checked out items)
+     * by a specific patron.
+     *
+     * @param array $patron The patron array from patronLogin
+     * @param array $params Parameters
+     *
+     * @throws DateException
+     * @throws ILSException
+     * @return array        Array of the patron's transactions on success.
+     */
+    public function getMyTransactionHistory($patron, $params)
+    {
+        $sort = explode(
+            ' ', !empty($params['sort']) ? $params['sort'] : 'checkout desc', 2
+        );
+        if ($sort[0] == 'checkout') {
+            $sortKey = 'issuedate';
+        } elseif ($sort[0] == 'return') {
+            $sortKey = 'returndate';
+        } else {
+            $sortKey = 'date_due';
+        }
+        $direction = (isset($sort[1]) && 'desc' === $sort[1]) ? 'desc' : 'asc';
+
+        $pageSize = isset($params['limit']) ? $params['limit'] : 50;
+        $queryParams = [
+            'borrowernumber' => $patron['id'],
+            'sort' => $sortKey,
+            'order' => $direction,
+            'offset' => isset($params['page'])
+                ? ($params['page'] - 1) * $pageSize : 0,
+            'limit' => $pageSize
+        ];
+
+        $transactions = $this->makeRequest(
+            ['v1', 'checkouts', 'history'],
+            $queryParams,
+            'GET',
+            $patron
+        );
+
+        $result = [
+            'count' => $transactions['total'],
+            'transactions' => []
+        ];
+
+        foreach ($transactions['records'] as $entry) {
+            try {
+                $item = $this->getItem($entry['itemnumber']);
+            } catch (\Exception $e) {
+                $item = [];
+            }
+            $volume = isset($item['enumchron'])
+                ? $item['enumchron'] : '';
+            $title = '';
+            if (!empty($item['biblionumber'])) {
+                $bib = $this->getBibRecord($item['biblionumber']);
+                if (!empty($bib['title'])) {
+                    $title = $bib['title'];
+                }
+                if (!empty($bib['title_remainder'])) {
+                    $title .= ' ' . $bib['title_remainder'];
+                    $title = trim($title);
+                }
+            }
+
+            $dueStatus = false;
+            $now = time();
+            $dueTimeStamp = strtotime($entry['date_due']);
+            if (is_numeric($dueTimeStamp)) {
+                if ($now > $dueTimeStamp) {
+                    $dueStatus = 'overdue';
+                } elseif ($now > $dueTimeStamp - (1 * 24 * 60 * 60)) {
+                    $dueStatus = 'due';
+                }
+            }
+
+            $transaction = [
+                'id' => isset($item['biblionumber']) ? $item['biblionumber'] : '',
+                'checkout_id' => $entry['issue_id'],
+                'item_id' => $entry['itemnumber'],
+                'title' => $title,
+                'volume' => $volume,
+                'checkoutdate' => $this->dateConverter->convertToDisplayDate(
+                    'Y-m-d\TH:i:sP', $entry['issuedate']
+                ),
+                'duedate' => $this->dateConverter->convertToDisplayDate(
+                    'Y-m-d\TH:i:sP', $entry['date_due']
+                ),
+                'dueStatus' => $dueStatus,
+                'returndate' => $this->dateConverter->convertToDisplayDate(
+                    'Y-m-d\TH:i:sP', $entry['returndate']
+                ),
+                'renew' => $entry['renewals']
+            ];
+
+            $result['transactions'][] = $transaction;
+        }
+
+        return $result;
+    }
+
+    /**
      * Get Patron Holds
      *
      * This is responsible for retrieving all holds by a specific patron.
@@ -559,7 +666,6 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
      * @throws DateException
      * @throws ILSException
      * @return array        Array of the patron's holds on success.
-     * @todo   Support for handling frozen and pickup location change
      */
     public function getMyHolds($patron)
     {
@@ -592,6 +698,11 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
                     $title = trim($title);
                 }
             }
+            $frozen = false;
+            if (!empty($entry['suspend'])) {
+                $frozen = !empty($entry['suspend_until']) ? $entry['suspend_until']
+                    : true;
+            }
             $holds[] = [
                 'id' => $bibId,
                 'item_id' => $itemId ? $itemId : $entry['reserve_id'],
@@ -606,7 +717,8 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
                 'available' => !empty($entry['waitingdate']),
                 'in_transit' => isset($entry['found']) && $entry['found'] == 't',
                 'requestId' => $entry['reserve_id'],
-                'title' => $title
+                'title' => $title,
+                'frozen' => $frozen
             ];
         }
         return $holds;
@@ -1023,6 +1135,23 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
      */
     public function getConfig($function, $params = null)
     {
+        if ('getMyTransactionHistory' === $function) {
+            if (empty($this->config['TransactionHistory']['enabled'])) {
+                return false;
+            }
+            return [
+                'max_results' => 100,
+                'sort' => [
+                    'checkout desc' => 'sort_checkout_date_desc',
+                    'checkout asc' => 'sort_checkout_date_asc',
+                    'return desc' => 'sort_return_date_desc',
+                    'return asc' => 'sort_return_date_asc',
+                    'due desc' => 'sort_due_date_desc',
+                    'due asc' => 'sort_due_date_asc'
+                ],
+                'default_sort' => 'checkout desc'
+            ];
+        }
         return isset($this->config[$function])
             ? $this->config[$function] : false;
     }
@@ -1309,7 +1438,6 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
 
         $statuses = [];
         foreach ($result[0]['item_availabilities'] as $i => $item) {
-            $location = $this->getItemLocationName($item);
             $avail = $item['availability'];
             $available = $avail['available'];
             $statusCodes = $this->getItemStatusCodes($item);
@@ -1326,7 +1454,7 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
             $entry = [
                 'id' => $id,
                 'item_id' => $item['itemnumber'],
-                'location' => $location,
+                'location' => $this->getItemLocationName($item),
                 'availability' => $available,
                 'status' => $status,
                 'status_array' => $statusCodes,
@@ -1335,9 +1463,14 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
                 'duedate' => $duedate,
                 'number' => $item['enumchron'],
                 'barcode' => $item['barcode'],
-                'item_notes' => [$item['itemnotes']],
-                'sort' => $i
+                'sort' => $i,
+                'requests_placed' => max(
+                    [$item['hold_queue_length'], $result[0]['hold_queue_length']]
+                )
             ];
+            if (!empty($item['itemnotes'])) {
+                $entry['item_notes'] = [$item['itemnotes']];
+            }
 
             if ($patron && $this->itemHoldAllowed($item)) {
                 $entry['is_holdable'] = true;
@@ -1368,7 +1501,9 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
             $statuses[] = 'On Shelf';
         } elseif (isset($item['availability']['unavailabilities'])) {
             foreach ($item['availability']['unavailabilities'] as $key => $reason) {
-                if (strncmp($key, 'Item::', 6) == 0) {
+                if (isset($this->config['ItemStatusMappings'][$key])) {
+                    $statuses[] = $this->config['ItemStatusMappings'][$key];
+                } elseif (strncmp($key, 'Item::', 6) == 0) {
                     $status = substr($key, 6);
                     switch ($status) {
                     case 'CheckedOut':
@@ -1415,19 +1550,15 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
                         }
                         $statuses[] = $onHold ? 'In Transit On Hold' : 'In Transit';
                         break;
-                    default:
-                        $statuses[] = !empty($reason['code'])
-                            ? $reason['code'] : $status;
-                    }
-                } elseif (strncmp($key, 'Hold::', 6) == 0) {
-                    $status = substr($key, 6);
-                    switch ($status) {
                     case 'Held':
                         $statuses[] = 'On Hold';
                         break;
                     case 'Waiting':
                         $statuses[] = 'On Holdshelf';
                         break;
+                    default:
+                        $statuses[] = !empty($reason['code'])
+                            ? $reason['code'] : $status;
                     }
                 }
             }
@@ -1474,11 +1605,7 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
     {
         $unavail = isset($item['availability']['unavailabilities'])
             ? $item['availability']['unavailabilities'] : [];
-        if (!isset($unavail['Item::NotForLoan'])
-            && !isset($unavail['Item::Withdrawn'])
-            && !isset($unavail['Item::Lost'])
-            && !isset($unavail['Hold::NotHoldable'])
-        ) {
+        if (!isset($unavail['Hold::NotHoldable'])) {
             return true;
         }
         return false;
@@ -1597,9 +1724,7 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
     {
         static $cachedRecords = [];
         if (!isset($cachedRecords[$id])) {
-             $cachedRecords[$id] = $this->makeRequest(
-                 ['v1', 'biblios', $id]
-             );
+            $cachedRecords[$id] = $this->makeRequest(['v1', 'biblios', $id]);
         }
         return $cachedRecords[$id];
     }
@@ -1664,7 +1789,8 @@ class KohaRest extends \VuFind\ILS\Driver\AbstractBase implements
      */
     protected function getItemLocationName($item)
     {
-        $branchId = $item['holdingbranch'];
+        $branchId = null !== $item['holdingbranch'] ? $item['holdingbranch']
+            : $item['homebranch'];
         $name = $this->translate("location_$branchId");
         if ($name === "location_$branchId") {
             $branches = $this->getCachedData('branches');

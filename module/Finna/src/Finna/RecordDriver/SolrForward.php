@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
  * @category VuFind
  * @package  RecordDrivers
@@ -108,6 +108,22 @@ class SolrForward extends \VuFind\RecordDriver\SolrDefault
      * @var array
      */
     protected $lazyRecordXML;
+
+    /**
+     * Constructor
+     *
+     * @param \Zend\Config\Config $mainConfig     VuFind main configuration (omit for
+     * built-in defaults)
+     * @param \Zend\Config\Config $recordConfig   Record-specific configuration file
+     * (omit to use $mainConfig as $recordConfig)
+     * @param \Zend\Config\Config $searchSettings Search-specific configuration file
+     */
+    public function __construct($mainConfig = null, $recordConfig = null,
+        $searchSettings = null
+    ) {
+        parent::__construct($mainConfig, $recordConfig, $searchSettings);
+        $this->searchSettings = $searchSettings;
+    }
 
     /**
      * Return access restriction notes for the record.
@@ -502,7 +518,19 @@ class SolrForward extends \VuFind\RecordDriver\SolrDefault
      */
     public function getNonPresenterSecondaryAuthors()
     {
-        return $this->getNonPresenterAuthors(false);
+        $authors = $this->getNonPresenterAuthors(false);
+        $uncredited = $credited = [];
+        foreach ($authors as $author) {
+            if ($author['uncredited']) {
+                $uncredited[] = $author;
+            } else {
+                $credited[] = $author;
+            }
+        }
+        if (!empty($credited) || !empty($uncredited)) {
+            return ['credited' => $credited, 'uncredited' => $uncredited];
+        }
+        return [];
     }
 
     /**
@@ -578,6 +606,21 @@ class SolrForward extends \VuFind\RecordDriver\SolrDefault
     {
         $str = $this->getProductionEventAttribute('elokuva-alkupkesto');
         return $str ? [$str] : [];
+    }
+
+    /**
+     * Get all presenters
+     *
+     * @return array
+     */
+    public function getAllPresenters()
+    {
+        $credited = $this->getPresenters(false);
+        $uncredited = $this->getPresenters(true);
+        if (!empty($credited['presenters']) || !empty($uncredited['presenters'])) {
+            return ['credited' => $credited, 'uncredited' => $uncredited];
+        }
+        return [];
     }
 
     /**
@@ -857,6 +900,8 @@ class SolrForward extends \VuFind\RecordDriver\SolrDefault
             } elseif (!empty($nameAttrs->{$uncreditedRole})) {
                 $roleName = (string)$nameAttrs->{$uncreditedRole};
                 $uncredited = true;
+            } elseif (!empty($nameAttrs->{'elokuva-elokreditoimatontekija-nimi'})) {
+                $uncredited = true;
             }
 
             $description = '';
@@ -1015,7 +1060,10 @@ class SolrForward extends \VuFind\RecordDriver\SolrDefault
                     if (!empty($attributes['video-tyyppi'])) {
                         $videoType = (string)$attributes->{'video-tyyppi'};
                     }
-                    $description = (string)$attributes->{'video-lisatieto'};
+                    // Use video type as the default description since the additional
+                    // information may contain long descriptive texts.
+                    $description = $videoType ? $videoType
+                        : (string)$attributes->{'video-lisatieto'};
 
                     $posterFilename = (string)$title->PartDesignation->Value;
                     if ($posterFilename) {
@@ -1345,5 +1393,31 @@ class SolrForward extends \VuFind\RecordDriver\SolrDefault
             }
         }
         return $results;
+    }
+
+    /**
+     * Return movie Age limit'
+     * Get Age limit from last inspection's details
+     *
+     * @return string AgeLimit
+     */
+    public function getAgeLimit()
+    {
+        $inspectionDetails = $this->getInspectionDetails();
+        foreach ($inspectionDetails as $inspection) {
+            if (isset($inspection['agerestriction'])) {
+                if (!isset($agerestriction) && $inspection['agerestriction']) {
+                    $agerestriction = $inspection['agerestriction'];
+                    $date = $inspection['date'] ? $inspection['date'] : '';
+                } elseif ($inspection['agerestriction']
+                    && isset($date)
+                    && strtotime($inspection['date']) > strtotime($date)
+                ) {
+                    $agerestriction = $inspection['agerestriction'];
+                    $date = $inspection['date'];
+                }
+            }
+        }
+        return isset($agerestriction) ? $agerestriction : null;
     }
 }

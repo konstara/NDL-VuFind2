@@ -27,7 +27,7 @@ email           = finna-posti@helsinki.fi
 title           = "Finna"
 ; This is the default theme for non-mobile devices (or all devices if mobile_theme
 ; is disabled below)
-theme           = finna
+theme           = finna2
 
 ; Automatic asset minification and concatenation setting. When active, HeadScript
 ; and HeadLink will concatenate and minify all viable files to reduce requests and
@@ -120,9 +120,11 @@ quickAddToFavorites = true
 institution =
 ; Whether index is used for new items search instead of backend driver
 indexBasedNewItems = true
-; Any system messages that need to be displayed on the top of every page. May be translation entries or
-; strings and may contain html markup.
-;systemMessages[] = development_disclaimer
+; Any system messages that need to be displayed on the top of every page. May contain html markup.
+; systemMessages[fi] = "Huom! Tämä on kehitysympäristö. Sisältö ja toiminnallisuus voivat muuttua milloin tahansa."
+; systemMessages[sv] = "Obs! Systemet är under utveckling. Innehåll och funktioner kan förändras när som helst."
+; systemMessages[en-gb] = ""
+
 ; Whether to hide due date reminder settings. Default is false
 ;hideDueDateReminder = true
 ; Whether to hide email address in patron profile. Default is false
@@ -265,9 +267,12 @@ library_cards = true
 ; N.B. Values other than 0 are not supported in the finna theme.
 checked_out_page_size = 0
 
-; The number of checkedout history items to display per page; 0 for no limit (may
-; cause memory problems for users with huge numbers of items). Default = 50.
-;checkout_history_page_size = 50
+; The number of historic loans to display per page; 0 for no limit (may cause
+; memory problems for users with a large number of historic loans). Default = 50
+;historic_loan_page_size = 50
+
+; Whether to display the item barcode for each loan. Default is false.
+display_checked_out_item_barcode = true
 
 ; This section allows you to determine how the users will authenticate.
 ; You can use an LDAP directory, the local ILS, the VuFind database (Database),
@@ -1250,9 +1255,9 @@ ttl = 60
 ;umask = 022
 ; Permissions for Zend-created cache directories and files, subject to umask
 ; Default dir_permission seems to be 0700.
-;dir_permission = 0700
+dir_permission = 0770
 ; Default file_permission seems to be 0600.
-;file_permission = 0600
+file_permission = 0660
 
 ; This section controls the "Collections" module -- the special view for records
 ; that represent collections, and the mechanism for browsing these records.

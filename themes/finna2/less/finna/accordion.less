@@ -1,0 +1,75 @@
+.accordion {
+  list-style-type: none;
+  .accordion-toggle {
+    padding: 10px;
+    margin-bottom: 5px;
+    font-size: 1em;
+    font-weight: 600;
+    background-color: @gray-ultralight;
+    border-top: 1px solid @gray-lighter;
+    border-right: 1px solid @gray-lighter;
+    border-bottom: 1px solid @gray-lighter;
+    border-left: 4px solid @gray-lighter;
+    @media(min-width: @screen-md) {
+      display: none;
+    }
+  }
+  .accordion-toggle a {
+    color: @text-color;
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: @line-height-computed;
+    width: 100%;
+    .title {
+      float: left;
+    }
+    .icon:after {
+      font-family: icomoon;
+      font-size: 24px;
+      content: "\e91a";
+      color: @action-link-color;
+      float: right;
+      font-style: normal;
+    }
+  }
+}
+
+.record-accordions.record-tabs {
+  .accordion.active {
+    .accordion-toggle {
+      border-left: 4px solid @action-link-color;
+      .icon:after {
+        font-family: icomoon;
+        font-size: 24px;
+        content: "\e916";
+        float: right;
+        color: @action-link-color;
+      }
+    }
+    @media (max-width: @screen-sm-max) {
+      .tab-content {
+        display: block;
+        margin: 10px 0;
+      }
+    }
+  }
+}
+
+.record-accordions.record-tabs {
+  margin-bottom: 30px;
+  width: 100%;
+  @media (min-width: @screen-md){
+    width: 75%;
+    padding-right: 15px;
+    float: left;
+  }
+  @media(max-width: @screen-sm-max) {
+    .tab-content {
+      display: none;
+      padding: 0;
+      margin: 0;
+    }
+  }
+}

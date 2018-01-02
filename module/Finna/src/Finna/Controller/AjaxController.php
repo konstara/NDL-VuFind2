@@ -4,7 +4,7 @@
  *
  * PHP version 5
  *
- * Copyright (C) The National Library of Finland 2015-2016.
+ * Copyright (C) The National Library of Finland 2015-2017.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
  * @category VuFind
  * @package  Controller
@@ -27,10 +27,10 @@
  */
 namespace Finna\Controller;
 
-use VuFind\RecordDriver\Missing;
-use VuFindSearch\Query\Query as Query;
-use VuFind\Search\RecommendListener;
 use Finna\Search\Solr\Params;
+use VuFind\RecordDriver\Missing;
+use VuFind\Search\RecommendListener;
+use VuFindSearch\Query\Query as Query;
 
 /**
  * This controller handles Finna AJAX functionality
@@ -247,18 +247,89 @@ class AjaxController extends \VuFind\Controller\AjaxController
             $patron = $this->getILSAuthenticator()->storedCatalogLogin();
 
             if ($patron) {
+                $result = $catalog->checkFunction('changePickupLocation');
+                if (!$result) {
+                    return $this->output(
+                        $this->translate('unavailable'),
+                        self::STATUS_ERROR,
+                        400
+                    );
+                }
+
                 $details = [
                     'requestId'    => $requestId,
                     'pickupLocationId' => $pickupLocationId
                 ];
-                $results = [];
-
                 $results = $catalog->changePickupLocation($patron, $details);
 
                 return $this->output($results, self::STATUS_OK);
             }
         } catch (\Exception $e) {
-            // Do nothing -- just fail through to the error message below.
+            $this->setLogger($this->serviceLocator->get('VuFind\Logger'));
+            $this->logError('changePickupLocation failed: ' . $e->getMessage());
+            // Fall through to the error message below.
+        }
+
+        return $this->output(
+            $this->translate('An error has occurred'), self::STATUS_ERROR, 500
+        );
+    }
+
+    /**
+     * Change request status
+     *
+     * @return \Zend\Http\Response
+     */
+    public function changeRequestStatusAjax()
+    {
+        $requestId = $this->params()->fromQuery('requestId');
+        $frozen = $this->params()->fromQuery('frozen');
+        if (empty($requestId)) {
+            return $this->output(
+                $this->translate('bulk_error_missing'),
+                self::STATUS_ERROR,
+                400
+            );
+        }
+
+        // check if user is logged in
+        $user = $this->getUser();
+        if (!$user) {
+            return $this->output(
+                [
+                    'status' => false,
+                    'msg' => $this->translate('You must be logged in first')
+                ],
+                self::STATUS_NEED_AUTH
+            );
+        }
+
+        try {
+            $catalog = $this->getILS();
+            $patron = $this->getILSAuthenticator()->storedCatalogLogin();
+
+            if ($patron) {
+                $result = $catalog->checkFunction('changeRequestStatus');
+                if (!$result) {
+                    return $this->output(
+                        $this->translate('unavailable'),
+                        self::STATUS_ERROR,
+                        400
+                    );
+                }
+
+                $details = [
+                    'requestId' => $requestId,
+                    'frozen' => $frozen
+                ];
+                $results = $catalog->changeRequestStatus($patron, $details);
+
+                return $this->output($results, self::STATUS_OK);
+            }
+        } catch (\Exception $e) {
+            $this->setLogger($this->serviceLocator->get('VuFind\Logger'));
+            $this->logError('changeRequestStatus failed: ' . $e->getMessage());
+            // Fall through to the error message below.
         }
 
         return $this->output(
@@ -454,6 +525,7 @@ class AjaxController extends \VuFind\Controller\AjaxController
                 $params->resetFacetConfig();
                 $options = $params->getOptions();
                 $options->disableHighlighting();
+                $options->spellcheckEnabled(false);
             }
         );
         $ids = [$id];
@@ -587,9 +659,7 @@ class AjaxController extends \VuFind\Controller\AjaxController
             if ($url) {
                 $httpService = $this->serviceLocator->get('VuFind\Http');
                 $result = $httpService->get($url, [], 60);
-                if ($result->isSuccess()) {
-                    $content = $result->getBody();
-
+                if ($result->isSuccess() && ($content = $result->getBody())) {
                     $encoding = mb_detect_encoding(
                         $content, ['UTF-8', 'ISO-8859-1']
                     );
@@ -613,10 +683,10 @@ class AjaxController extends \VuFind\Controller\AjaxController
             $language = $this->serviceLocator->get('VuFind\Translator')
                 ->getLocale();
             if ($summary = $driver->getSummary($language)) {
-                $summary = implode('<br><br>', $summary);
+                $summary = implode("\n\n", $summary);
 
                 // Replace double hash with a <br>
-                $summary = str_replace('##', '<br>', $summary);
+                $summary = str_replace('##', "\n\n", $summary);
 
                 // Process markdown
                 $summary = $this->getViewRenderer()->plugin('markdown')
@@ -1028,11 +1098,19 @@ class AjaxController extends \VuFind\Controller\AjaxController
     {
         $this->disableSessionWrites();  // avoid session write timing bug
 
-        if (null === ($parent = $this->params()->fromQuery('parent'))) {
+        $reqParams = array_merge(
+            $this->params()->fromPost(), $this->params()->fromQuery()
+        );
+        if (empty($reqParams['parent'])) {
             return $this->handleError('getOrganisationInfo: missing parent');
         }
+        $parent = is_array($reqParams['parent'])
+            ? implode(',', $reqParams['parent']) : $reqParams['parent'];
 
-        $params = $this->params()->fromQuery('params');
+        if (empty($reqParams['params']['action'])) {
+            return $this->handleError('getOrganisationInfo: missing action');
+        }
+        $params = $reqParams['params'];
 
         $cookieName = 'organisationInfoId';
         $cookieManager = $this->serviceLocator->get('VuFind\CookieManager');
@@ -1059,8 +1137,10 @@ class AjaxController extends \VuFind\Controller\AjaxController
         }
 
         if ($action == 'lookup') {
-            $params['link'] = $this->params()->fromQuery('link') === '1';
-            $params['parentName'] = $this->params()->fromQuery('parentName');
+            $link = isset($reqParams['link']) ? $reqParams['link'] : '0';
+            $params['link'] = $link === '1';
+            $params['parentName'] = isset($reqParams['parentName'])
+                ? $reqParams['parentName'] : null;
         }
 
         $lang = $this->serviceLocator->get('VuFind\Translator')->getLocale();
@@ -1192,7 +1272,8 @@ class AjaxController extends \VuFind\Controller\AjaxController
                             'tab' => $tab,
                             'lookfor' => $lookfor,
                             'handler' => $params->getQuery()->getHandler(),
-                            'results' => $otherResults
+                            'results' => $otherResults,
+                            'params' => $params
                         ]
                     );
                 }
@@ -1231,10 +1312,16 @@ class AjaxController extends \VuFind\Controller\AjaxController
             $listener->attach($runner->getEventManager()->getSharedManager());
 
             $params->setLimit(0);
+            if (is_callable([$params, 'getHierarchicalFacetLimit'])) {
+                $params->setHierarchicalFacetLimit(-1);
+            }
+            $options = $params->getOptions();
+            $options->disableHighlighting();
+            $options->spellcheckEnabled(false);
         };
 
         $runner = $this->serviceLocator->get('VuFind\SearchRunner');
-        $results = $runner->run($request, 'Solr', $setupCallback);
+        $results = $runner->run($request, DEFAULT_SEARCH_BACKEND, $setupCallback);
 
         if ($results instanceof \VuFind\Search\EmptySet\Results) {
             $this->setLogger($this->serviceLocator->get('VuFind\Logger'));
@@ -1245,13 +1332,111 @@ class AjaxController extends \VuFind\Controller\AjaxController
         $recommend = $results->getRecommendations('side');
         $recommend = reset($recommend);
 
-        $view = $this->getViewRenderer();
-        $view->recommend = $recommend;
-        $view->params = $results->getParams();
-        $view->searchClassId = 'Solr';
-        $html = $view->partial('Recommend/SideFacets.phtml');
+        if (isset($request['enabledFacets'])) {
+            // Render requested facets separately
+            $response = [];
+            $facetConfig = $this->getConfig('facets');
+            $facetHelper = $this->serviceLocator
+                ->get('VuFind\HierarchicalFacetHelper');
+            $hierarchicalFacets = [];
+            $options = $results->getOptions();
+            if (is_callable([$options, 'getHierarchicalFacets'])) {
+                $hierarchicalFacets = $options->getHierarchicalFacets();
+                $hierarchicalFacetSortOptions
+                    = $recommend->getHierarchicalFacetSortOptions();
+            }
+            $checkboxFacets = $results->getParams()->getCheckboxFacets();
+            $sideFacetSet = $recommend->getFacetSet();
+            $results = $recommend->getResults();
+            $view = $this->getViewRenderer();
+            $view->recommend = $recommend;
+            $view->params = $results->getParams();
+            $view->searchClassId = 'Solr';
+            foreach ($request['enabledFacets'] as $facet) {
+                if (strpos($facet, ':')) {
+                    foreach ($checkboxFacets as $checkboxFacet) {
+                        if ($facet !== $checkboxFacet['filter']) {
+                            continue;
+                        }
+                        list($field, $value) = explode(':', $facet, 2);
+                        $checkboxResults = $results->getFacetList(
+                            [$field => $value]
+                        );
+                        if (!isset($checkboxResults[$field]['list'])) {
+                            $response[$facet] = null;
+                            continue 2;
+                        }
+                        $count = 0;
+                        $truncate = substr($value, -1) === '*';
+                        if ($truncate) {
+                            $value = substr($value, 0, -1);
+                        }
+                        foreach ($checkboxResults[$field]['list'] as $item) {
+                            if ($item['value'] == $value
+                                || ($truncate
+                                && preg_match('/^' . $value . '/', $item['value']))
+                                || ($item['value'] == 'true' && $value == '1')
+                                || ($item['value'] == 'false' && $value == '0')
+                            ) {
+                                $count += $item['count'];
+                            }
+                        }
+                        $response[$facet] = $count;
+                        continue 2;
+                    }
+                }
+                if (in_array($facet, $hierarchicalFacets)) {
+                    // Return the facet data for hierarchical facets
+                    $facetList = $sideFacetSet[$facet]['list'];
 
-        return $this->output($html, self::STATUS_OK);
+                    if (!empty($hierarchicalFacetSortOptions[$facet])) {
+                        $facetHelper->sortFacetList(
+                            $facetList,
+                            'top' === $hierarchicalFacetSortOptions[$facet]
+                        );
+                    }
+
+                    $facetList = $facetHelper->buildFacetArray(
+                        $facet, $facetList, $results->getUrlQuery()
+                    );
+
+                    if (!empty($facetConfig->FacetFilters->$facet)
+                        || !empty($facetConfig->ExcludeFilters->$facet)
+                    ) {
+                        $filters = !empty($facetConfig->FacetFilters->$facet)
+                            ? $facetConfig->FacetFilters->$facet->toArray()
+                            : [];
+                        $excludeFilters
+                            = !empty($facetConfig->ExcludeFilters->$facet)
+                            ? $facetConfig->ExcludeFilters->$facet->toArray()
+                            : [];
+
+                        $facetList = $facetHelper->filterFacets(
+                            $facetList,
+                            $filters,
+                            $excludeFilters
+                        );
+                    }
+
+                    $response[$facet] = $facetList;
+                } else {
+                    $view->facet = $facet;
+                    $view->cluster = isset($sideFacetSet[$facet])
+                        ? $sideFacetSet[$facet] : [];
+                    $response[$facet]
+                        = $view->partial('Recommend/SideFacets/facet.phtml');
+                }
+            }
+            return $this->output($response, self::STATUS_OK);
+        } else {
+            // Render full sidefacets
+            $view = $this->getViewRenderer();
+            $view->recommend = $recommend;
+            $view->params = $results->getParams();
+            $view->searchClassId = 'Solr';
+            $html = $view->partial('Recommend/SideFacets.phtml');
+            return $this->output($html, self::STATUS_OK);
+        }
     }
 
     /**
@@ -1649,7 +1834,7 @@ class AjaxController extends \VuFind\Controller\AjaxController
      *
      * @return \Zend\Http\Response
      */
-    protected function handleError($outputMsg, $logMsg, $httpStatus = 400)
+    protected function handleError($outputMsg, $logMsg = '', $httpStatus = 400)
     {
         $this->setLogger($this->serviceLocator->get('VuFind\Logger'));
         $this->logError(

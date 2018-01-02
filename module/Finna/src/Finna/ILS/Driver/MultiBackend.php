@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
  * @category VuFind
  * @package  ILSdrivers
@@ -252,6 +252,33 @@ class MultiBackend extends \VuFind\ILS\Driver\MultiBackend
             )
         ) {
             return $driver->changePickupLocation(
+                $this->stripIdPrefixes($patron, $source), $holdDetails
+            );
+        }
+        throw new ILSException('No suitable backend driver found');
+    }
+
+    /**
+     * Change Request Status
+     *
+     * Attempts to change the status of a specific hold request
+     *
+     * @param array $patron      The patron array from patronLogin
+     * @param array $holdDetails The request details
+     *
+     * @return mixed An array of data on the request including
+     * whether or not it was successful and a system message (if available)
+     */
+    public function changeRequestStatus($patron, $holdDetails)
+    {
+        $source = $this->getSource($patron['cat_username']);
+        $driver = $this->getDriver($source);
+        if ($driver
+            && $this->methodSupported(
+                $driver, 'changeRequestStatus', [$patron, $holdDetails]
+            )
+        ) {
+            return $driver->changeRequestStatus(
                 $this->stripIdPrefixes($patron, $source), $holdDetails
             );
         }

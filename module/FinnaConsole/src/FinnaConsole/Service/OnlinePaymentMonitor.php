@@ -17,9 +17,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
- * @category VuFind2
+ * @category VuFind
  * @package  Service
  * @author   Samuli Sillanpää <samuli.sillanpaa@helsinki.fi>
  * @author   Ere Maijala <ere.maijala@helsinki.fi>
@@ -27,14 +27,14 @@
  * @link     http://vufind.org/wiki/vufind2:developer_manual Wiki
  */
 namespace FinnaConsole\Service;
-use Finna\Db\Table\Transaction,
-    Finna\Db\Row\User,
-    Zend\Db\Sql\Select;
+
+use Finna\Db\Row\User;
+use Finna\Db\Table\Transaction;
 
 /**
  * Console service for processing unregistered online payments.
  *
- * @category VuFind2
+ * @category VuFind
  * @package  Service
  * @author   Samuli Sillanpää <samuli.sillanpaa@helsinki.fi>
  * @author   Ere Maijala <ere.maijala@helsinki.fi>
@@ -447,7 +447,7 @@ class OnlinePaymentMonitor extends AbstractService
      */
     protected function usage()
     {
-// @codingStandardsIgnoreStart
+        // @codingStandardsIgnoreStart
         return <<<EOT
 Usage:
   php index.php util online_payment_monitor <expire_hours> <from_email>
@@ -463,6 +463,6 @@ Usage:
                           considered failed (seconds, default 120)
 
 EOT;
-// @codingStandardsIgnoreEnd
+        // @codingStandardsIgnoreEnd
     }
 }

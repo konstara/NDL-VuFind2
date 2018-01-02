@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
  * @category VuFind
  * @package  Content
@@ -26,9 +26,9 @@
  * @link     http://vufind.org/wiki/vufind2:developer_manual Wiki
  */
 namespace Finna\Feed;
-use Zend\Config\Config,
-    Zend\Feed\Reader\Reader,
-    Zend\Http\Request as HttpRequest;
+
+use Zend\Config\Config;
+use Zend\Feed\Reader\Reader;
 
 /**
  * Feed service
@@ -131,7 +131,7 @@ class Feed implements \Zend\Log\LoggerAwareInterface
         $url = $result->url;
         if (isset($url[$language])) {
             $url = trim($url[$language]);
-        } else if (isset($url['*'])) {
+        } elseif (isset($url['*'])) {
             $url = trim($url['*']);
         } else {
             $this->logError("Missing feed URL (id $id)");
@@ -273,29 +273,51 @@ class Feed implements \Zend\Log\LoggerAwareInterface
                 try {
                     $channel = Reader::import($url);
                 } catch (\Exception $e) {
-                    $this->logError("Error importing feed from url $url");
-                    $this->logError("   " . $e->getMessage());
+                    $this->logError(
+                        "Error importing feed from url $url: " . $e->getMessage()
+                    );
                 }
-            } else if (substr($url, 0, 1) === '/') {
+            } elseif (substr($url, 0, 1) === '/') {
                 // Relative URL
                 $url = substr($viewUrl, 0, -1) . $url;
                 try {
                     $channel = Reader::import($url);
                 } catch (\Exception $e) {
-                    $this->logError("Error importing feed from url $url");
-                    $this->logError("   " . $e->getMessage());
+                    $this->logError(
+                        "Error importing feed from url $url: " . $e->getMessage()
+                    );
                 }
             } else {
                 // Local file
                 if (!is_file($url)) {
                     $this->logError("File $url could not be found");
-                    throw new \Exception('Error reading feed');
                 }
-                $channel = Reader::importFile($url);
+                try {
+                    $channel = Reader::importFile($url);
+                } catch (\Exception $e) {
+                    $this->logError(
+                        "Error importing feed from file $url: " . $e->getMessage()
+                    );
+                }
             }
-            if ($channel) {
-                file_put_contents($localFile, $channel->saveXml());
+
+            if (!$channel) {
+                // Cache also a failed load as an empty feed XML
+                $feedStr = <<<EOT
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+  <channel>
+    <atom:link href="" rel="self" type="application/rss+xml"/>
+    <link></link>
+    <title><![CDATA[<!-- Feed could not be loaded -->]]></title>
+    <description></description>
+  </channel>
+</rss>
+EOT;
+                $channel = Reader::importString($feedStr);
             }
+
+            file_put_contents($localFile, $channel->saveXml());
         }
 
         if (!$channel) {
@@ -344,21 +366,21 @@ class Feed implements \Zend\Log\LoggerAwareInterface
                                 $value = ['url' => $value];
                             }
                         }
-                    } else if ($setting == 'date') {
+                    } elseif ($setting == 'date') {
                         if (isset($value['date'])) {
                             $value = new \DateTime(($value['date']));
                             if ($dateFormat) {
                                 $value = $value->format($dateFormat);
                             }
                         }
-                    } else if ($setting == 'contentDate') {
+                    } elseif ($setting == 'contentDate') {
                         if (isset($value['date'])) {
                             $value = new \DateTime(($value['date']));
                             if ($contentDateFormat) {
                                 $value = $value->format($contentDateFormat);
                             }
                         }
-                    } else if ($setting == 'link' && $showFullContentOnSite) {
+                    } elseif ($setting == 'link' && $showFullContentOnSite) {
                         if (!$itemId = $item->getId()) {
                             $itemId = $cnt;
                         }
@@ -367,7 +389,7 @@ class Feed implements \Zend\Log\LoggerAwareInterface
                             ['page' => $id, 'element' => urlencode($itemId)]
                         );
                         $value = $link;
-                    } else if ($setting == 'id') {
+                    } elseif ($setting == 'id') {
                         if (!$value) {
                             $value = $cnt;
                         }

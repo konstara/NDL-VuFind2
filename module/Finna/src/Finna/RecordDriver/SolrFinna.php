@@ -4,7 +4,7 @@
  *
  * PHP version 5
  *
- * Copyright (C) The National Library 2015.
+ * Copyright (C) The National Library 2015-2017.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
  * @category VuFind
  * @package  RecordDrivers
@@ -43,6 +43,13 @@ namespace Finna\RecordDriver;
 trait SolrFinna
 {
     use FinnaRecord;
+
+    /**
+     * Search settings
+     *
+     * @var array
+     */
+    protected $searchSettings = [];
 
     /**
      * Return an array of image URLs associated with this record with keys:
@@ -87,6 +94,50 @@ trait SolrFinna
     public function getAccessRestrictionsType()
     {
         return false;
+    }
+
+    /**
+     * Get Author Information with Associated Data Fields
+     *
+     * @param string $index      The author index [primary, corporate, or secondary]
+     * used to construct a method name for retrieving author data (e.g.
+     * getPrimaryAuthors).
+     * @param array  $dataFields An array of fields to used to construct method
+     * names for retrieving author-related data (e.g., if you pass 'role' the
+     * data method will be similar to getPrimaryAuthorsRoles). This value will also
+     * be used as a key associated with each author in the resulting data array.
+     *
+     * @return array
+     */
+    public function getAuthorDataFields($index, $dataFields = [])
+    {
+        $data = $dataFieldValues = [];
+
+        // Collect author data
+        $authorMethod = sprintf('get%sAuthors', ucfirst($index));
+        $authors = $this->tryMethod($authorMethod, [], []);
+
+        // Collect attribute data
+        foreach ($dataFields as $field) {
+            $fieldMethod = $authorMethod . ucfirst($field) . 's';
+            $dataFieldValues[$field] = $this->tryMethod($fieldMethod, [], []);
+        }
+
+        // Match up author and attribute data (this assumes that the attribute
+        // arrays have the same indices as the author array; i.e. $author[$i]
+        // has $dataFieldValues[$attribute][$i].
+        foreach ($authors as $i => $author) {
+            if (!isset($data[$author])) {
+                $data[$author] = [];
+            }
+
+            foreach ($dataFieldValues as $field => $dataFieldValue) {
+                $data[$author][$field][] = !empty($dataFieldValue[$i])
+                    ? $dataFieldValue[$i] : '-';
+            }
+        }
+
+        return $data;
     }
 
     /**
@@ -302,6 +353,11 @@ trait SolrFinna
      */
     public function getMergedRecordData()
     {
+        if (empty($this->searchSettings['Records']['deduplication'])) {
+            // Do nothing if deduplication isn't enabled
+            return [];
+        }
+
         // If local_ids_str_mv is set, we already have all
         if (isset($this->fields['local_ids_str_mv'])) {
             return [
@@ -316,31 +372,54 @@ trait SolrFinna
             ];
         }
 
+        // Check for cached data
+        if (isset($this->cachedMergeRecordData)) {
+            return $this->cachedMergeRecordData;
+        }
+
+        // Check if this is a merged record
+        if (empty($this->fields['merged_child_boolean'])) {
+            return [];
+        }
+
         // Find the dedup record
         if (null === $this->searchService) {
             return [];
         }
 
-        $safeId = addcslashes($this->getUniqueID(), '"');
-        $query = new \VuFindSearch\Query\Query(
-            'local_ids_str_mv:"' . $safeId . '"'
-        );
-        $params = new \VuFindSearch\ParamBag(
-            ['hl' => 'false', 'spellcheck' => 'false']
-        );
-        $records = $this->searchService->search('Solr', $query, 0, 1, $params)
-            ->getRecords();
+        if (!empty($this->fields['dedup_id_str_mv'])) {
+            $records = $this->searchService->retrieve(
+                DEFAULT_SEARCH_BACKEND, $this->fields['dedup_id_str_mv'][0]
+            )->getRecords();
+        } else {
+            $safeId = addcslashes($this->getUniqueID(), '"');
+            $query = new \VuFindSearch\Query\Query(
+                'local_ids_str_mv:"' . $safeId . '"'
+            );
+            $params = new \VuFindSearch\ParamBag(
+                ['hl' => 'false', 'spellcheck' => 'false', 'sort' => '']
+            );
+            $records = $this->searchService->search(
+                DEFAULT_SEARCH_BACKEND, $query, 0, 1, $params
+            )->getRecords();
+        }
         if (!isset($records[0])) {
+            $this->cachedMergeRecordData = [];
             return [];
         }
+        $dedupRecord = $records[0];
+
         $results = [];
-        $results['records'] = $this->createSourceIdArray($records[0]->getLocalIds());
-        if ($onlineURLs = $records[0]->getOnlineURLs(true)) {
+        $results['records'] = $this->createSourceIdArray(
+            $dedupRecord->getLocalIds()
+        );
+        if ($onlineURLs = $dedupRecord->getOnlineURLs(true)) {
             $results['urls'] = $this->mergeURLArray(
                 $onlineURLs,
                 true
             );
         }
+        $this->cachedMergeRecordData = $results;
         return $results;
     }
 
@@ -511,6 +590,17 @@ trait SolrFinna
     }
 
     /**
+     * Get usage rights (empty if none).
+     *
+     * @return array
+     */
+    public function getUsageRights()
+    {
+        return isset($this->fields['usage_rights_str_mv'])
+            ? $this->fields['usage_rights_str_mv'] : [];
+    }
+
+    /**
      * Return the first ISBN found in the record.
      *
      * @return mixed
@@ -636,9 +726,9 @@ trait SolrFinna
             return 'Article';
         } elseif (in_array('0/Journal/', $formats)) {
             return 'Journal';
-        } else if (strlen($this->getCleanISSN()) > 0) {
+        } elseif (strlen($this->getCleanISSN()) > 0) {
             return 'Journal';
-        } else if (strlen($this->getCleanISBN()) > 0) {
+        } elseif (strlen($this->getCleanISBN()) > 0) {
             return 'Book';
         } elseif (isset($formats[0])) {
             $format = explode('/', $formats[0]);
@@ -718,11 +808,16 @@ trait SolrFinna
     protected function mergeURLArray($urlArray, $sources = true)
     {
         $urls = [];
+        $sourceFilter = $sources
+            && !empty($this->searchSettings['Records']['sources'])
+            ? explode(',', $this->searchSettings['Records']['sources']) : [];
         foreach ($urlArray as $url) {
             $newURL = json_decode($url, true);
             // If there's no dedup data, don't display sources either
             if (!$sources) {
                 $newURL['source'] = '';
+            } elseif ($sourceFilter && !in_array($newURL['source'], $sourceFilter)) {
+                continue;
             }
             // Check for duplicates
             $found = false;

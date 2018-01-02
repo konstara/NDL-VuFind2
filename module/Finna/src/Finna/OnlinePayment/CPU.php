@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
  * @category VuFind
  * @package  OnlinePayment
@@ -145,7 +145,9 @@ class CPU extends BaseHandler
                 }
             }
             if (!empty($fine['title'])) {
-                $fineDesc .= ' (' . $fine['title'] . ')';
+                $fineDesc .= ' ('
+                    . substr($fine['title'], 0, 100 - 4 - strlen($fineDesc))
+                . ')';
             }
             $code = isset($productCodeMappings[$fineType])
                 ? $productCodeMappings[$fineType] : $productCode;
@@ -169,7 +171,12 @@ class CPU extends BaseHandler
             return false;
         }
 
-        $response = $module->sendPayment($payment);
+        try {
+            $response = $module->sendPayment($payment);
+        } catch (\Exception $e) {
+            $this->handleCPUError('exception sending payment: ' . $e->getMessage());
+            return false;
+        }
         if (!$response) {
             $this->handleCPUError('error sending payment');
             return false;
@@ -333,7 +340,7 @@ class CPU extends BaseHandler
                'transactionId' => $orderNum,
                'amount' => $data->amount
             ];
-        } else if ($status === self::STATUS_CANCELLED) {
+        } elseif ($status === self::STATUS_CANCELLED) {
             $this->setTransactionCancelled($orderNum);
             return 'online_payment_canceled';
         } else {
@@ -363,7 +370,6 @@ class CPU extends BaseHandler
         $module->setHttpService($this->http);
         $module->setLogger($this->logger);
         return $module;
-
     }
 
     /**

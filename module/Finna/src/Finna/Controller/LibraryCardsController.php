@@ -18,7 +18,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
  * @category VuFind
  * @package  Controller
@@ -28,6 +28,7 @@
  * @link     http://vufind.org   Main Site
  */
 namespace Finna\Controller;
+
 use VuFind\Exception\Auth as AuthException;
 
 /**
@@ -183,7 +184,7 @@ class LibraryCardsController extends \VuFind\Controller\LibraryCardsController
         $id = $this->params()->fromRoute('id', $this->params()->fromQuery('id'));
 
         if (!empty($cardName)) {
-            list($cardInstitution) = explode('.', $username,  2);
+            list($cardInstitution) = explode('.', $username, 2);
             foreach ($user->getLibraryCards() as $otherCard) {
                 if ($otherCard->id == $id) {
                     continue;
@@ -204,7 +205,7 @@ class LibraryCardsController extends \VuFind\Controller\LibraryCardsController
             $user->saveLibraryCard(
                 $id == 'NEW' ? null : $id, $cardName, $username, $password
             );
-        } catch(\VuFind\Exception\LibraryCard $e) {
+        } catch (\VuFind\Exception\LibraryCard $e) {
             $this->flashMessenger()->addMessage($e->getMessage(), 'error');
             return false;
         }

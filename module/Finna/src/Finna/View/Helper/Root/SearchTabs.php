@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
  * @category VuFind
  * @package  View_Helpers
@@ -26,6 +26,7 @@
  * @link     http://vufind.org/wiki/vufind2:developer_manual Wiki
  */
 namespace Finna\View\Helper\Root;
+
 use VuFind\Search\Results\PluginManager;
 use VuFind\Search\SearchTabsHelper;
 use Zend\View\Helper\Url;
@@ -221,7 +222,7 @@ class SearchTabs extends \VuFind\View\Helper\Root\SearchTabs
         $targetParams->setBasicSearch($query, $handler);
 
         // Clone the active query so that we can remove active filters
-        $currentResults = clone($this->getView()->results);
+        $currentResults = clone $this->getView()->results;
         $currentParams = $currentResults->getParams();
 
         // Remove current filters

@@ -26,6 +26,7 @@
  * @link     https://vufind.org/wiki/development:plugins:hierarchy_components Wiki
  */
 namespace VuFind\RecordTab;
+
 use Zend\ServiceManager\ServiceManager;
 
 /**
@@ -180,7 +181,7 @@ class Factory
         $mapType = isset($config->Content->recordMap)
             ? $config->Content->recordMap : null;
         $options = [];
-        $optionFields = ['displayCoords', 'mapLabels'];
+        $optionFields = ['displayCoords', 'mapLabels', 'graticule'];
         foreach ($optionFields as $field) {
             if (isset($config->Content->$field)) {
                 $options[$field] = $config->Content->$field;

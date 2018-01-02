@@ -18,7 +18,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
  * @category VuFind
  * @package  Search
@@ -27,6 +27,7 @@
  * @link     http://vufind.org
  */
 namespace FinnaSearch\Backend\Solr;
+
 use VuFindCode\ISBN;
 use VuFindSearch\Backend\Exception\BackendException;
 
@@ -56,6 +57,11 @@ class LuceneSyntaxHelper extends \VuFindSearch\Backend\Solr\LuceneSyntaxHelper
     protected $searchFilters;
 
     /**
+     * Maximum number of words in search query for spellcheck to be used
+     */
+    protected $maxSpellcheckWords;
+
+    /**
      * Constructor.
      *
      * @param bool|string $csBools                  Case sensitive Booleans setting
@@ -63,14 +69,17 @@ class LuceneSyntaxHelper extends \VuFindSearch\Backend\Solr\LuceneSyntaxHelper
      * @param string      $unicodeNormalizationForm UNICODE normalization form
      * @param array       $searchFilters            Regexp filters defined invalid
      * searches
+     * @param int         $maxSpellcheckWords       Max number of words in query for
+     * spellcheck to be used
      */
     public function __construct(
         $csBools = true, $csRanges = true, $unicodeNormalizationForm = 'NFKC',
-        $searchFilters = []
+        $searchFilters = [], $maxSpellcheckWords = 5
     ) {
         parent::__construct($csBools, $csRanges);
         $this->unicodeNormalizationForm = $unicodeNormalizationForm;
         $this->searchFilters = $searchFilters;
+        $this->maxSpellcheckWords = $maxSpellcheckWords;
     }
 
     /**
@@ -183,4 +192,18 @@ class LuceneSyntaxHelper extends \VuFindSearch\Backend\Solr\LuceneSyntaxHelper
         return $result;
     }
 
+    /**
+     * Extract search terms from a query string for spell checking.
+     *
+     * This will only handle the most often used simple cases.
+     *
+     * @param string $query Query string
+     *
+     * @return string
+     */
+    public function extractSearchTerms($query)
+    {
+        $result = parent::extractsearchTerms($query);
+        return str_word_count($result) <= $this->maxSpellcheckWords ? $result : '';
+    }
 }

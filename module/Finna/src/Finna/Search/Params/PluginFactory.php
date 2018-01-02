@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
  * @category VuFind
  * @package  Search
@@ -26,6 +26,7 @@
  * @link     http://vufind.org/wiki/vufind2:developer_manual Wiki
  */
 namespace Finna\Search\Params;
+
 use Zend\ServiceManager\ServiceLocatorInterface;
 
 /**
@@ -63,6 +64,6 @@ class PluginFactory extends \VuFind\Search\Params\PluginFactory
 
         $configLoader = $serviceLocator->getServiceLocator()->get('VuFind\Config');
         // Clone the options instance in case caller modifies it:
-        return new $class(clone($options), $configLoader, ...$extraParams);
+        return new $class(clone $options, $configLoader, ...$extraParams);
     }
 }

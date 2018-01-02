@@ -18,7 +18,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
  * @category VuFind
  * @package  Search
@@ -31,8 +31,8 @@ namespace Finna\Search\Solr;
 use VuFindSearch\Backend\BackendInterface;
 
 use Zend\EventManager\EventInterface;
-use Zend\ServiceManager\ServiceLocatorInterface;
 use Zend\EventManager\SharedEventManagerInterface;
+use Zend\ServiceManager\ServiceLocatorInterface;
 
 /**
  * Finna Solr extensions listener.
@@ -149,9 +149,8 @@ class SolrExtensionsListener
         if ($backend === $this->backend) {
             $this->addDataSourceFilter($event);
             if ($event->getParam('context') == 'search') {
-                $this->limitHierarchicalFacets($event);
                 $this->addHiddenComponentPartFilter($event);
-                $this->handleOnlineBoolean($event);
+                $this->handleOnlineFilters($event);
                 $this->addGeoFilterBoost($event);
             }
         }
@@ -349,27 +348,28 @@ class SolrExtensionsListener
     }
 
     /**
-     * Change the online_boolean filter to online_str_mv filter if deduplication is
-     * enabled
+     * Change the online_boolean filter to online_str_mv filter or
+     * free_online_boolean to free_online_str_mv filter if deduplication is enabled.
      *
      * @param EventInterface $event Event
      *
      * @return void
      */
-    protected function handleOnlineBoolean(EventInterface $event)
+    protected function handleOnlineFilters(EventInterface $event)
     {
         $config = $this->serviceLocator->get('VuFind\Config');
         $searchConfig = $config->get($this->searchConfig);
         if (isset($searchConfig->Records->deduplication)
             && $searchConfig->Records->deduplication
-            && isset($searchConfig->Records->sources)
             && !empty($searchConfig->Records->sources)
         ) {
             $params = $event->getParam('params');
             $filters = $params->get('fq');
             if (null !== $filters) {
                 foreach ($filters as $key => $value) {
-                    if ($value == 'online_boolean:"1"') {
+                    if ($value == 'online_boolean:"1"'
+                        || $value == 'free_online_boolean:"1"'
+                    ) {
                         unset($filters[$key]);
                         $sources = explode(',', $searchConfig->Records->sources);
                         $sources = array_map(
@@ -378,57 +378,16 @@ class SolrExtensionsListener
                             },
                             $sources
                         );
-                        $filters[] = 'online_str_mv:(' . implode(' OR ', $sources)
-                            . ')';
+                        $filter = $value == 'online_boolean:"1"'
+                            ? 'online_str_mv' : 'free_online_str_mv';
+                        $filter .= ':(' . implode(' OR ', $sources) . ')';
+                        $filters[] = $filter;
                         $params->set('fq', $filters);
-                        break;
-                    }
-                }
-            }
-            $facets = $params->get('facet.field');
-            if (null !== $facets) {
-                foreach ($facets as $key => $value) {
-                    if (substr($value, -14) == 'online_boolean') {
-                        unset($facets[$key]);
-                        $params->set('facet.field', $facets);
-                        break;
-                    }
-                }
-            }
-        }
-    }
 
-    /**
-     * Since we don't support non-JS hierarchical facets, limit them to one entry
-     * that's needed for checking whether there's something to display.
-     *
-     * @param EventInterface $event Event
-     *
-     * @return void
-     */
-    protected function limitHierarchicalFacets(EventInterface $event)
-    {
-        $params = $event->getParam('params');
-        // Check if facets are requested at all
-        $fields = $params->get('facet.field');
-        if ($fields === null) {
-            return;
-        }
-        $config = $this->serviceLocator->get('VuFind\Config');
-        $facetConfig = $config->get($this->facetConfig);
-        if (empty($facetConfig->SpecialFacets->hierarchical)) {
-            return;
-        }
-        // Check if we're retrieving the complete list or something else than records
-        // (limit=0, e.g. facets for search screen)
-        $limit = $params->get('limit');
-        $facetLimit = $params->get('facet.limit');
-        if ($facetLimit === null || $facetLimit[0] == -1 || $limit === 0) {
-            return;
-        }
-        $hierarchical = $facetConfig->SpecialFacets->hierarchical->toArray();
-        foreach ($hierarchical as $facet) {
-            $params->set("f.$facet.facet.limit", 1);
+                        break;
+                    }
+                }
+            }
         }
     }
 }

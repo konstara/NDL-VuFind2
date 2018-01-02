@@ -18,7 +18,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
  * @category VuFind
  * @package  View_Helpers
@@ -56,17 +56,21 @@ class ThemeSrc extends \Zend\View\Helper\AbstractHelper
     /**
      * Check if file is found in the current theme.
      *
-     * @param string $relPath File relative path
+     * @param string $relPath        File relative path
+     * @param bool   $returnAbsolute Whether to return absolute file system path
      *
      * @return mixed
      */
-    protected function fileFromCurrentTheme($relPath)
+    protected function fileFromCurrentTheme($relPath, $returnAbsolute = false)
     {
         $currentTheme = $this->themeInfo->getTheme();
         $basePath = $this->themeInfo->getBaseDir();
 
         $file = $basePath . '/' . $currentTheme . '/' . $relPath;
         if (file_exists($file)) {
+            if ($returnAbsolute) {
+                return $file;
+            }
             $urlHelper = $this->getView()->plugin('url');
             return $urlHelper('home') . 'themes/' . $currentTheme . '/' . $relPath;
         }

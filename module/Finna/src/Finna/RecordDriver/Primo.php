@@ -18,7 +18,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
  * @category VuFind
  * @package  RecordDrivers
@@ -49,6 +49,21 @@ class Primo extends \VuFind\RecordDriver\Primo
      * @var \SimpleXMLElement
      */
     protected $simpleXML;
+
+    /**
+     * Indicate whether export is disabled for a particular format.
+     *
+     * @param string $format Export format
+     *
+     * @return bool
+     *
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
+     */
+    public function exportDisabled($format)
+    {
+        // Support export for EndNote and RefWorks
+        return !in_array($format, ['EndNote', 'RefWorks', 'RIS']);
+    }
 
     /**
      * Get an array of supported, user-activated citation formats.

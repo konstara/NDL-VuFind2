@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
  * @category VuFind
  * @package  Db_Table
@@ -27,6 +27,7 @@
  * @link     http://vufind.org   Main Site
  */
 namespace Finna\Db\Table;
+
 use VuFind\Db\Row\RowGateway;
 use VuFind\Db\Table\PluginManager;
 use Zend\Db\Adapter\Adapter;
@@ -397,7 +398,7 @@ class Transaction extends \VuFind\Db\Table\Gateway
             $dateStr = date("Y-m-d H:i:s", $timestamp);
             if ($status == self::STATUS_PAID) {
                 $t->paid = $dateStr;
-            } else if ($status == self::STATUS_COMPLETE) {
+            } elseif ($status == self::STATUS_COMPLETE) {
                 $t->registered = $dateStr;
             }
 

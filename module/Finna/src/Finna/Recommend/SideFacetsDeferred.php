@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
  * @category VuFind
  * @package  Recommendations
@@ -26,9 +26,6 @@
  * @link     http://vufind.org/wiki/vufind2:recommendation_modules Wiki
  */
 namespace Finna\Recommend;
-use VuFind\I18n\Translator\TranslatorAwareInterface,
-    VuFind\I18n\Translator\TranslatorAwareTrait,
-    VuFind\Recommend\RecommendInterface;
 
 /**
  * SideFacetsDeferred Recommendations Module
@@ -58,10 +55,23 @@ class SideFacetsDeferred extends SideFacets
     }
 
     /**
+     * Get active facets (key => display string)
+     *
+     * @return array
+     */
+    public function getActiveFacets()
+    {
+        return $this->mainFacets;
+    }
+
+    /**
      * Called at the end of the Search Params objects' initFromRequest() method.
      * This method is responsible for setting search parameters needed by the
      * recommendation module and for reading any existing search parameters that may
      * be needed.
+     *
+     * We'll not do anything here since we want to defer the whole process until the
+     * search is done.
      *
      * @param \VuFind\Search\Base\Params $params  Search parameter object
      * @param \Zend\StdLib\Parameters    $request Parameter object representing user
@@ -72,5 +82,4 @@ class SideFacetsDeferred extends SideFacets
     public function init($params, $request)
     {
     }
-
 }

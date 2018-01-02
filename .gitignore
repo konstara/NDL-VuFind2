@@ -3,6 +3,7 @@
 ChangeLog
 \#*
 .\#*
+.php_cs_cache
 TAGS
 *~
 /downloads
@@ -48,3 +49,4 @@ local/import/import_auth.properties
 *.diff
 vufind.bat
 public/swagger-ui
+.vagrant

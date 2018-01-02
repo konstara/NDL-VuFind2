@@ -1,8 +1,8 @@
 <?php
-return array(
+return [
     'extends' => false,
-    'helpers' => array(
-        'factories' => array(
+    'helpers' => [
+        'factories' => [
             'accountcapabilities' => 'VuFind\View\Helper\Root\Factory::getAccountCapabilities',
             'addthis' => 'VuFind\View\Helper\Root\Factory::getAddThis',
             'alphabrowse' => 'VuFind\View\Helper\Root\Factory::getAlphaBrowse',
@@ -22,6 +22,7 @@ return array(
             'ils' => 'VuFind\View\Helper\Root\Factory::getIls',
             'jstranslations' => 'VuFind\View\Helper\Root\Factory::getJsTranslations',
             'keepalive' => 'VuFind\View\Helper\Root\Factory::getKeepAlive',
+            'permission' => 'VuFind\View\Helper\Root\Factory::getPermission',
             'proxyurl' => 'VuFind\View\Helper\Root\Factory::getProxyUrl',
             'openurl' => 'VuFind\View\Helper\Root\Factory::getOpenUrl',
             'piwik' => 'VuFind\View\Helper\Root\Factory::getPiwik',
@@ -40,8 +41,8 @@ return array(
             'systememail' => 'VuFind\View\Helper\Root\Factory::getSystemEmail',
             'userlist' => 'VuFind\View\Helper\Root\Factory::getUserList',
             'usertags' => 'VuFind\View\Helper\Root\Factory::getUserTags',
-        ),
-        'invokables' => array(
+        ],
+        'invokables' => [
             'addellipsis' => 'VuFind\View\Helper\Root\AddEllipsis',
             'browse' => 'VuFind\View\Helper\Root\Browse',
             'context' => 'VuFind\View\Helper\Root\Context',
@@ -58,6 +59,6 @@ return array(
             'transesc' => 'VuFind\View\Helper\Root\TransEsc',
             'translate' => 'VuFind\View\Helper\Root\Translate',
             'truncate' => 'VuFind\View\Helper\Root\Truncate',
-        )
-    ),
-);
+        ]
+    ],
+];

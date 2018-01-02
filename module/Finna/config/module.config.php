@@ -18,7 +18,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
  * @category VuFind
  * @package  Finna
@@ -163,6 +163,7 @@ $config = [
     'controllers' => [
         'factories' => [
             'ajax' => 'Finna\Controller\Factory::getAjaxController',
+            'barcode' => 'Finna\Controller\Factory::getBarcodeController',
             'browse' => 'Finna\Controller\Factory::getBrowseController',
             'cache' => 'Finna\Controller\Factory::getCacheController',
             'cart' => 'Finna\Controller\Factory::getCartController',
@@ -185,6 +186,7 @@ $config = [
             'primo' => 'Finna\Controller\Factory::getPrimoController',
             'primorecord' => 'Finna\Controller\Factory::getPrimorecordController',
             'record' => 'Finna\Controller\Factory::getRecordController',
+            'collection' => 'Finna\Controller\Factory::getCollectionController',
             'search' => 'Finna\Controller\Factory::getSearchController',
             'listpage' => 'Finna\Controller\Factory::getListController',
         ],
@@ -210,6 +212,7 @@ $config = [
             'VuFind\ILSHoldLogic' => 'Finna\Service\Factory::getILSHoldLogic',
             'VuFind\AuthManager' => 'Finna\Auth\Factory::getManager',
             'VuFind\RecordLoader' => 'Finna\Service\Factory::getRecordLoader',
+            'VuFind\Role\PermissionManager' => 'Finna\Service\Factory::getPermissionManager',
             'VuFind\SearchSpecsReader' => 'Finna\Service\Factory::getSearchSpecsReader',
             'VuFind\SearchTabsHelper' => 'Finna\Service\Factory::getSearchTabsHelper',
             'VuFind\YamlReader' => 'Finna\Service\Factory::getYamlReader',
@@ -247,6 +250,7 @@ $config = [
                     'fee' => 'Finna\Db\Row\Factory::getFee',
                     'finnacache' => 'Finna\Db\Row\Factory::getFinnaCache',
                     'privateuser' => 'Finna\Db\Row\Factory::getPrivateUser',
+                    'resource' => 'Finna\Db\Row\Factory::getResource',
                     'search' => 'Finna\Db\Row\Factory::getSearch',
                     'transaction' => 'Finna\Db\Row\Factory::getTransaction',
                     'user' => 'Finna\Db\Row\Factory::getUser',
@@ -297,8 +301,10 @@ $config = [
             ],
             'search_backend' => [
                 'factories' => [
+                    'EDS' => 'Finna\Search\Factory\EdsBackendFactory',
                     'Primo' => 'Finna\Search\Factory\PrimoBackendFactory',
                     'Solr' => 'Finna\Search\Factory\SolrDefaultBackendFactory',
+                    'Summon' => 'Finna\Search\Factory\SummonBackendFactory',
                 ],
                 'aliases' => [
                     // Allow Solr core names to be used as aliases for services:
@@ -349,6 +355,14 @@ $config = [
                 'factories' => [
                     'map' => 'Finna\RecordTab\Factory::getMap',
                     'usercomments' => 'Finna\RecordTab\Factory::getUserComments',
+                    'pressreview' => 'Finna\RecordTab\Factory::getPressReviews',
+                    'music' => 'Finna\RecordTab\Factory::getMusic',
+                    'distribution' => 'Finna\RecordTab\Factory::getDistribution',
+                    'inspectionDetails' =>
+                        'Finna\RecordTab\Factory::getInspectionDetails',
+                    'descriptionFWD' => 'Finna\RecordTab\Factory::getDescriptionFWD',
+                    'itemdescription' =>
+                        'Finna\RecordTab\Factory::getItemDescription',
                 ],
                 'invokables' => [
                     'componentparts' => 'Finna\RecordTab\ComponentParts',
@@ -356,6 +370,7 @@ $config = [
             ],
             'related' => [
                 'factories' => [
+                    'nothing' => 'Finna\Related\Factory::getNothing',
                     'similardeferred' => 'Finna\Related\Factory::getSimilarDeferred',
                 ],
             ],
@@ -409,6 +424,12 @@ $config = [
                     'UserComments' => 'UserComments',
                     'Reviews' => 'Reviews',
                     'Map' => 'Map',
+                    'PressReview' => 'PressReview',
+                    'Music' => 'Music',
+                    'Distribution' => 'Distribution',
+                    'InspectionDetails' => 'InspectionDetails',
+                    'DescriptionFWD' => 'DescriptionFWD',
+                    'ItemDescription' => 'ItemDescription',
                     'Details' => 'StaffViewArray',
                 ],
                 'defaultTab' => null,
@@ -468,11 +489,11 @@ $staticRoutes = [
     'Browse/Database', 'Browse/Journal',
     'LocationService/Modal',
     'MetaLib/Home', 'MetaLib/Search', 'MetaLib/Advanced',
-    'MyResearch/CheckoutHistory', 'MyResearch/SaveCustomOrder',
-    'MyResearch/PurgeCheckoutHistory',
+    'MyResearch/SaveCustomOrder', 'MyResearch/PurgeHistoricLoans',
     'OrganisationInfo/Home',
     'PCI/Home', 'PCI/Search', 'PCI/Record',
-    'Search/StreetSearch'
+    'Search/StreetSearch',
+    'Barcode/Show'
 ];
 
 $routeGenerator = new \VuFind\Route\RouteGenerator();

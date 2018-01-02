@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
  * @category VuFind
  * @package  View_Helpers
@@ -83,7 +83,7 @@ class HoldingsSettings extends AbstractHelper
     }
 
     /**
-     * Return configured setting for showing holdings details after the location 
+     * Return configured setting for showing holdings details after the location
      * group title so that they can be seen without "expanding" the group.
      * This only affects record page holdings.
      *
@@ -93,7 +93,7 @@ class HoldingsSettings extends AbstractHelper
     {
         return empty($this->config->Item_Status->show_details_after_location_group)
             ? false
-            : (boolean)$this->config->Item_Status->show_details_after_location_group;
+            : (bool)$this->config->Item_Status->show_details_after_location_group;
     }
 
     /**
@@ -106,7 +106,7 @@ class HoldingsSettings extends AbstractHelper
     {
         return empty($this->config->Item_Status->show_link_to_record_page)
             ? false
-            : (boolean)$this->config->Item_Status->show_link_to_record_page;
+            : (bool)$this->config->Item_Status->show_link_to_record_page;
     }
 
     /**
@@ -119,7 +119,7 @@ class HoldingsSettings extends AbstractHelper
     {
         return empty($this->config->Item_Status->show_title_hold)
             ? false
-            : (boolean)$this->config->Item_Status->show_title_hold;
+            : (bool)$this->config->Item_Status->show_title_hold;
     }
 
     /**
@@ -132,12 +132,12 @@ class HoldingsSettings extends AbstractHelper
     {
         return empty($this->config->Item_Status->show_holdings_summary)
             ? false
-            : (boolean)$this->config->Item_Status->show_holdings_summary;
+            : (bool)$this->config->Item_Status->show_holdings_summary;
     }
 
     /**
      * Return configured setting for overriding holdings ordering and
-     * re-sorting holdings by availability and location name. This only affects 
+     * re-sorting holdings by availability and location name. This only affects
      * non-Axiell search results holdings.
      *
      * @return boolean
@@ -146,7 +146,7 @@ class HoldingsSettings extends AbstractHelper
     {
         return empty($this->config->Item_Status->override_sort_order)
             ? false
-            : (boolean)$this->config->Item_Status->override_sort_order;
+            : (bool)$this->config->Item_Status->override_sort_order;
     }
 
     /**

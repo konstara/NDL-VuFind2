@@ -18,7 +18,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
  * @category VuFind
  * @package  Search
@@ -27,6 +27,7 @@
  * @link     http://vufind.org   Main Site
  */
 namespace Finna\Search\Solr;
+
 use Zend\EventManager\EventInterface;
 
 /**
@@ -210,16 +211,25 @@ class DeduplicationListener extends \VuFind\Search\Solr\DeduplicationListener
                 }
             );
         }
-        $cookieManager = $this->serviceLocator->get('VuFind\CookieManager');
-        if ($cookieManager) {
-            if (!($preferred = $cookieManager->get('preferredRecordSource'))) {
-                $authManager = $this->serviceLocator->get('VuFind\AuthManager');
-                if ($user = $authManager->isLoggedIn()) {
-                    if ($user->cat_username) {
-                        list($preferred) = explode('.', $user->cat_username, 2);
-                    }
+
+        // Secondary priority to selected library card
+        $authManager = $this->serviceLocator->get('VuFind\AuthManager');
+        if ($user = $authManager->isLoggedIn()) {
+            if ($user->cat_username) {
+                list($preferred) = explode('.', $user->cat_username, 2);
+                // array_search may return 0, but that's fine since it means the
+                // source already has highest priority
+                if ($preferred && $key = array_search($preferred, $recordSources)) {
+                    unset($recordSources[$key]);
+                    array_unshift($recordSources, $preferred);
                 }
             }
+        }
+
+        // Primary priority to cookie
+        $cookieManager = $this->serviceLocator->get('VuFind\CookieManager');
+        if ($cookieManager) {
+            $preferred = $cookieManager->get('preferredRecordSource');
             // array_search may return 0, but that's fine since it means the source
             // already has highest priority
             if ($preferred && $key = array_search($preferred, $recordSources)) {

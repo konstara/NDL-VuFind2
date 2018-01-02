@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
  * @category VuFind
  * @package  ILS_Drivers
@@ -29,8 +29,8 @@
 namespace Finna\ILS\Driver;
 
 use Finna\ILS\SIP2;
-use VuFind\Exception\ILS as ILSException;
 use PDO;
+use VuFind\Exception\ILS as ILSException;
 use Zend\Validator\EmailAddress as EmailAddressValidator;
 
 /**
@@ -182,7 +182,6 @@ trait VoyagerFinna
             $where = array_merge(
                 $where, ["LINE_ITEM_STATUS.LINE_ITEM_STATUS_DESC in ($statuses)"]
             );
-
         }
 
         if (!empty($this->config['Holdings']['order_formats'])) {
@@ -205,7 +204,6 @@ trait VoyagerFinna
                     "BIB_TEXT.BIB_FORMAT in ($formats)"
                 ]
             );
-
         }
 
         $sqlArray = [
@@ -466,8 +464,8 @@ trait VoyagerFinna
                     'secondary_login_field_label' => $label
                 ];
             }
-        } else if ($function == 'onlinePayment'
-            && $config = $this->getOnlinePaymentConfig()
+        } elseif ($function == 'onlinePayment'
+            && isset($this->config['OnlinePayment'])
         ) {
             return $config;
         }
@@ -525,7 +523,7 @@ trait VoyagerFinna
                 $addr1 = utf8_encode($row['ADDRESS_LINE1']);
                 if ($validator->isValid($addr1)) {
                     $patron['email'] = $addr1;
-                } else if (!isset($patron['address1'])) {
+                } elseif (!isset($patron['address1'])) {
                     if (!empty($addr1)) {
                         $patron['address1'] = $addr1;
                     }
@@ -556,10 +554,73 @@ trait VoyagerFinna
                     }
                 }
             }
-            return (empty($patron) ? null : $patron);
+            return empty($patron) ? null : $patron;
         } catch (PDOException $e) {
             throw new ILSException($e->getMessage());
         }
+    }
+
+    /**
+     * Get Patron Fines
+     *
+     * This is responsible for retrieving all fines by a specific patron.
+     *
+     * @param array $patron The patron array from patronLogin
+     *
+     * @throws DateException
+     * @throws ILSException
+     * @return mixed        Array of the patron's fines on success.
+     */
+    public function getMyFines($patron)
+    {
+        try {
+            $fines = parent::getMyFines($patron);
+            return $this->markOnlinePayableFines($fines);
+        } catch (ILSException $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Return total amount of fees that may be paid online.
+     *
+     * @param array $patron Patron
+     *
+     * @throws ILSException
+     * @return array Associative array of payment info,
+     * false if an ILSException occurred.
+     */
+    public function getOnlinePayableAmount($patron)
+    {
+        $fines = $this->getMyFines($patron);
+        if (!empty($fines)) {
+            $nonPayableReason = false;
+            $amount = 0;
+            foreach ($fines as $fine) {
+                if (!$fine['payableOnline'] && !$fine['accruedFine']) {
+                    $nonPayableReason
+                        = 'online_payment_fines_contain_nonpayable_fees';
+                } elseif ($fine['payableOnline']) {
+                    $amount += $fine['balance'];
+                }
+            }
+            $config = $this->getConfig('onlinePayment');
+            if (!$nonPayableReason
+                && isset($config['minimumFee']) && $amount < $config['minimumFee']
+            ) {
+                $nonPayableReason = 'online_payment_minimum_fee';
+            }
+            $res = ['payable' => empty($nonPayableReason), 'amount' => $amount];
+            if ($nonPayableReason) {
+                $res['reason'] = $nonPayableReason;
+            }
+            return $res;
+        }
+        return [
+            'payable' => false,
+            'amount' => 0,
+            'reason' => 'online_payment_minimum_fee'
+        ];
     }
 
     /**
@@ -577,7 +638,7 @@ trait VoyagerFinna
     public function registerOnlinePayment($patron, $amount, $currency, $params)
     {
         $patronId = $patron['cat_username'];
-        
+
         $sip = new SIP2();
         $sip->error_detection = false;
         $sip->msgTerminator = "\r";
@@ -805,7 +866,7 @@ trait VoyagerFinna
     }
 
     /**
-     * Support method for getMyFines that augments the fines with 
+     * Support method for getMyFines that augments the fines with
      * extra information. The driver may also append the information
      * in getMyFines implement markOnlinePayableFines as a stub.
      *
@@ -814,7 +875,7 @@ trait VoyagerFinna
      *
      * The following keys are appended when required:
      * - blockPayment <boolean> True if the fine prevents starting
-     * the payment process. 
+     * the payment process.
      *
      * @param array $fines Processed fines.
       *
@@ -843,7 +904,7 @@ trait VoyagerFinna
                 if (!$payableOnline && !$accruedFine) {
                     // A non-payable fine that is not a
                     // accrued fine blocks the payment
-                    $fine['blockPayment'] = true;                    
+                    $fine['blockPayment'] = true;
                 }
             }
             $fine['payableOnline'] = $payableOnline;

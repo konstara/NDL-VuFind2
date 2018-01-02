@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
  * @category VuFind
  * @package  Service
@@ -244,7 +244,7 @@ class DueDateReminders extends AbstractService
                     "$remindCnt reminders and $errorCnt errors to send for user"
                     . " {$user->username} (id {$user->id})"
                 );
-                 $this->sendReminder($user, $remindLoans, $errors);
+                $this->sendReminder($user, $remindLoans, $errors);
             } else {
                 $this->msg(
                     "No loans to remind for user {$user->username} (id {$user->id})"
@@ -409,13 +409,13 @@ class DueDateReminders extends AbstractService
             return false;
         }
 
-        list($userInstitution,) = explode(':', $user['username'], 2);
+        list($userInstitution, ) = explode(':', $user['username'], 2);
 
         if (!$this->currentInstitution
             || $userInstitution != $this->currentInstitution
         ) {
             $templateDirs = [
-                "{$this->baseDir}/themes/finna/templates",
+                "{$this->baseDir}/themes/finna2/templates",
             ];
             if (!$viewPath = $this->resolveViewPath($userInstitution)) {
                 $this->err(
@@ -483,7 +483,8 @@ class DueDateReminders extends AbstractService
             'baseUrl' => $baseUrl,
             'lastLogin' => $lastLogin->format($dateFormat),
             'loginMethod' => $loginMethod,
-            'serviceName' => $serviceName
+            'serviceName' => $serviceName,
+            'userInstitution' => $userInstitution
         ];
 
         if (!empty($errors)) {
@@ -549,7 +550,7 @@ class DueDateReminders extends AbstractService
      */
     protected function getUsage()
     {
-// @codingStandardsIgnoreStart
+        // @codingStandardsIgnoreStart
         return <<<EOT
 Usage:
   php index.php util due_date_reminders <vufind_dir> <view_dir>
@@ -559,6 +560,6 @@ Usage:
     view_dir      View directory
 
 EOT;
-// @codingStandardsIgnoreEnd
+        // @codingStandardsIgnoreEnd
     }
 }

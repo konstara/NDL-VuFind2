@@ -26,6 +26,7 @@
  * @link     https://vufind.org/wiki/development Wiki
  */
 namespace VuFind\View\Helper\Root;
+
 use Zend\ServiceManager\ServiceManager;
 
 /**
@@ -91,7 +92,10 @@ class Factory
      */
     public static function getAuth(ServiceManager $sm)
     {
-        return new Auth($sm->getServiceLocator()->get('VuFind\AuthManager'));
+        return new Auth(
+            $sm->getServiceLocator()->get('VuFind\AuthManager'),
+            $sm->getServiceLocator()->get('VuFind\ILSAuthenticator')
+        );
     }
 
     /**
@@ -232,6 +236,22 @@ class Factory
         $universal = isset($config->GoogleAnalytics->universal)
             ? $config->GoogleAnalytics->universal : false;
         return new GoogleAnalytics($key, $universal);
+    }
+
+    /**
+     * Construct the Permission helper.
+     *
+     * @param ServiceManager $sm Service manager.
+     *
+     * @return Permission
+     */
+    public static function getPermission(ServiceManager $sm)
+    {
+        $ld = new Permission(
+            $sm->getServiceLocator()->get('VuFind\Role\PermissionManager'),
+            $sm->getServiceLocator()->get('VuFind\Role\PermissionDeniedManager')
+        );
+        return $ld;
     }
 
     /**
@@ -452,11 +472,17 @@ class Factory
     {
         $config = $sm->getServiceLocator()->get('VuFind\Config');
         $mainConfig = $config->get('config');
+        $searchboxConfig = $config->get('searchbox')->toArray();
+        $includeAlphaOptions
+            = isset($searchboxConfig['General']['includeAlphaBrowse'])
+            && $searchboxConfig['General']['includeAlphaBrowse'];
         return new SearchBox(
             $sm->getServiceLocator()->get('VuFind\SearchOptionsPluginManager'),
-            $config->get('searchbox')->toArray(),
+            $searchboxConfig,
             isset($mainConfig->SearchPlaceholder)
-                ? $mainConfig->SearchPlaceholder->toArray() : []
+                ? $mainConfig->SearchPlaceholder->toArray() : [],
+            $includeAlphaOptions && isset($mainConfig->AlphaBrowse_Types)
+                ? $mainConfig->AlphaBrowse_Types->toArray() : []
         );
     }
 

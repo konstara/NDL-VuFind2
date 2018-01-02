@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
  * @category VuFind
  * @package  Controller
@@ -27,6 +27,7 @@
  * @link     https://vufind.org/wiki/development:plugins:controllers Wiki
  */
 namespace Finna\Controller;
+
 use Zend\ServiceManager\ServiceManager;
 
 /**
@@ -116,6 +117,22 @@ class Factory extends \VuFind\Controller\Factory
     }
 
     /**
+     * Construct the CollectionController.
+     *
+     * @param ServiceManager $sm Service manager.
+     *
+     * @return CollectionController
+     */
+    public static function getCollectionController(ServiceManager $sm)
+    {
+        $serviceLocator = $sm->getServiceLocator();
+        return new CollectionController(
+            $serviceLocator,
+            $serviceLocator->get('VuFind\Config')->get('config')
+        );
+    }
+
+    /**
      * Construct the CartController.
      *
      * @param ServiceManager $sm Service manager.
@@ -131,6 +148,22 @@ class Factory extends \VuFind\Controller\Factory
                 'cart_followup',
                 $serviceLocator->get('VuFind\SessionManager')
             )
+        );
+    }
+
+    /**
+     * Construct the ListController.
+     *
+     * @param ServiceManager $sm Service manager.
+     *
+     * @return ListController
+     */
+    public static function getListController(ServiceManager $sm)
+    {
+        $serviceLocator = $sm->getServiceLocator();
+        return new ListController(
+            $serviceLocator,
+            $serviceLocator->get('VuFind\SessionManager')
         );
     }
 

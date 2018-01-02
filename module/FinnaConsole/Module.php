@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
  * @category VuFind
  * @package  Module
@@ -26,6 +26,7 @@
  * @link     https://github.com/dmj/vf2-proxy
  */
 namespace FinnaConsole;
+
 use Zend\Console\Adapter\AdapterInterface as Console;
 
 /**
@@ -95,15 +96,18 @@ class Module implements \Zend\ModuleManager\Feature\ConsoleUsageProviderInterfac
     public function getConsoleUsage(Console $console)
     {
         return [
+            'util account_expiration_reminders'
+                => 'Remind users x days before account expiration',
             'util due_date_reminders' => 'Send due date reminders',
             'util encrypt_catalog_passwords' => 'Encrypt ILS passwords in database',
-            'util expire_finna_cache' => 'Remove expires Finna cache entries from'
-            . ' database',
+            'util expire_finna_cache'
+                => 'Remove expires Finna cache entries from database',
             'util expire_users' => 'Anonymize expired user accounts',
             'util online_payment_monitor' => 'Process unregistered online payments',
             'util scheduled_alerts' => 'Send scheduled alerts',
             'util update_search_hashes' => 'Update search hashes',
-            'util verify_record_links' => 'Verify record links'
+            'util verify_record_links' => 'Verify record links',
+            'util verify_resource_metadata' => 'Verify resource metadata'
         ];
     }
 }

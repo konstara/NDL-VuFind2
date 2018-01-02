@@ -20,7 +20,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
  * @category VuFind
  * @package  ILS_Drivers
@@ -29,6 +29,7 @@
  * @link     https://vufind.org/wiki/development:plugins:ils_drivers Wiki
  */
 namespace Finna\ILS;
+
 use VuFind\Exception\ILS as ILSException;
 
 /**
@@ -63,6 +64,86 @@ class Connection extends \VuFind\ILS\Connection
             );
         }
         return $this->getDriver()->changePassword($details);
+    }
+
+    /**
+     * Check Holds
+     *
+     * A support method for checkFunction(). This is responsible for checking
+     * the driver configuration to determine if the system supports Holds.
+     *
+     * @param array $functionConfig The Hold configuration values
+     * @param array $params         An array of function-specific params (or null)
+     *
+     * @return mixed On success, an associative array with specific function keys
+     * and values either for placing holds via a form or a URL; on failure, false.
+     */
+    protected function checkMethodHolds($functionConfig, $params)
+    {
+        $response = parent::checkMethodHolds($functionConfig, $params);
+
+        if (isset($functionConfig['acceptTermsText'])) {
+            $response['acceptTermsText'] = $this->getHelpText(
+                $functionConfig['acceptTermsText']
+            );
+        }
+
+        return $response;
+    }
+
+    /**
+     * Check Storage Retrieval Request
+     *
+     * A support method for checkFunction(). This is responsible for checking
+     * the driver configuration to determine if the system supports storage
+     * retrieval requests.
+     *
+     * @param array $functionConfig The storage retrieval request configuration
+     * values
+     * @param array $params         An array of function-specific params (or null)
+     *
+     * @return mixed On success, an associative array with specific function keys
+     * and values either for placing requests via a form; on failure, false.
+     */
+    protected function checkMethodStorageRetrievalRequests($functionConfig, $params)
+    {
+        $response = parent::checkMethodStorageRetrievalRequests(
+            $functionConfig, $params
+        );
+
+        if (isset($functionConfig['acceptTermsText'])) {
+            $response['acceptTermsText'] = $this->getHelpText(
+                $functionConfig['acceptTermsText']
+            );
+        }
+
+        return $response;
+    }
+
+    /**
+     * Check ILL Request
+     *
+     * A support method for checkFunction(). This is responsible for checking
+     * the driver configuration to determine if the system supports storage
+     * retrieval requests.
+     *
+     * @param array $functionConfig The ILL request configuration values
+     * @param array $params         An array of function-specific params (or null)
+     *
+     * @return mixed On success, an associative array with specific function keys
+     * and values either for placing requests via a form; on failure, false.
+     */
+    protected function checkMethodILLRequests($functionConfig, $params)
+    {
+        $response = parent::checkMethodILLRequests($functionConfig, $params);
+
+        if (isset($functionConfig['acceptTermsText'])) {
+            $response['acceptTermsText'] = $this->getHelpText(
+                $functionConfig['acceptTermsText']
+            );
+        }
+
+        return $response;
     }
 
     /**
@@ -147,6 +228,34 @@ class Connection extends \VuFind\ILS\Connection
         }
 
         if ($this->checkCapability('changePickupLocation', [$params ?: []])
+        ) {
+            return $functionConfig;
+        }
+
+        return false;
+    }
+
+    /**
+     * Check for changeRequestStatus
+     *
+     * A support method for checkFunction(). This is responsible for checking
+     * the driver configuration to determine if the system supports change of
+     * request status.
+     *
+     * @param array $functionConfig The configuration values
+     * @param array $params         Patron data
+     *
+     * @return mixed On success, array of configuration data; on failure, false.
+     *
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
+     */
+    protected function checkMethodchangeRequestStatus($functionConfig, $params)
+    {
+        if (!isset($functionConfig['method'])) {
+            return false;
+        }
+
+        if ($this->checkCapability('changeRequestStatus', [$params ?: []])
         ) {
             return $functionConfig;
         }

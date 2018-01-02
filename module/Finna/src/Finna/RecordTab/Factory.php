@@ -18,7 +18,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
  * @category VuFind
  * @package  RecordDrivers
@@ -28,6 +28,7 @@
  * @link     http://vufind.org/wiki/vufind2:record_tabs Wiki
  */
 namespace Finna\RecordTab;
+
 use Zend\ServiceManager\ServiceManager;
 
 /**
@@ -69,12 +70,71 @@ class Factory
     {
         $capabilities = $sm->getServiceLocator()->get('VuFind\AccountCapabilities');
         $config = $sm->getServiceLocator()->get('VuFind\Config')->get('config');
-        $useRecaptcha = isset($config->Captcha) && isset($config->Captcha->forms)
-            && (trim($config->Captcha->forms) === '*'
-            || strpos($config->Captcha->forms, 'userComments'));
+        $recaptcha = \Finna\Controller\Plugin\Factory::getRecaptcha($sm);
+        $useRecaptcha = $recaptcha->active('userComments');
         return new UserComments(
             'enabled' === $capabilities->getCommentSetting(),
             $useRecaptcha
         );
+    }
+
+    /**
+     * Factory for PressReview tab plugin.
+     *
+     * @return PressReviews
+     */
+    public static function getPressReviews()
+    {
+        return new PressReviews(true);
+    }
+
+    /**
+     * Factory for Music tab plugin.
+     *
+     * @return Music
+     */
+    public static function getMusic()
+    {
+        return new Music(true);
+    }
+
+    /**
+     * Factory for Distribution tab plugin.
+     *
+     * @return Distribution
+     */
+    public static function getDistribution()
+    {
+        return new Distribution(true);
+    }
+
+    /**
+     * Factory for Inspection Details tab plugin.
+     *
+     * @return InspectionDetails
+     */
+    public static function getInspectionDetails()
+    {
+        return new InspectionDetails(true);
+    }
+
+    /**
+     * Factory for Description tab plugin.
+     *
+     * @return DescriptionFWD
+     */
+    public static function getDescriptionFWD()
+    {
+        return new DescriptionFWD(true);
+    }
+
+    /**
+     * Factory for Item Description tab plugin.
+     *
+     * @return Description
+     */
+    public static function getItemDescription()
+    {
+        return new ItemDescription(true);
     }
 }

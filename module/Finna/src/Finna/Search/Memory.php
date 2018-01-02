@@ -17,7 +17,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
  * @category Finna
  * @package  Search
@@ -49,7 +49,7 @@ class Memory extends \VuFind\Search\Memory
      */
     public function rememberSearchData($searchId, $searchType, $lookfor)
     {
-        $this->session->searchData = (object) [
+        $this->session->searchData = (object)[
             'id' => $searchId,
             'type' => $searchType,
             'lookfor' => $lookfor
@@ -64,5 +64,27 @@ class Memory extends \VuFind\Search\Memory
     public function retrieveLastSearchData()
     {
         return isset($this->session->searchData) ? $this->session->searchData : null;
+    }
+
+    /**
+     * Remember record scroll data
+     *
+     * @param object $scrollData Record scroll data.
+     *
+     * @return void
+     */
+    public function rememberScrollData($scrollData)
+    {
+        $this->session->scrollData = $scrollData;
+    }
+
+    /**
+     * Retrieve scroll data
+     *
+     * @return object
+     */
+    public function retrieveScrollData()
+    {
+        return isset($this->session->scrollData) ? $this->session->scrollData : null;
     }
 }
