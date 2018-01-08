@@ -23,7 +23,7 @@ extraHoldFields = pickUpLocation
 ;pickUpLocationOrder = 1
 
 ; A Pick Up Location Code used to pre-select the pick up location drop down list and
-; provide a default option if others are not available. Must correspond with one of 
+; provide a default option if others are not available. Must correspond with one of
 ; the Location IDs returned by getPickUpLocations()
 ;defaultPickUpLocation = 1
 
@@ -39,7 +39,7 @@ extraHoldFields = pickUpLocation
 ; NOTE: this setting is needed only when the library unit hierarchy consists of 2 levels
 ; (1. branch, 2. department). Comment out if the hierarchy also includes the organisation.
 ; (1. organisation, 2. branch, 3. department)
-; organisationId = 
+; organisationId =
 
 [Loans]
 renewalLimit = 3
@@ -114,7 +114,9 @@ method = driver
 options[0] = checkout_history_forever
 options[1] = checkout_history_never
 
-; Sort options for transaction history.
-[TransactionHistorySortList]
-checkout desc = sort_date_desc
-checkout asc = sort_date_asc
+; Uncomment the following lines to enable transaction history
+; Only 'driver' is currently supported method.
+;[getMyTransactionHistory]
+;method = driver
+;sort[0] = sort_date_desc
+;sort[1] = sort_date_asc

@@ -4,7 +4,7 @@
  *
  * PHP version 5
  *
- * Copyright (C) The National Library of Finland 2017.
+ * Copyright (C) The National Library of Finland 2017-2018.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -24,6 +24,7 @@
  * @author   Bjarne Beckmann <bjarne.beckmann@helsinki.fi>
  * @author   Ere Maijala <ere.maijala@helsinki.fi>
  * @author   Samuli Sillanpää <samuli.sillanpaa@helsinki.fi>
+ * @author   Konsta Raunio  <konsta.raunio@helsinki.fi>
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org/wiki/development:plugins:ils_drivers Wiki
  */
@@ -39,6 +40,7 @@ use VuFind\Exception\ILS as ILSException;
  * @author   Bjarne Beckmann <bjarne.beckmann@helsinki.fi>
  * @author   Ere Maijala <ere.maijala@helsinki.fi>
  * @author   Samuli Sillanpää <samuli.sillanpaa@helsinki.fi>
+ * @author   Konsta Raunio  <konsta.raunio@helsinki.fi>
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org/wiki/development:plugins:ils_drivers Wiki
  */
@@ -60,8 +62,6 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
      * @var \VuFind\Date\Converter
      */
     protected $dateConverter;
-
-    protected $translator;
 
     /**
      * Institution settings for the order of organisations
@@ -92,10 +92,9 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
      *
      * @param \VuFind\Date\Converter $dateConverter Date converter object
      */
-    public function __construct(\VuFind\Date\Converter $dateConverter, $translator
+    public function __construct(\VuFind\Date\Converter $dateConverter
     ) {
         $this->dateConverter = $dateConverter;
-        $this->translator = $translator;
     }
 
     /**
@@ -481,7 +480,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             'zip' => $result['MainZip'],
             'city' => $result['MainPlace'],
             'expiration_date' => $expirationDate,
-            'checkout_history' => $result['StoreBorrowerHistory'] ? 0 : 1,
+            'loan_history' => $result['StoreBorrowerHistory'] ? 0 : 1,
             'messagingServices' => $messagingSettings
         ];
 
@@ -508,7 +507,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
     {
         $result = $this->makeRequest(
             ['odata', 'BorrowerLoans'],
-            ['$filter' => 'BorrowerId eq ' . $patron['id']]
+            ['$filter' => 'BorrowerId eq ' . '72857']
         );
         if (empty($result)) {
             return [];
@@ -623,7 +622,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
     {
         $result = $this->makeRequest(
             ['odata', 'BorrowerReservations'],
-            ['$filter' => 'BorrowerId eq ' . $patron['id']]
+            ['$filter' => 'BorrowerId eq ' . '72857']
         );
         if (!isset($result)) {
             return [];
@@ -679,26 +678,17 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
      */
     public function getMyTransactionHistory($patron, $params)
     {
-        $extractHistory = function ($history, $start, $limit, $sort) {
-            if ($sort == 'checkout desc') {
-                $history = array_reverse($history);
-            }
-            return array_slice($history, $start, $start+$limit);
-        };
-
         $cacheKey = $this->getPatronCacheKey($patron, 'transactionHistory');
         $history = $this->getCachedData($cacheKey);
-        $reverseHistory = $params['sort'] == 'checkout desc';
-        if ($history !== null) {
-            $history['transactions'] = $extractHistory(
-               $history['transactions'], $params['start'], $params['limit'],
-               $reverseHistory
-            );
-            return $history;
-        }
+
+        $sort = $params['sort'] == 0 ? 'desc' : 'asc';
+        $limit = isset($params['limit']) ? $params['limit'] : '';
 
         $request = [
-            '$filter' => 'BorrowerId eq ' . $patron['id']
+            '$filter' => 'BorrowerId eq ' . '72857',
+            '$orderby' => 'ServiceTime' . ' ' . $sort,
+            'limit' => $limit
+
         ];
 
         $result = $this->makeRequest(
@@ -708,9 +698,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
 
         $history = [
             'count' => count($result),
-            'transactions' => [],
-            'sortList' => isset($this->config['TransactionHistorySortList'])
-               ? $this->config['TransactionHistorySortList'] : null
+            'transactions' => []
         ];
 
         if (!$result) {
@@ -746,15 +734,10 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
 
             $history['transactions'][] = $transaction;
         }
-
         $this->putCachedData($cacheKey, $history);
 
-        $history['transactions'] = $extractHistory(
-           $history['transactions'], $params['start'], $params['limit'],
-           $reverseHistory
-        );
+            return $history;
 
-        return $history;
     }
 
     /**
