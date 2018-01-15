@@ -29,6 +29,7 @@
  * @link     https://vufind.org/wiki/development:plugins:ils_drivers Wiki
  */
 namespace Finna\ILS\Driver;
+
 use VuFind\Exception\Date as DateException;
 use VuFind\Exception\ILS as ILSException;
 
@@ -77,11 +78,11 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
      */
     protected $defaultPickUpLocation;
 
-     /**
-      * Mappings from fee (account line) types
-      *
-      * @var array
-      */
+    /**
+     * Mappings from fee (account line) types
+     *
+     * @var array
+     */
     protected $feeTypeMappings = [
         'Overdue charge' => 'Overdue',
         'Extra service' => 'Extra service'
@@ -140,7 +141,6 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
         ) {
             return $config;
         }
-
         return isset($this->config[$function])
             ? $this->config[$function] : false;
     }
@@ -256,7 +256,6 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             $profile['major'] = null;
             $profile['college'] = null;
         }
-
         return $profile;
     }
 
@@ -339,7 +338,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             if (isset($this->feeTypeMappings[$type])) {
                 $type = $this->feeTypeMappings[$type];
             }
-            $amount = $entry['Remainder']*100;
+            $amount = $entry['Remainder'] * 100;
             $fineId = isset($entry['Id']) ? $entry['Id'] : null;
             $fine = [
                 'amount' => $amount,
@@ -359,20 +358,19 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             }
             $fines[] = $fine;
         }
-
         return $fines;
     }
 
-     /**
-      * Get Patron Profile
-      *
-      * This is responsible for retrieving the profile for a specific patron.
-      *
-      * @param array $patron The patron array
-      *
-      * @throws ILSException
-      * @return array        Array of the patron's profile data on success.
-      */
+    /**
+     * Get Patron Profile
+     *
+     * This is responsible for retrieving the profile for a specific patron.
+     *
+     * @param array $patron The patron array
+     *
+     * @throws ILSException
+     * @return array        Array of the patron's profile data on success.
+     */
     public function getMyProfile($patron)
     {
         $cacheKey = $this->getPatronCacheKey($patron, 'profile');
@@ -484,9 +482,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
         ];
 
         $profile = array_merge($patron, $profile);
-
         $this->putCachedData($cacheKey, $profile);
-
         return $profile;
     }
 
@@ -526,7 +522,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
                 'dueStatus' => $entry['ServiceCode'],
                 'renew' => $renewalCount,
                 'renewLimit' => $renewLimit,
-                'renewable' => ($renewLimit-$renewalCount) > 0,
+                'renewable' => ($renewLimit - $renewalCount) > 0,
                 'message' => $entry['Notes']
             ];
             if (!empty($entry['MarcRecordTitle'])) {
@@ -535,7 +531,6 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
 
             $transactions[] = $transaction;
         }
-
         return $transactions;
     }
 
@@ -728,9 +723,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             $history['transactions'][] = $transaction;
         }
         $this->putCachedData($cacheKey, $history);
-
         return $history;
-
     }
 
     /**
@@ -895,7 +888,6 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             };
             usort($locations, $sortFunction);
         }
-
         return $locations;
     }
 
@@ -1008,7 +1000,6 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             ];
         }
         $this->putCachedData($this->getPatronCacheKey($patron, 'profile'), null);
-
         return ['success' => true, 'status' => 'request_change_done'];
     }
 
@@ -1158,7 +1149,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
         $errorIds = [];
         foreach ($payableFines as $fine) {
             $fineId = $fine['fineId'];
-            $request = ['Amount' => $fine['amount']/100.0];
+            $request = ['Amount' => $fine['amount'] / 100.0];
 
             list($code, $result) = $this->makeRequest(
                 ['BorrowerDebts', $patron['cat_username'], $fineId],
@@ -1177,7 +1168,6 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
         if (!empty($errorIds)) {
             return 'Registration failed for fines: ' . implode(',', $errorIds);
         }
-
         return true;
     }
 
@@ -1199,7 +1189,6 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             'PATCH',
             true
         );
-
         return $code;
     }
 
@@ -1405,7 +1394,6 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
 
         $summary = $this->getHoldingsSummary($statuses);
         $statuses[] = $summary;
-
         return $statuses;
     }
 
@@ -1541,7 +1529,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
                 $organisationId = $this->config['Holdings']['organisationId'];
                 $organisationName
                     = $this->translator->translate("source_$organisationId");
-            } else if ($parent && $parent['department']) {
+            } elseif ($parent && $parent['department']) {
                 $organisationId = $parent['parent'];
                 $organisationName = $this->getLibraryUnit($parent['id'])['name'];
             }
@@ -1561,9 +1549,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             }
             $unit['name'] = "$parentName - $unitName";
         }
-
         $this->putCachedData($cacheKey, $units);
-
         return $units;
     }
 
@@ -1709,7 +1695,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
         $message = 'hold_error_fail';
         if (!empty($result['error']['message'])) {
             $message = $result['error']['message'];
-        } else if (!empty($result['error']['code'])) {
+        } elseif (!empty($result['error']['code'])) {
             $message = $result['error']['code'];
         }
 
@@ -1839,10 +1825,8 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             if (!$next) {
                 $fetch = false;
             }
-
             $page++;
         }
-
         return $returnCode ? [$response->getStatusCode(), $data]
             : $data;
     }
@@ -1869,14 +1853,13 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             if ($orderB !== null) {
                 $posA = array_search($a[$key], $sortOrder);
                 $posB = array_search($b[$key], $sortOrder);
-                return $posA-$posB;
+                return $posA - $posB;
             }
             return -1;
         }
         if ($orderB !== null) {
             return 1;
         }
-
         return strcmp($a['branch'], $b['branch']);
     }
 }

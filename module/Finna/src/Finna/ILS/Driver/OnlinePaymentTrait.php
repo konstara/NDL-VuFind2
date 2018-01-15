@@ -198,11 +198,12 @@ trait OnlinePaymentTrait
             $cacheId = "blocks_$patronId";
             $this->session->cache[$cacheId] = null;
             return true;
-        } else if ($result !== false) {
+        } elseif ($result !== false) {
             $errFun($userId, $patronId, $result);
         }
         return false;
     }
+
     /**
      * Get online payment configuration
      *
@@ -218,6 +219,7 @@ trait OnlinePaymentTrait
         }
         return $this->config['OnlinePayment'];
     }
+
     /**
      * Check if online payment is supported and enabled
      *
@@ -238,7 +240,7 @@ trait OnlinePaymentTrait
      *
      * @param boolean $throwException Throw an ILSException if the
      * configuration is not valid.
-
+     *
      * @return bool
      */
     protected function validateOnlinePaymentConfig($throwException = false)
