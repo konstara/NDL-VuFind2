@@ -5,9 +5,6 @@ unit =
 username =
 password =
 
-; Maximum number of pages to fetch in one request when 'skip' parameter is not used
-pageLimit = 10
-
 [Holds]
 ; HMACKeys - A list of hold form element names that will be analyzed for consistency
 ; during hold form processing. Most users should not need to change this setting.

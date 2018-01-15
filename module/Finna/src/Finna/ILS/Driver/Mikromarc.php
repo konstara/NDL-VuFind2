@@ -289,7 +289,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
     /**
      * Get Patron Fines
      *
-     * This is responsible for retrieving all fines by a specific patron.
+     * This is responsible for retrieving all unpaid fines by a specific patron.
      *
      * @param array $patron The patron array from patronLogin
      *
@@ -299,7 +299,6 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
      */
     public function getMyFines($patron)
     {
-        // TODO: check if ciAccountEntryStatus = 0 (all units) ?
 
         // All fines, ciAccountEntryStatus = 2
         $allFines = $this->makeRequest(
@@ -507,7 +506,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
     {
         $result = $this->makeRequest(
             ['odata', 'BorrowerLoans'],
-            ['$filter' => 'BorrowerId eq ' . '72857']
+            ['$filter' => 'BorrowerId eq' . ' ' . $patron['id']]
         );
         if (empty($result)) {
             return [];
@@ -620,10 +619,16 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
      */
     public function getMyHolds($patron)
     {
+        $request = [
+            '$filter' => 'BorrowerId eq' . ' ' . $patron['id'],
+            '$orderby' => 'DeliverAtLocalUnitId'
+        ];
+
         $result = $this->makeRequest(
             ['odata', 'BorrowerReservations'],
-            ['$filter' => 'BorrowerId eq ' . '72857']
+            $request
         );
+
         if (!isset($result)) {
             return [];
         }
@@ -662,15 +667,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
      *
      * @param array $patron The patron array from patronLogin
      * @param array $params Retrieval params that may contain the following keys:
-     *   start  Start offset (0-based)
-     *   limit  Maximum number of records to return
-     *   sort   Sorting order, one of:
-     *          checkout asc
-     *          checkout desc
-     *          return asc
-     *          return desc
-     *          due asc
-     *          due desc
+     *   sort   Sorting order with checkout date ascending or descending
      *
      * @throws DateException
      * @throws ILSException
@@ -680,15 +677,11 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
     {
         $cacheKey = $this->getPatronCacheKey($patron, 'transactionHistory');
         $history = $this->getCachedData($cacheKey);
-
         $sort = $params['sort'] == 0 ? 'desc' : 'asc';
-        $limit = isset($params['limit']) ? $params['limit'] : '';
 
         $request = [
-            '$filter' => 'BorrowerId eq ' . '72857',
-            '$orderby' => 'ServiceTime' . ' ' . $sort,
-            'limit' => $limit
-
+            '$filter' => 'BorrowerId eq ' . $patron['id'],
+            '$orderby' => 'ServiceTime' . ' ' . $sort
         ];
 
         $result = $this->makeRequest(
@@ -736,7 +729,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
         }
         $this->putCachedData($cacheKey, $history);
 
-            return $history;
+        return $history;
 
     }
 
@@ -1616,7 +1609,8 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
     /**
      * Get cache key for patron profile.
      *
-     * @param array $patron Patron
+     * @param array  $patron Patron
+     * @param string $action Action calling
      *
      * @return string
      */
@@ -1750,7 +1744,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
      * authentication error
      */
     protected function makeRequest($hierarchy, $params = false, $method = 'GET',
-        $returnCode = false, $limit = 100
+        $returnCode = false
     ) {
         // Set up the request
         $conf = $this->config['Catalog'];
@@ -1788,31 +1782,25 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
         $startTime = microtime(true);
         $client->setMethod($method);
 
-        // Result pagination.
-        $page = 0;
-        $maxPages = !empty($this->config['Catalog']['pageLimit']) ?
-            $this->config['Catalog']['pageLimit'] : 10;
-
         if (false == $params) {
             $params = [];
         }
 
+        $page = 0;
         $data = [];
-        while ($page < $maxPages) {
+        $fetch = true;
+        while ($fetch) {
             $client->setUri($apiUrl);
             $response = $client->send();
             $result = $response->getBody();
-
             $this->debug(
                 '[' . round(microtime(true) - $startTime, 4) . 's]'
                 . " GET request $apiUrl" . PHP_EOL . 'response: ' . PHP_EOL
                 . $result
             );
-
             // Handle errors as complete failures only if the API call didn't return
             // valid JSON that the caller can handle
             $decodedResult = json_decode($result, true);
-
             if (!$response->isSuccess()
                 && (null === $decodedResult || !empty($decodedResult['error']))
                 && !$returnCode
@@ -1849,7 +1837,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             }
 
             if (!$next) {
-                break;
+                $fetch = false;
             }
 
             $page++;
