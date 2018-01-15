@@ -628,9 +628,10 @@ trait VoyagerFinna
      *
      * This is called after a successful online payment.
      *
-     * @param array  $patron        Patron.
-     * @param int    $amount        Amount to be registered as paid.
-     * @param string $transactionId Transaction ID.
+     * @param array  $patron   Patron.
+     * @param int    $amount   Amount to be registered as paid.
+     * @param string $currency Currency
+     * @param array  $params   Registration configuration parameters
      *
      * @throws ILSException
      * @return boolean success
@@ -878,7 +879,7 @@ trait VoyagerFinna
      * the payment process.
      *
      * @param array $fines Processed fines.
-      *
+     *
      * @return array $fines Fines.
      */
     protected function markOnlinePayableFines($fines)

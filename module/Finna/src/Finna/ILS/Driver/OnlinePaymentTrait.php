@@ -55,7 +55,7 @@ trait OnlinePaymentTrait
     abstract public function getOnlinePaymentRegistrationParams();
 
     /**
-     * Support method for getMyFines that augments the fines with 
+     * Support method for getMyFines that augments the fines with
      * extra information. The driver may also append the information
      * in getMyFines implement markOnlinePayableFines as a stub.
      *
@@ -64,10 +64,10 @@ trait OnlinePaymentTrait
      *
      * The following keys are appended when required:
      * - blockPayment <boolean> True if the fine prevents starting
-     * the payment process. 
+     * the payment process.
      *
      * @param array $fines Processed fines.
-      *
+     *
      * @return array $fines Fines.
      */
     abstract public function markOnlinePayableFines($fines);
@@ -81,7 +81,7 @@ trait OnlinePaymentTrait
      * @param array  $params   Registration configuration parameters
      *
      * @return boolean success
-     */    
+     */
     abstract public function registerOnlinePayment(
         $patron, $amount, $currency, $params
     );
@@ -144,7 +144,7 @@ trait OnlinePaymentTrait
             if ($nonPayableReason) {
                 $res['reason'] = $nonPayableReason;
             }
-            
+
             return $res;
         }
         return [
@@ -169,9 +169,11 @@ trait OnlinePaymentTrait
     public function markFeesAsPaid($patron, $amount, $transactionId)
     {
         if (!$this->validateOnlinePaymentConfig(true)) {
-            throw new ILSException('Online payment disabled or configuration missing.');
+            throw new ILSException(
+                'Online payment disabled or configuration missing.'
+            );
         }
-        
+
         $paymentConfig = $this->getOnlinePaymentConfig();
         $params
             = isset($paymentConfig['registrationParams'])
@@ -201,7 +203,14 @@ trait OnlinePaymentTrait
         }
         return false;
     }
-
+    /**
+     * Get online payment configuration
+     *
+     * @param boolean $throwException Throw an ILSException if the
+     * configuration is not valid.
+     *
+     * @return array config data
+     */
     protected function getOnlinePaymentConfig($throwException = false)
     {
         if (empty($this->config['OnlinePayment'])) {
@@ -209,7 +218,11 @@ trait OnlinePaymentTrait
         }
         return $this->config['OnlinePayment'];
     }
-
+    /**
+     * Check if online payment is supported and enabled
+     *
+     * @return bool
+     */
     protected function supportsOnlinePayment()
     {
         $config = $this->getOnlinePaymentConfig();
@@ -219,13 +232,13 @@ trait OnlinePaymentTrait
 
         return $this->validateOnlinePaymentConfig();
     }
-    
+
     /**
      * Helper method for validating online payment configuration.
      *
      * @param boolean $throwException Throw an ILSException if the
      * configuration is not valid.
-     
+
      * @return bool
      */
     protected function validateOnlinePaymentConfig($throwException = false)
@@ -240,7 +253,7 @@ trait OnlinePaymentTrait
                     }
                     return false;
                 }
-    
+
                 if (empty($config[$req])) {
                     return false;
                 }
@@ -259,13 +272,13 @@ trait OnlinePaymentTrait
         if (empty($registrationParams)) {
             return true;
         }
-        
+
         if (empty($config['registrationParams'])) {
             return false;
         }
 
         return $checkRequired(
-           $config['registrationParams'], $registrationParams, $throwException
+            $config['registrationParams'], $registrationParams, $throwException
         );
     }
 }

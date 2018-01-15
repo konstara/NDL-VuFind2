@@ -78,10 +78,10 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
     protected $defaultPickUpLocation;
 
      /**
-     * Mappings from fee (account line) types
-     *
-     * @var array
-     */
+      * Mappings from fee (account line) types
+      *
+      * @var array
+      */
     protected $feeTypeMappings = [
         'Overdue charge' => 'Overdue',
         'Extra service' => 'Extra service'
@@ -260,7 +260,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
         return $profile;
     }
 
-        /**
+    /**
      * Check whether the patron is blocked from placing requests (holds/ILL/SRR).
      *
      * @param array $patron Patron data from patronLogin().
@@ -364,15 +364,15 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
     }
 
      /**
-     * Get Patron Profile
-     *
-     * This is responsible for retrieving the profile for a specific patron.
-     *
-     * @param array $patron The patron array
-     *
-     * @throws ILSException
-     * @return array        Array of the patron's profile data on success.
-     */
+      * Get Patron Profile
+      *
+      * This is responsible for retrieving the profile for a specific patron.
+      *
+      * @param array $patron The patron array
+      *
+      * @throws ILSException
+      * @return array        Array of the patron's profile data on success.
+      */
     public function getMyProfile($patron)
     {
         $cacheKey = $this->getPatronCacheKey($patron, 'profile');
@@ -1117,7 +1117,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
      * the payment process.
      *
      * @param array $fines Processed fines.
-      *
+     *
      * @return array $fines Fines.
      */
     public function markOnlinePayableFines($fines)
