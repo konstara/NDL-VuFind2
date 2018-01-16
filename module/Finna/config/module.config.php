@@ -493,7 +493,7 @@ $staticRoutes = [
     'OrganisationInfo/Home',
     'PCI/Home', 'PCI/Search', 'PCI/Record',
     'Search/StreetSearch',
-    'Barcode/Show'
+    'Barcode/Show', 'Search/MapFacet'
 ];
 
 $routeGenerator = new \VuFind\Route\RouteGenerator();

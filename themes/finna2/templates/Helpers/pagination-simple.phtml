@@ -8,7 +8,7 @@
       <? else: ?>
         <a href="<?= $this->currentPath() . '?' . http_build_query($newParams); ?>">
       <? endif; ?>
-      <span class="sr-only"><?=$this->transEsc('Previous Page')?></span><i class="fa fa-arrow-left"></i>
+      <span class="sr-only"><?=$this->transEsc('Previous Page')?></span><i class="fa fa-arrow-alt-left"></i>
       </a>
     <? endif; ?>
     </li>
@@ -28,7 +28,7 @@
       <? else: ?>
         <a href="<?= $this->currentPath() . '?' . http_build_query($newParams); ?>">
       <? endif; ?>
-        <span class="sr-only"><?=$this->transEsc('Next Page')?></span><i class="fa fa-arrow-right"></i>
+        <span class="sr-only"><?=$this->transEsc('Next Page')?></span><i class="fa fa-arrow-alt-right"></i>
       </a>
     <? endif; ?>
     </li>
