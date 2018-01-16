@@ -28,10 +28,7 @@
  */
 namespace Finna\ILS\Driver;
 
-use Finna\ILS\SIP2;
 use VuFind\Exception\ILS as ILSException;
-use PDO;
-use Zend\Validator\EmailAddress as EmailAddressValidator;
 
 /**
  * Finna ILS online payment Trait
