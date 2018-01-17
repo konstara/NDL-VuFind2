@@ -1245,6 +1245,7 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
                 $result['museumContact'] = 'Contact';
             }
             $details['id'] = $id;
+            $details['email'] = isset($json['email']) ? $json['email'] : '';
             $result['list'][0] = $details;
         } else if ($publish == 0) {
             $result = false;
