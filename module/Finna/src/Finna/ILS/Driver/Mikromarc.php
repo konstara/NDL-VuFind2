@@ -691,8 +691,6 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
                 $transaction['title'] = $entry['MarcRecordTitle'];
             }
 
-            $transaction['title'] = "marcid: " . $entry['MarcRecordId'];
-
             $history['transactions'][] = $transaction;
         }
         $this->putCachedData($cacheKey, $history);
