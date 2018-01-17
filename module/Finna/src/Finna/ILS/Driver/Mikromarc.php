@@ -1295,7 +1295,6 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             if (!$unit = $this->getLibraryUnit($unitId)) {
                 continue;
             }
-            $organisationName = $unit['organisationName'];
             $locationName = $this->translate(
                 'location_' . $unit['name'],
                 null,
@@ -1329,7 +1328,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
                 'item_id' => $item['Id'],
                 'parentId' => $unit['parent'],
                 'holdings_id' => $unit['organisation'],
-                'location' => $organisationName,
+                'location' => $locationName,
                 'organisation_id' => $unit['organisation'],
                 'branch' => $locationName,
                 'branch_id' => $unit['branch'],
@@ -1419,7 +1418,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
     protected function getItemStatusCode($item)
     {
         $map = [
-           'AvailableForLoan' => 'On Shelf',
+           'AvailableForLoan' => 'Available',
            'InCourseOfAcquisition' => 'Ordered',
            'OnLoan' => 'Charged',
            'InProcess' => 'In Process',
