@@ -467,7 +467,7 @@ trait VoyagerFinna
         } elseif ($function == 'onlinePayment'
             && isset($this->config['OnlinePayment'])
         ) {
-            return $config;
+            return $this->config['OnlinePayment'];
         }
 
         if (is_callable('parent::getConfig')) {
@@ -628,17 +628,38 @@ trait VoyagerFinna
      *
      * This is called after a successful online payment.
      *
-     * @param array  $patron   Patron.
-     * @param int    $amount   Amount to be registered as paid.
-     * @param string $currency Currency
-     * @param array  $params   Registration configuration parameters
+     * @param array  $patron        Patron.
+     * @param int    $amount        Amount to be registered as paid.
+     * @param string $transactionId Transaction ID.
      *
      * @throws ILSException
      * @return boolean success
      */
-    public function registerOnlinePayment($patron, $amount, $currency, $params)
+    public function markFeesAsPaid($patron, $amount, $transactionId)
     {
+        $params
+            = isset($this->config['OnlinePayment']['registrationParams'])
+            ? $this->config['OnlinePayment']['registrationParams'] : []
+        ;
+
+        $required = ['host', 'port', 'userId', 'password', 'locationCode'];
+        foreach ($required as $req) {
+            if (!isset($params[$req]) && !empty($params[$req])) {
+                $this->error("Missing SIP2 parameter $req");
+                throw new ILSException("Missing SIP2 parameter $req");
+            }
+        }
+        $currency = $this->config['OnlinePayment']['currency'];
+        $userId = $patron['id'];
         $patronId = $patron['cat_username'];
+        $errFun = function ($userId, $patronId, $error) {
+            $this->error(
+                "SIP2 payment error (user: $userId, driver: "
+                . $this->dbName . ", patron: $patronId): "
+                . $error
+            );
+            throw new ILSException($error);
+        };
 
         $sip = new SIP2();
         $sip->error_detection = false;
@@ -667,21 +688,32 @@ trait VoyagerFinna
                             = $sip->parseFeePaidResponse($feepaidResponse);
                         if ($feepaidResult['fixed']['PaymentAccepted'] == 'Y') {
                             $sip->disconnect();
+
+                            // Clear patron blocks cache
+                            $cacheId = "blocks_$patronId";
+                            $this->session->cache[$cacheId] = null;
+
                             return true;
                         } else {
-                            return 'payment rejected';
+                            $sip->disconnect();
+                            $errFun(
+                                $userId, $patronId, 'payment rejected'
+                            );
                         }
                     } else {
-                        return 'payment failed';
+                        $sip->disconnect();
+                        $errFun($userId, $patronId, 'payment failed');
                     }
                 } else {
-                    return 'login failed';
+                    $sip->disconnect();
+                    $errFun($userId, $patronId, 'login failed');
                 }
             } else {
-                return 'login failed';
+                $sip->disconnect();
+                $errFun($userId, $patronId, 'login failed');
             }
         } else {
-            return 'connection error';
+            $errFun($userId, $patronId, 'connection error');
         }
         return false;
     }
@@ -847,7 +879,28 @@ trait VoyagerFinna
     public function supportsMethod($method, $params)
     {
         if ($method == 'markFeesAsPaid') {
-            return $this->supportsOnlinePayment();
+            $required = [
+                'currency', 'enabled', 'registrationMethod', 'registrationParams'
+            ];
+
+            foreach ($required as $req) {
+                if (empty($this->config['OnlinePayment'][$req])) {
+                    return false;
+                }
+            }
+
+            if (!$this->config['OnlinePayment']['enabled']) {
+                return false;
+            }
+
+            $regParams = $this->config['OnlinePayment']['registrationParams'];
+            $required = ['host', 'port', 'userId', 'password', 'locationCode'];
+            foreach ($required as $req) {
+                if (empty($regParams[$req])) {
+                    return false;
+                }
+            }
+            return true;
         }
         return is_callable('parent::supportsMethod')
             ? parent::supportsMethod($method, $params)
@@ -855,28 +908,9 @@ trait VoyagerFinna
     }
 
     /**
-     * Returns a list of parameters that are required for registering
-     * online payments to the ILS. The parameters are configured in
-     * OnlinePayment > registrationParams.
+     * Support method for getMyFines.
      *
-     * @return array
-     */
-    public function getOnlinePaymentRegistrationParams()
-    {
-        return ['host', 'port', 'userId', 'password', 'locationCode'];
-    }
-
-    /**
-     * Support method for getMyFines that augments the fines with
-     * extra information. The driver may also append the information
-     * in getMyFines implement markOnlinePayableFines as a stub.
-     *
-     * The following keys are appended to each fine:
-     * - payableOnline <boolean> May the fine be payed online?
-     *
-     * The following keys are appended when required:
-     * - blockPayment <boolean> True if the fine prevents starting
-     * the payment process.
+     * Appends booleans 'accruedFine' and 'payableOnline' to a fine.
      *
      * @param array $fines Processed fines.
      *
@@ -884,30 +918,25 @@ trait VoyagerFinna
      */
     protected function markOnlinePayableFines($fines)
     {
-        if (!$this->supportsOnlinePayment()) {
+        if (!isset($this->config['OnlinePayment'])) {
             return $fines;
         }
 
-        $config = $this->getOnlinePaymentConfig();
+        $accruedType = 'Accrued Fine';
+
+        $config = $this->config['OnlinePayment'];
         $nonPayable = isset($config['nonPayable'])
             ? $config['nonPayable'] : []
         ;
-        $accruedType = 'Accrued Fine';
-
+        $nonPayable[] = $accruedType;
         foreach ($fines as &$fine) {
             $payableOnline = true;
             if (isset($fine['fine'])) {
-                $accruedFine = $fine['fine'] == $accruedType;
-                $fine['accruedFine'] = $accruedFine;
-
-                $payableOnline
-                    = !in_array($fine['fine'], $nonPayable) && !$accruedFine;
-                if (!$payableOnline && !$accruedFine) {
-                    // A non-payable fine that is not a
-                    // accrued fine blocks the payment
-                    $fine['blockPayment'] = true;
+                if (in_array($fine['fine'], $nonPayable)) {
+                    $payableOnline = false;
                 }
             }
+            $fine['accruedFine'] = ($fine['fine'] === $accruedType);
             $fine['payableOnline'] = $payableOnline;
         }
 

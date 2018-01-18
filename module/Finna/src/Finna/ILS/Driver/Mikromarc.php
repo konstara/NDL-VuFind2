@@ -49,8 +49,6 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
     \VuFindHttp\HttpServiceAwareInterface,
     \VuFind\I18n\Translator\TranslatorAwareInterface, \Zend\Log\LoggerAwareInterface
 {
-    use OnlinePaymentTrait;
-
     use \VuFindHttp\HttpServiceAwareTrait;
     use \VuFind\I18n\Translator\TranslatorAwareTrait;
     use \VuFind\Log\LoggerAwareTrait {
@@ -136,13 +134,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
      */
     public function getConfig($function, $params = null)
     {
-        if ($function == 'onlinePayment'
-            && $config = $this->getOnlinePaymentConfig()
-        ) {
-            return $config;
-        }
-        return isset($this->config[$function])
-            ? $this->config[$function] : false;
+        return isset($this->config[$function]) ? $this->config[$function] : false;
     }
 
     /**

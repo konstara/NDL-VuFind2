@@ -42,7 +42,6 @@ use PDOException;
 class VoyagerRestful extends \VuFind\ILS\Driver\VoyagerRestful
 {
     use VoyagerFinna;
-    use OnlinePaymentTrait;
 
     /**
      * Configuration Reader
