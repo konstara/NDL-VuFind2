@@ -89,7 +89,7 @@ class Factory
      *
      * @param ServiceManager $sm Service manager.
      *
-     * @return KohaRest
+     * @return Mikromarc
      */
     public static function getMikromarc(ServiceManager $sm)
     {

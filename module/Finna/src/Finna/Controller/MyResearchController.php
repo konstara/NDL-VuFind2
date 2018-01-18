@@ -275,7 +275,6 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
     }
 
     /**
-     * Purge checkout history action.
      * Purge historic loans action.
      *
      * @return mixed
