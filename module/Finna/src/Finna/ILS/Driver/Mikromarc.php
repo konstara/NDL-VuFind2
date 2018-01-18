@@ -395,8 +395,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
                  'readonly' => false,
                  'active' => $dueDateNoticeActive,
                  'label' => 'messaging_settings_option_' .
-                    ($dueDateNoticeActive ? 'active' : 'inactive'),
-                 'hideTitle' => true
+                    ($dueDateNoticeActive ? 'active' : 'inactive')
               ]
            ]
         ];
