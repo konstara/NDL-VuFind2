@@ -104,16 +104,21 @@ checkoutNotice[] = Email:email
 notifications[] = Email:email
 notifications[] = SMS:sms
 
-; Changing of checkout history state is enabled if method parameter is set. Only
+; Changing of loan history state is enabled if method parameter is set. Only
 ; valid value is 'driver'.
 [updateTransactionHistoryState]
 method = driver
-options[0] = checkout_history_forever
-options[1] = checkout_history_never
+options[0] = loan_history_forever
+options[1] = loan_history_never
 
 ; Uncomment the following lines to enable transaction history
 ; Only 'driver' is currently supported method.
 ;[getMyTransactionHistory]
 ;method = driver
-;sort[0] = sort_date_desc
-;sort[1] = sort_date_asc
+;sort[0] = sort_loan_history_desc
+;sort[1] = sort_loan_history_asc
+
+; Changing of messaging settings is enabled if method parameter is set. Only valid
+; value for Micromarc is 'driver'.
+[updateMessagingSettings]
+method = driver
