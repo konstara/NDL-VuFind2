@@ -1,14 +1,14 @@
 <!-- START of: finna - Helpers/pagination-simple.phtml -->
 <? if ($this->pageCount): ?>
   <ul class="paginationSimple">
-    <li><? if (isset($this->previous)): ?>
+    <li<? if (isset($this->previous)): ?>>
       <? $newParams = $this->params; $newParams['page'] = $this->previous; ?>
       <? if (isset($sort)): ?>
         <a href="<?= $this->currentPath() . '?' . http_build_query($newParams) . '&sort=' . $sort; ?>">
       <? else: ?>
         <a href="<?= $this->currentPath() . '?' . http_build_query($newParams); ?>">
       <? endif; ?>
-      <span class="sr-only"><?=$this->transEsc('Previous Page')?></span><i class="fa fa-arrow-left"></i>
+      <span class="sr-only"><?=$this->transEsc('Previous Page')?></span><i class="fa fa-arrow-alt-left"></i>
       </a>
     <? endif; ?>
     </li>
@@ -28,7 +28,7 @@
       <? else: ?>
         <a href="<?= $this->currentPath() . '?' . http_build_query($newParams); ?>">
       <? endif; ?>
-        <span class="sr-only"><?=$this->transEsc('Next Page')?></span><i class="fa fa-arrow-right"></i>
+        <span class="sr-only"><?=$this->transEsc('Next Page')?></span><i class="fa fa-arrow-alt-right"></i>
       </a>
     <? endif; ?>
     </li>
