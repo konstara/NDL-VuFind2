@@ -1,0 +1,17 @@
+.collection-list-controls {
+  display: flex;
+  .filter-input {
+    flex-grow: 1;
+    white-space: nowrap;
+  }
+  .view-option-container, .sort-option-container {
+    margin: auto 0 auto 5px;
+  }
+  @media (min-width: @screen-sm) {
+    #keywordFilter_lookfor {
+      &::-moz-placeholder { opacity: 0; }
+      &:-ms-input-placeholder { opacity: 0; }
+      &::-webkit-input-placeholder { opacity: 0; }
+    }
+  }
+}
