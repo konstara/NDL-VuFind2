@@ -8,7 +8,10 @@
   .view-option-container, .sort-option-container {
     margin: auto 0 auto 5px;
     .view-dropdown i:first-child {
-      margin-right: 20px;
+      margin-right: 5px;
+      @media (max-width: @screen-sm-max) {
+        margin-right: 20px;
+      }
     }
   }
   #keywordFilter_lookfor {
