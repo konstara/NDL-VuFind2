@@ -13,43 +13,43 @@
   <? $recommendations = $results->getRecommendations('side'); ?>
   <? foreach ($recommendations as $recommend): ?>
     <? if ($recommend->keywordFilterEnabled()): ?>
-        <?
-        $keywordFilter = $recommend->getKeywordFilter();
-        if (!empty($keywordFilter)) {
-            $this->extraSideFacetFilters = [
-                'Keyword' => [
-                    [
-                        'value' => $keywordFilter,
-                        'displayText' => $keywordFilter,
-                        'specialType' => 'keyword',
-                        'operator' => 'OR'
-                    ]
-                ]
-            ];
-        }
-        ?>
-        <? ob_start() ?>
-        <div class="filter-input">
-          <span class="hidden-xs"><?=$this->transEsc('Search from collection')?></span>
-          <form class="form-inline" role="form" method="get" name="keywordFilterForm" id="keywordFilterForm">
-            <div class="input-group">
-              <input id="keywordFilter_lookfor" type="text" name="lookfor" placeholder="<?=$this->transEsc('Search from collection')?>" value="<?=$this->escapeHtmlAttr($keywordFilter)?>" class="form-control"/>
-                <? foreach ($params->getFilterList(true) as $field => $filters): ?>
-                    <? foreach ($filters as $filter): ?>
-                    <input type="hidden" name="filter[]" value="<?=$this->escapeHtmlAttr($filter['field'])?>:&quot;<?=$this->escapeHtmlAttr($filter['value'])?>&quot;" />
-                    <? endforeach; ?>
+      <?
+      $keywordFilter = $recommend->getKeywordFilter();
+      if (!empty($keywordFilter)) {
+        $this->extraSideFacetFilters = [
+          'Keyword' => [
+            [
+              'value' => $keywordFilter,
+              'displayText' => $keywordFilter,
+              'specialType' => 'keyword',
+              'operator' => 'OR'
+            ]
+          ]
+        ];
+      }
+      ?>
+      <? ob_start() ?>
+      <div class="filter-input">
+        <span class="hidden-xs"><?=$this->transEsc('Search from collection')?></span>
+        <form class="form-inline" role="form" method="get" name="keywordFilterForm" id="keywordFilterForm">
+          <div class="input-group">
+            <input id="keywordFilter_lookfor" type="text" name="lookfor" placeholder="<?=$this->transEsc('Search from collection')?>" value="<?=$this->escapeHtmlAttr($keywordFilter)?>" class="form-control"/>
+              <? foreach ($params->getFilterList(true) as $field => $filters): ?>
+                <? foreach ($filters as $filter): ?>
+                  <input type="hidden" name="filter[]" value="<?=$this->escapeHtmlAttr($filter['field'])?>:&quot;<?=$this->escapeHtmlAttr($filter['value'])?>&quot;" />
                 <? endforeach; ?>
-              <span class="input-group-btn"><button class="btn btn-primary btn-default" type="submit" name="submit"><span class="sr-only"><?=$this->transEsc('Search')?></span><i class="fa fa-search"></i></button></span>
-            </div>
-          </form>
-        </div>
-      <? $sideFacetExtraControls = ob_get_contents(); ?>
+              <? endforeach; ?>
+            <span class="input-group-btn"><button class="btn btn-primary btn-default" type="submit" name="submit"><span class="sr-only"><?=$this->transEsc('Search')?></span><i class="fa fa-search"></i></button></span>
+          </div>
+        </form>
+      </div>
+      <? $collectionFilterField = ob_get_contents(); ?>
       <? ob_end_clean(); ?>
     <? endif; ?>
   <? endforeach; ?>
 
   <div class="collection-list-controls">
-    <?=$sideFacetExtraControls ?>
+    <?= isset($collectionFilterField) ? $collectionFilterField : '' ?>
     <?=$this->render('search/controls/view.phtml', $searchDetails)?>
     <?=$this->render('search/controls/sort.phtml', $searchDetails)?>
   </div>
