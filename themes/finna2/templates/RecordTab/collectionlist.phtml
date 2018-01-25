@@ -29,6 +29,29 @@
     <?=$this->render('search/controls/view.phtml', $searchDetails)?>
     <?=$this->render('search/controls/sort.phtml', $searchDetails)?>
   </div>
+
+  <?
+    $filterList = $params->getFilterList(true);
+    $checkboxFilters = $params->getCheckboxFacets();
+    $options = $this->searchOptions($this->searchClassId);
+    $lastSort = $this->searchMemory()->getLastSort($this->searchClassId);
+    $defaultSortApplied = !isset($params) || $lastSort == $options->getDefaultSortByHandler($params->getSearchHandler());
+    $urlQuery = $results->getUrlQuery();
+  ?>
+  <? if(!empty($params->getFilterList(false))): ?>
+    <?=$this->render('search/filters.phtml',
+      [
+        'filterList' => $filterList,
+        'checkboxFilters' => $checkboxFilters,
+        'defaultSortApplied' => $defaultSortApplied,
+        'options' => $options,
+        'params' => $params,
+        'urlQuery' => $results->getUrlQuery(),
+        'isCollectionTab' => true
+      ]
+    ); ?>
+  <? endif; ?>
+
   <?=$this->paginationControl($results->getPaginator(), 'Sliding', 'search/pagination_simple.phtml', ['results' => $results])?>
 
   <form class="form-inline" method="post" name="bulkActionForm" action="<?=$this->url('cart-searchresultsbulk')?>">
