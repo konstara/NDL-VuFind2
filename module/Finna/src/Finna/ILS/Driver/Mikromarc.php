@@ -1761,7 +1761,11 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             }
 
             // More results available?
-            if ($next = !empty($decodedResult['@odata.nextLink'])) {
+            if ($next = !empty($decodedResult['@odata.nextLink'])
+                && !strpos(
+                    $decodedResult['@odata.nextLink'], 'LibraryUnits?$skip=100'
+                )
+            ) {
                 $client->setParameterPost([]);
                 $client->setParameterGet([]);
                 $apiUrl = $decodedResult['@odata.nextLink'];
