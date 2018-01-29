@@ -150,6 +150,10 @@ finna.record = (function finnaRecord() {
       var accordion = $(e.target).closest('.accordion');
       var tabid = accordion.find('.accordion-toggle a').data('tab');
       var $recordTabs = $('.record-tabs');
+      if (accordion.hasClass('noajax') && !$recordTabs.find('.' + tabid + '-tab').length) {
+        //If this is noajax tab and not already loaded, let the browser follow the link
+        return true;
+      }
       e.preventDefault();
       if (accordion.hasClass('active')){
         $('.record-accordions').find('.accordion.active').removeClass('active');

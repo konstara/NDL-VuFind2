@@ -2,6 +2,7 @@
 <?
   // Set up standard record scripts:
   $this->headScript()->appendFile("record.js");
+  $this->headScript()->appendFile("finna-record.js");
   $this->headScript()->appendFile("check_save_statuses.js");
   // Activate Syndetics Plus if necessary:
   if ($this->syndeticsPlus()->isActive()) {
@@ -77,10 +78,10 @@
   </div>
 
     <? // N.B. The element/class structure here is important for the ajax tabs to work properly ?>
-  <div class="record-tabs">
+  <div class="record-tabs record-accordions">
     <? if (count($this->tabs) > 0): ?>
       <a name="tabnav"></a>
-      <ul class="recordTabs nav nav-tabs">
+      <ul class="recordTabs nav nav-tabs visible-md visible-lg">
         <? foreach ($this->tabs as $tab => $obj): ?>
           <? // add current tab to breadcrumbs if applicable:
             $desc = $obj->getDescription();
@@ -110,6 +111,38 @@
         </div>
       <? endif; ?>
     </div>
+
+    <div class="clearfix hidden-lg hidden-md"></div>
+    <div class="record-accordions">
+        <? if (count($this->tabs) > 0): ?>
+            <? foreach ($this->tabs as $accordion => $obj): ?>
+                <? // add current tab to breadcrumbs if applicable:
+                $desc = $obj->getDescription();
+                $accordion_classes = [
+                    'accordion',
+                    'accordion-' . strtolower($accordion)
+                ];
+                if (0 === strcasecmp($this->activeTab, $accordion)) {
+                    $this->layout()->breadcrumbs .= '<li class="active">' . $this->transEsc($desc) . '</li>';
+                    $activeTabObj = $obj;
+                }
+                if (!$obj->isVisible()) { $accordion_classes[] = 'hidden'; }
+                if (!$obj->supportsAjax()) { $accordion_classes[] = 'noajax'; }
+                ?>
+            <div <?=count($accordion_classes) > 0 ? ' class="' . implode(' ', $accordion_classes) . '"' : ''?>>
+              <div class="accordion-toggle">
+                <a data-tab="<?=strtolower($accordion) ?>" class="accordion-title"
+                   href="<?=$this->recordLink()->getTabUrl($this->driver, $accordion) ?>#<?=$obj->supportsAjax() ? 'tabnav' : strtolower($accordion)?>"<? if ($obj->supportsAjax() && in_array($accordion, $this->backgroundTabs)):?>
+                  data-background<? endif ?>>
+                  <span class="title"><?=$this->transEsc($desc)?><? if (strtolower($accordion) == 'usercomments') : ?>(<span class="count"><?= count($this->driver->getComments()) ?></span>)<? endif; ?></span>
+                  <i class="icon"></i>
+                </a>
+              </div>
+            </div>
+            <? endforeach; ?>
+        <?endif; ?>
+    </div>
+
     <?=$this->driver->supportsCoinsOpenURL()?'<span class="Z3988" title="' . $this->escapeHtmlAttr($this->driver->getCoinsOpenURL()) . '"></span>':''?>
   </div>
 
