@@ -65,7 +65,7 @@
     <div class="filters-toggle"><?=$this->transEsc("show_filters")?><span class="active-filter-count"></span><i class="fa fa-arrow-down"></i></div>
     <? if (!isset($isCollectionTab) || !$isCollectionTab): ?>
       <div class="retain-filters">
-          <? $defaultFilterState = $hasDefaultsApplied || $options->getRetainFilterSetting() || !$defaultSortApplied ? ' checked="checked"' : ''; ?>
+        <? $defaultFilterState = $hasDefaultsApplied || $options->getRetainFilterSetting() || !$defaultSortApplied ? ' checked="checked"' : ''; ?>
         <span class="checkbox<?=$defaultFilterState ? ' checked' : ''?>">
           <label>
             <input onChange="$('.finna-filters .checkbox').toggleClass('checked'); var sort = $(this).closest('form').find('input[name=sort]'); sort.val($('.finna-filters .checkbox').hasClass('checked') ? sort.data('value') : '');" type="checkbox"<?=$defaultFilterState?> class="searchFormKeepFilters"/>
