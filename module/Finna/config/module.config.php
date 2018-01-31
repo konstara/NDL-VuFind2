@@ -374,6 +374,15 @@ $config = [
                 ],
             ],
         ],
+        'recorddriver_collection_tabs' => [
+            'VuFind\RecordDriver\AbstractBase' => [
+                'tabs' => [
+                    'UserComments' => 'Finna\RecordTab\UserComments',
+                    'Details' => 'StaffViewArray',
+                ],
+                'defaultTab' => null,
+            ],
+        ],
         'recorddriver_tabs' => [
             'Finna\RecordDriver\EDS' => [
                 'tabs' => [
