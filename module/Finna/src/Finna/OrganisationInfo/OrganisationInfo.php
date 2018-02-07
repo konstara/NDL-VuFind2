@@ -292,7 +292,9 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
             $this->logError("Unknown action: $action");
             return false;
         } else if ($params['orgType'] == 'museum') {
-            $id = $this->matchMuseumId($parent);
+            //TODO Current solution is for How to make museum organisation page for
+            //TODO consortiums with more than one museum
+            $id = $this->config->General->defaultOrganisation;
             $response = $this->museumAction(
                 $id, 'finna_org_perustiedot.php', $params, $target
             );
@@ -1321,30 +1323,6 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
         }
 
         return $response;
-    }
-
-    /**
-     * Get Museo ID for Finna
-     *
-     * @param string $finna_id Finna-organisation ID
-     *
-     * @return int
-     */
-    protected function matchMuseumId($finna_id)
-    {
-        $idlist = [];
-        $idlist = [
-            '201' => 'forssan museo',
-            '202' => 'museo2',
-            '203' => 'museomuseo',
-            '123' => 'lusto'
-        ];
-        $key = array_search($finna_id, $idlist);
-        if (empty($key)) {
-            return null;
-        } else {
-            return $key;
-        }
     }
 
     /**
