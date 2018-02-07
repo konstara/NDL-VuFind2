@@ -134,6 +134,21 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
      */
     public function getConfig($function, $params = null)
     {
+        if ('getMyTransactionHistory' === $function) {
+            if (empty($this->config['getMyTransactionHistory']['enabled'])) {
+                return false;
+            }
+            return [
+                'sort' => [
+                    'checkout desc' => 'sort_checkout_date_desc',
+                    'checkout asc' => 'sort_checkout_date_asc',
+                    'return desc' => 'sort_return_date_desc',
+                    'return asc' => 'sort_return_date_asc',
+                    'everything desc' => 'sort_loan_history'
+                ],
+                'default_sort' => 'everything desc',
+            ];
+        }
         return isset($this->config[$function]) ? $this->config[$function] : false;
     }
 
@@ -632,7 +647,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
      *
      * @param array $patron The patron array from patronLogin
      * @param array $params Retrieval params that may contain the following keys:
-     *   sort   Sorting order with checkout date ascending or descending
+     *   sort   Sorting order with date ascending or descending
      *
      * @throws DateException
      * @throws ILSException
@@ -642,9 +657,9 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
     {
         $cacheKey = $this->getPatronCacheKey($patron, 'transactionHistory');
         $history = $this->getCachedData($cacheKey);
-        $sort = $params['sort'] == 0 ? 'desc' : 'asc';
+        $sort = strpos($params['sort'],  'desc') ? 'desc' : 'asc';
         $request = [
-            '$filter' => 'BorrowerId eq ' . $patron['id'],
+            '$filter' => 'BorrowerId eq' . ' ' . $patron['id'],
             '$orderby' => 'ServiceTime' . ' ' . $sort
         ];
         $result = $this->makeRequest(
@@ -655,7 +670,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             'count' => count($result),
             'transactions' => []
         ];
-        if (!$result) {
+        if (!$history != null) {
             return $history;
         }
         $serviceCodeMap = [
@@ -681,8 +696,17 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             if (isset($item['MarcRecordTitle'])) {
                 $transaction['title'] = $entry['MarcRecordTitle'];
             }
-
-            $history['transactions'][] = $transaction;
+            if ($params['sort'] == 'checkout ' . $sort
+                && isset($transaction['checkoutdate'])
+            ) {
+                $history['transactions'][] = $transaction;
+            } elseif ($params['sort'] == 'return ' . $sort
+                && isset($transaction['returndate'])
+            ) {
+                $history['transactions'][] = $transaction;
+            } elseif ($params['sort'] == 'everything desc') {
+                $history['transactions'][] = $transaction;
+            }
         }
         $this->putCachedData($cacheKey, $history);
         return $history;
@@ -1080,7 +1104,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
      * @param string $currency Currency
      * @param array  $params   Registration configuration parameters
      *
-     * @return boolean success
+     * @return boolean  true on success, false on failed registration
      */
     public function registerOnlinePayment($patron, $amount, $currency, $params)
     {
@@ -1118,6 +1142,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
                     "Registration error for fine $fineId "
                     . "(HTTP status $code): $result"
                 );
+                return false;
             }
         }
 
@@ -1247,6 +1272,179 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             return isset($this->config['changePassword']);
         }
         return is_callable([$this, $method]);
+    }
+
+    /**
+     * Return total amount of fees that may be paid online.
+     *
+     * @param array $patron Patron
+     *
+     * @throws ILSException
+     * @return array Associative array of payment info,
+     * false if an ILSException occurred.
+     */
+    public function getOnlinePayableAmount($patron)
+    {
+        $fines = $this->getMyFines($patron);
+        if (!empty($fines)) {
+            $nonPayableReason = false;
+            $amount = 0;
+            $allowPayment = true;
+            foreach ($fines as $fine) {
+                if (!$fine['payableOnline']) {
+                    $nonPayableReason
+                        = 'online_payment_fines_contain_nonpayable_fees';
+                } else {
+                    $amount += $fine['balance'];
+                }
+                if ($allowPayment && !empty($fine['blockPayment'])) {
+                    $allowPayment = false;
+                }
+            }
+            $config = $this->getConfig('onlinePayment');
+            if (!$nonPayableReason
+                && isset($config['minimumFee']) && $amount < $config['minimumFee']
+            ) {
+                $nonPayableReason = 'online_payment_minimum_fee';
+            }
+            $res = ['payable' => $allowPayment, 'amount' => $amount];
+            if ($nonPayableReason) {
+                $res['reason'] = $nonPayableReason;
+            }
+
+            return $res;
+        }
+        return [
+            'payable' => false,
+            'amount' => 0,
+            'reason' => 'online_payment_minimum_fee'
+        ];
+    }
+
+    /**
+     * Mark fees as paid.
+     *
+     * This is called after a successful online payment.
+     *
+     * @param array  $patron        Patron.
+     * @param int    $amount        Amount to be registered as paid.
+     * @param string $transactionId Transaction ID.
+     *
+     * @throws ILSException
+     * @return boolean success
+     */
+    public function markFeesAsPaid($patron, $amount, $transactionId)
+    {
+        if (!$this->validateOnlinePaymentConfig(true)) {
+            throw new ILSException(
+                'Online payment disabled or configuration missing.'
+            );
+        }
+
+        $paymentConfig = $this->getOnlinePaymentConfig();
+        $params
+            = isset($paymentConfig['registrationParams'])
+            ? $paymentConfig['registrationParams'] : []
+        ;
+        $currency = $paymentConfig['currency'];
+        $userId = $patron['id'];
+        $patronId = $patron['cat_username'];
+        $errFun = function ($userId, $patronId, $error) {
+            $this->error(
+                "Online payment error (user: $userId, driver: "
+                . $this->dbName . ", patron: $patronId): "
+                . $error
+            );
+            throw new ILSException($error);
+        };
+
+        $result = $this->registerOnlinePayment(
+            $patron, $amount, $currency, $params
+        );
+        if ($result === true) {
+            $cacheId = "blocks_$patronId";
+            $this->session->cache[$cacheId] = null;
+            return true;
+        } elseif ($result !== false) {
+            $errFun($userId, $patronId, $result);
+        }
+        return false;
+    }
+
+    /**
+     * Get online payment configuration
+     *
+     * @param boolean $throwException Throw an ILSException if the
+     * configuration is not valid.
+     *
+     * @return array config data
+     */
+    protected function getOnlinePaymentConfig($throwException = false)
+    {
+        if (empty($this->config['OnlinePayment'])) {
+            return false;
+        }
+        return $this->config['OnlinePayment'];
+    }
+
+    /**
+     * Check if online payment is supported and enabled
+     *
+     * @return bool
+     */
+    protected function supportsOnlinePayment()
+    {
+        $config = $this->getOnlinePaymentConfig();
+        if (!$config || empty($config['enabled'])) {
+            return false;
+        }
+        return $this->validateOnlinePaymentConfig();
+    }
+
+    /**
+     * Helper method for validating online payment configuration.
+     *
+     * @param boolean $throwException Throw an ILSException if the
+     * configuration is not valid.
+
+     * @return bool
+     */
+    protected function validateOnlinePaymentConfig($throwException = false)
+    {
+        $checkRequired = function ($config, $params, $throwException) {
+            foreach ($params as $req) {
+                if (!isset($params[$req]) && !empty($params[$req])) {
+                    $err = "Missing online payment parameter $req";
+                    $this->error($err);
+                    if ($throwException) {
+                        throw new ILSException($err);
+                    }
+                    return false;
+                }
+
+                if (empty($config[$req])) {
+                    return false;
+                }
+            }
+            return true;
+        };
+        if (!$config = $this->getOnlinePaymentConfig()) {
+            return false;
+        }
+        if (!$checkRequired($config, ['currency', 'enabled'], $throwException)) {
+            return false;
+        }
+        $registrationParams = $this->getOnlinePaymentRegistrationParams();
+        if (empty($registrationParams)) {
+            return true;
+        }
+
+        if (empty($config['registrationParams'])) {
+            return false;
+        }
+        return $checkRequired(
+            $config['registrationParams'], $registrationParams, $throwException
+        );
     }
 
     /**

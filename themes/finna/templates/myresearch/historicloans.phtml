@@ -39,11 +39,7 @@
             <a class="btn btn-primary" href="<?=$this->url('myresearch-purgehistoricloans');?>" data-lightbox><?=$this->transEsc('loan_history_purge')?></a>
           </div>
           <div class="pagination-container">
-            <? if (!empty($params['sort'])): ?>
-              <?=$paginator ? $this->paginationControl($paginator, 'Sliding', 'Helpers/pagination-simple.phtml', ['sort' => $params['sort']]) : '';?>
-            <? else: ?>
-              <?=$paginator ? $this->paginationControl($paginator, 'Sliding', 'Helpers/pagination-simple.phtml') : ''?>
-            <? endif; ?>
+            <?=$paginator ? $this->paginationControl($paginator, 'Sliding', 'Helpers/pagination-simple.phtml') : ''?>
           </div>
         </div>
         <table class="myresearch-table">
@@ -126,11 +122,7 @@
           </tr>
         <? endforeach; ?>
         </table>
-        <? if (!empty($params['sort'])): ?>
-          <?=$paginator ? $this->paginationControl($paginator, 'Sliding', 'Helpers/pagination.phtml', ['sort' => $params['sort']]) : '';?>
-        <? else: ?>
-          <?=$paginator ? $this->paginationControl($paginator, 'Sliding', 'Helpers/pagination.phtml') : ''?>
-        <? endif; ?>
+        <?=$paginator ? $this->paginationControl($paginator, 'Sliding', 'Helpers/pagination.phtml') : ''?>
         <? if ($template = $this->content()->findTemplateForLng("content/Additions/checkout-history-post-list")): ?>
           <div class="checkout-history-post-list"><?=$this->render($template)?></div>
         <? endif; ?>
