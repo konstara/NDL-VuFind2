@@ -657,7 +657,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
     {
         $cacheKey = $this->getPatronCacheKey($patron, 'transactionHistory');
         $history = $this->getCachedData($cacheKey);
-        $sort = strpos($params['sort'],  'desc') ? 'desc' : 'asc';
+        $sort = strpos($params['sort'], 'desc') ? 'desc' : 'asc';
         $request = [
             '$filter' => 'BorrowerId eq' . ' ' . $patron['id'],
             '$orderby' => 'ServiceTime' . ' ' . $sort
@@ -1406,7 +1406,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
      *
      * @param boolean $throwException Throw an ILSException if the
      * configuration is not valid.
-
+     *
      * @return bool
      */
     protected function validateOnlinePaymentConfig($throwException = false)
