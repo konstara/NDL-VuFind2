@@ -1115,37 +1115,30 @@ class AjaxController extends \VuFind\Controller\AjaxController
         $cookieName = 'organisationInfoId';
         $cookieManager = $this->serviceLocator->get('VuFind\CookieManager');
         $cookie = $cookieManager->get($cookieName);
-        $organisationInfo = $this->serviceLocator->get('VuFind\Config')
-            ->get('OrganisationInfo');
-        $params['orgType'] = strpos($organisationInfo->General->url, 'museot.fi')
-            ? 'museum' : 'library';
-        if ($params['orgType'] == 'library') {
-            $action = $params['action'];
-            $buildings = isset($params['buildings'])
-                ? explode(',', $params['buildings']) : null;
-
-            $key = $parent;
-            if ($action == 'details') {
-                if (!isset($params['id'])) {
-                    return $this->handleError('getOrganisationInfo: missing id');
-                }
-                if (isset($params['id'])) {
-                    $id = $params['id'];
-                    $expire = time() + 365 * 60 * 60 * 24; // 1 year
-                    $cookieManager->set($cookieName, $id, $expire);
-                }
+        $museumCheck = $this->checkIfMuseum($parent);
+        $params['orgType'] = $museumCheck ? 'museum' : 'library';
+        $action = $params['action'];
+        $buildings = isset($params['buildings'])
+            ? explode(',', $params['buildings']) : null;
+        $key = $parent;
+        if ($action == 'details') {
+            if (!isset($params['id'])) {
+                return $this->handleError('getOrganisationInfo: missing id');
             }
-
-            if (!isset($params['id']) && $cookie) {
-                $params['id'] = $cookie;
+            if (isset($params['id'])) {
+                $id = $params['id'];
+                $expire = time() + 365 * 60 * 60 * 24; // 1 year
+                $cookieManager->set($cookieName, $id, $expire);
             }
-
-            if ($action == 'lookup') {
-                $link = isset($reqParams['link']) ? $reqParams['link'] : '0';
-                $params['link'] = $link === '1';
-                $params['parentName'] = isset($reqParams['parentName'])
-                    ? $reqParams['parentName'] : null;
-            }
+        }
+        if (!isset($params['id']) && $cookie) {
+            $params['id'] = $cookie;
+        }
+        if ($action == 'lookup') {
+            $link = isset($reqParams['link']) ? $reqParams['link'] : '0';
+            $params['link'] = $link === '1';
+            $params['parentName'] = isset($reqParams['parentName'])
+                ? $reqParams['parentName'] : null;
         }
         $lang = $this->serviceLocator->get('VuFind\Translator')->getLocale();
         $map = ['en-gb' => 'en'];
@@ -1972,5 +1965,33 @@ class AjaxController extends \VuFind\Controller\AjaxController
             'userLists' => $listCount,
             'userResources' => $favoritesCount
         ];
+    }
+
+    /**
+     * Check if organisation is museum
+     *
+     * @param string $parent Finna-organisation ID
+     *
+     * @return boolean
+     */
+    protected function checkIfMuseum($parent)
+    {
+        $museumList = [
+            'Ateneum', 'designmuseo', 'ESPOO_KAUPMUS', 'Forum Marinum-säätiö',
+            'Halikon museo', 'HELINAMUSEO', 'Turun museokeskus', 'HKM',
+            'HOTELLI- JA RAVINTOLAMUSEO', 'HYVINKAAMUSEO', 'IlomantsinMuseosaatio',
+            'FNG_ARCH', 'FNG_LIB', 'Suomen kansallismuseo', 'KERAVAMUSEO','KSM',
+            'Nykytaiteen museo Kiasma', 'Kouvolan taidemuseo', 'kultamuseo',
+            'Kustavin museo', 'KYMIMUSEO', 'LAHTIMUSEO', 'LapinMetsamuseo',
+            'LPRMUSEOT', 'Lusto', 'mikkelinmuseot', 'sarka', 'Museovirasto',
+            'MANTSALAMUSEO', 'Naantalin museo', 'NurmeksenMuseo', 'NURMUJARVIMUSEO',
+            'PielisenMuseo', 'paivalehdenmuseo', 'SIIDA',
+            'Salon historiallinen museo', 'SATMUSEO', 'Sinebrychoff', 'SA-kuva',
+            'ilmailumuseo', 'KELLOMUSEO', 'HEVOSENKENKA', 'Suomen merimuseo',
+            'Metsastysmuseo', 'SRM', 'siirtolaisuusmuseo', 'Elektra', 'Siiri',
+            'tekniikan_museo', 'Turun museokeskus', 'Tuusula', 'Werstas', 'SUM',
+            'Uudenkaupungin museo', 'VANTAA', 'Verla', 'testimuseo', '201'
+        ];
+        return in_array($parent, $museumList);
     }
 }
