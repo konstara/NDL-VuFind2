@@ -668,9 +668,6 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             'count' => count($result),
             'transactions' => []
         ];
-        if (!$history != null) {
-            return $history;
-        }
         $serviceCodeMap = [
             'Returned' => 'returndate',
             'OnLoan' => 'checkoutdate',
