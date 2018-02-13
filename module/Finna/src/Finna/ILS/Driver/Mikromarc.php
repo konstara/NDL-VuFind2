@@ -375,7 +375,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
     public function getMyProfile($patron)
     {
         $cacheKey = $this->getPatronCacheKey($patron, 'profile');
-        if (false && $profile = $this->getCachedData($cacheKey)) {
+        if ($profile = $this->getCachedData($cacheKey)) {
             return $profile;
         }
         list($code, $result) = $this->makeRequest(
@@ -655,8 +655,6 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
      */
     public function getMyTransactionHistory($patron, $params)
     {
-        $cacheKey = $this->getPatronCacheKey($patron, 'transactionHistory');
-        $history = $this->getCachedData($cacheKey);
         $sort = strpos($params['sort'], 'desc') ? 'desc' : 'asc';
         $request = [
             '$filter' => 'BorrowerId eq' . ' ' . $patron['id'],
@@ -708,7 +706,6 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
                 $history['transactions'][] = $transaction;
             }
         }
-        $this->putCachedData($cacheKey, $history);
         return $history;
     }
 
