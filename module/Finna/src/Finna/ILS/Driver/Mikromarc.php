@@ -378,12 +378,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
         if ($profile = $this->getCachedData($cacheKey)) {
             return $profile;
         }
-        list($code, $result) = $this->makeRequest(
-            ['odata', 'Borrowers(' . $patron['id'] . ')'], false, 'GET', true
-        );
-        if ($code != 200) {
-            return null;
-        }
+        $result = $this->makeRequest(['odata', 'Borrowers(' . $patron['id'] . ')']);
         $expirationDate = !empty($result['Expires'])
             ? $this->dateConverter->convertToDisplayDate(
                 'Y-m-d', $result['Expires']
