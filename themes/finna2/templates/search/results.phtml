@@ -11,7 +11,7 @@
       $this->headTitle((empty($lookfor) ? "{$this->transEsc('history_empty_search')}" : "{$lookfor}") . ' | ' . $this->translate('Search Results'));
   }
   $account = $this->auth()->getManager();
-  $searchType = $this->params->getsearchType();
+  $searchType = $this->params->getSearchType();
 
     // Set up search box:
     $this->layout()->searchbox = $this->context($this)->renderInContext(
@@ -80,10 +80,10 @@
           [
               'filterList' => $filterList,
               'checkboxFilters' => $checkboxFilters,
-              'hasDefaultsApplied' => $params->hasDefaultsApplied(),
               'defaultSortApplied' => $defaultSortApplied,
               'options' => $options,
-              'urlQuery' => $results->getUrlQuery()
+              'urlQuery' => $results->getUrlQuery(),
+              'params' => $params
           ]
       );
   }
@@ -171,11 +171,6 @@
               <? $resultsStr = ''; ?>
           <? endif; ?>
           <? $this->layout()->srmessage = strip_tags($resultsStr); ?>
-          <? if ($this->fromStreetSearch): ?>
-            <div class="text-right hidden-sm hidden-md hidden-lg hidden-print">
-                <?=$this->render('search/street-search-header.phtml');?>
-            </div>
-          <? endif; ?>
       </div>
     <? endif; ?>
     <? if ($this->results->getResultTotal() > 0): ?>

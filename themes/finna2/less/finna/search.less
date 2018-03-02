@@ -28,6 +28,11 @@
     position: relative;
   }
 }
+@media (max-width: @screen-xs-max) {
+  .media-left {
+    float: right;
+  }
+}
 
 .resultListLabeling {
   display: none;
@@ -92,7 +97,9 @@ mark, .highlight {
     padding-right: 5px;
   }
 }
-.result .save-record {
+.result .save-record,
+.result .cart-add,
+.result .cart-remove {
   font-size: medium;
   @media(max-width: @screen-xs-max) {
     font-size: 1em;
@@ -330,29 +337,6 @@ mark, .highlight {
   }
   .datepicker.datepicker-dropdown {
     margin-top: -340px;
-  }
-}
-/* --- Sidebar --- */
-.sidebar {
-  & .list-group-item.usage-rights-info {
-    margin-top: 5px;
-    margin-left: 20px;
-    font-size: 0.9em;
-    & .fa {
-      font-size: 1.1em;
-      float: left;
-      margin: 5px 5px 0 -20px;
-      color: @brand-primary;
-    }
-    & .info {
-      margin-left: 5px;
-      margin-top: -3px;
-    }
-    & .more-info {
-      text-align: right;
-      display: block;
-      margin-top: 3px;
-    }
   }
 }
 

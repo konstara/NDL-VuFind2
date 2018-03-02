@@ -1,21 +1,6 @@
-/*global VuFind, checkSaveStatuses, action, finna, L, initFacetTree, setupFacets, videojs, priorityNav, buildFacetNodes */
+/*global VuFind, checkSaveStatuses, action, finna, initFacetTree, setupFacets, videojs, priorityNav, buildFacetNodes */
 finna.layout = (function finnaLayout() {
   var _fixFooterTimeout = null;
-
-  function initMap(map) {
-    // Add zoom control with translated tooltips
-    L.control.zoom({
-      position: 'topleft',
-      zoomInTitle: VuFind.translate('map_zoom_in'),
-      zoomOutTitle: VuFind.translate('map_zoom_out')
-    }).addTo(map);
-
-    // Enable mouseWheel zoom on click
-    map.once('focus', function onFocusMap() {
-      map.scrollWheelZoom.enable();
-    });
-    map.scrollWheelZoom.disable();
-  }
 
   function initResizeListener() {
     var intervalId = false;
@@ -351,7 +336,6 @@ finna.layout = (function finnaLayout() {
         scrollTop: $('.recordProvidedBy').offset().top
       }, 500);
     });
-    var modalContent = 0;
     if ($('.floating-feedback-btn').length) {
       var feedbackBtnOffset = $('.floating-feedback-btn').offset().top;
       $(window).scroll(function onScrollWindow(/*event*/) {
@@ -375,21 +359,6 @@ finna.layout = (function finnaLayout() {
         }
       });
     }
-
-    $('#modal').on('shown.bs.modal', function onShownModal(/*e*/) {
-      $('#hierarchyTree').scroll(function onScrollHierarchyTree() {
-        modalContent = $('#hierarchyTree').scrollTop();
-        if (modalContent > 1500) {
-          $('#modal .back-to-up').removeClass('hidden');
-        }
-        else {
-          $('#modal .back-to-up').addClass('hidden');
-        }
-      });
-      $('.back-to-up').click(function onClickBackToUp() {
-        $('#hierarchyTree, #modal').animate({scrollTop: 0 }, 200);
-      });
-    });
   }
 
   function initSearchboxFunctions() {
@@ -534,6 +503,17 @@ finna.layout = (function finnaLayout() {
         var group = field.closest('.form-group');
         group.find('label').text(labels[target] + ':');
         group.show();
+      }
+    }).change();
+  }
+
+  function initILSPasswordRecoveryLink(links) {
+    $('#login_target').change(function onChangeLoginTargetLink() {
+      var target = $('#login_target').val();
+      if (links[target]) {
+        $('#login_library_card_recovery').attr('href', links[target]).show();
+      } else {
+        $('#login_library_card_recovery').hide();
       }
     }).change();
   }
@@ -907,18 +887,20 @@ finna.layout = (function finnaLayout() {
   }
 
   function initFiltersToggle () {
-    var filterAmount = $('.filters-bar .filter-value').length;
-    if (filterAmount > 0) {
-      $('.filters-toggle .active-filter-count').text(' (' + filterAmount + ')');
-    }
+    $('.finna-filters').each(function calcFilterAmount() {
+      var filterAmount = $(this).find('.filters-bar .filter-value').length;
+      $(this).find('.filters-toggle .active-filter-count').text(' (' + filterAmount + ')');
+    });
 
-    $('.filters-toggle').click(function filterToggleClicked(){
-      if ($('.filters-bar').hasClass('hidden')) {
-        $('.filters-bar').removeClass('hidden');
-        $('.filters-toggle .fa-arrow-down').removeClass('fa-arrow-down').addClass('fa-arrow-up');
+    $('.filters-toggle').click(function filterToggleClicked(e){
+      var finnaFilters = $(e.target).closest('.finna-filters');
+      var filtersBar = finnaFilters.find('.filters-bar');
+      if (filtersBar.hasClass('hidden')) {
+        filtersBar.removeClass('hidden');
+        finnaFilters.find('.fa-arrow-down').removeClass('fa-arrow-down').addClass('fa-arrow-up');
       } else {
-        $('.filters-bar').addClass('hidden');
-        $('.filters-toggle .fa-arrow-up').removeClass('fa-arrow-up').addClass('fa-arrow-down');
+        filtersBar.addClass('hidden');
+        finnaFilters.find('.fa-arrow-up').removeClass('fa-arrow-up').addClass('fa-arrow-down');
 
       }
     });
@@ -927,7 +909,6 @@ finna.layout = (function finnaLayout() {
   var my = {
     getOrganisationPageLink: getOrganisationPageLink,
     isTouchDevice: isTouchDevice,
-    initMap: initMap,
     initTruncate: initTruncate,
     initLocationService: initLocationService,
     initHierarchicalFacet: initHierarchicalFacet,
@@ -935,6 +916,7 @@ finna.layout = (function finnaLayout() {
     initMobileNarrowSearch: initMobileNarrowSearch,
     initOrganisationPageLinks: initOrganisationPageLinks,
     initSecondaryLoginField: initSecondaryLoginField,
+    initILSPasswordRecoveryLink: initILSPasswordRecoveryLink,
     initIframeEmbed: initIframeEmbed,
     initVideoPopup: initVideoPopup,
     init: function init() {

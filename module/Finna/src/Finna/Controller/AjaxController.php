@@ -247,7 +247,7 @@ class AjaxController extends \VuFind\Controller\AjaxController
             $patron = $this->getILSAuthenticator()->storedCatalogLogin();
 
             if ($patron) {
-                $result = $catalog->checkFunction('changePickupLocation');
+                $result = $catalog->checkFunction('changePickupLocation', [$patron]);
                 if (!$result) {
                     return $this->output(
                         $this->translate('unavailable'),
@@ -309,7 +309,7 @@ class AjaxController extends \VuFind\Controller\AjaxController
             $patron = $this->getILSAuthenticator()->storedCatalogLogin();
 
             if ($patron) {
-                $result = $catalog->checkFunction('changeRequestStatus');
+                $result = $catalog->checkFunction('changeRequestStatus', [$patron]);
                 if (!$result) {
                     return $this->output(
                         $this->translate('unavailable'),
@@ -1990,7 +1990,7 @@ class AjaxController extends \VuFind\Controller\AjaxController
             'ilmailumuseo', 'KELLOMUSEO', 'HEVOSENKENKA', 'Suomen merimuseo',
             'Metsastysmuseo', 'SRM', 'siirtolaisuusmuseo', 'Elektra', 'Siiri',
             'tekniikan_museo', 'Turun museokeskus', 'Tuusula', 'Werstas', 'SUM',
-            'Uudenkaupungin museo', 'VANTAA', 'Verla', 'testimuseo', '201'
+            'Uudenkaupungin museo', 'VANTAA', 'Verla', 'testimuseo', 'testimuseo'
         ];
         return in_array($parent, $museumList);
     }
