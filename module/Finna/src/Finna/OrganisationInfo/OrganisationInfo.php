@@ -1201,7 +1201,7 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
             ];
             foreach ($days as $day => $key) {
                 $details['openTimes']['schedules'][$day]
-                    = $this->getMuseumDaySchedule($key, $json);
+                    = $this->getMuseumDaySchedule($key, $json, $today, $currentHour);
                 if ($details['openTimes']['schedules'][$day]['openNow'] == true) {
                     $details['openNow'] = true;
                     $details['openTimes']['openNow'] = true;
@@ -1237,17 +1237,17 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
                     = preg_replace('/\D/', '', $json['post_office']);
                 $details['address']['city'] = $replace['city'];
             }
-            $phones = [];
+            $contactInfo = [];
             foreach ($json['contact_infos'] as $field => $key) {
-                $phones[]
+                $contactInfo[]
                     = ['name' => $key['contact_info']['place_'.$language.''],
-                     'number' => $key['contact_info']['phone_email_'.$language.'']];
+                     'contact' => $key['contact_info']['phone_email_'.$language.'']];
             }
-            $phones['museum'] = true;
+            $contactInfo['museum'] = true;
             try {
-                $result['phone'] = $this->viewRenderer->partial(
-                    "Helpers/organisation-info-phone-{$target}.phtml",
-                    ['phones' => $phones]
+                $result['contactInfo'] = $this->viewRenderer->partial(
+                    "Helpers/organisation-info-museum-page.phtml",
+                    ['contactInfo' => $contactInfo]
                 );
             } catch (\Exception $e) {
                 $this->logError($e->getmessage());
@@ -1266,13 +1266,6 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
                 = !empty($json['opening_info'][$language])
                     ? $json['opening_info'][$language] : '';
             $result['museum'] = true;
-            if ($language == 'fi') {
-                $result['museumContact'] = 'Yhteystiedot';
-            } else if ($language == 'sv') {
-                $result['museumContact'] = 'Kontakt';
-            } else {
-                $result['museumContact'] = 'Contact';
-            }
             $details['id'] = $id;
             $details['email'] = isset($json['email']) ? $json['email'] : '';
             $result['list'][0] = $details;
@@ -1354,16 +1347,16 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
     /**
      * Date-data handling function for museums
      *
-     * @param string $day  weekday
-     * @param array  $json data from museum api
+     * @param string $day         weekday
+     * @param array  $json        data from museum api
+     * @param string $today       current date
+     * @param string $currentHour current hour
      *
      * @return array
      */
-    protected function getMuseumDaySchedule($day, $json)
+    protected function getMuseumDaySchedule($day, $json, $today, $currentHour)
     {
         $return = [];
-        $today = date('d.m');
-        $currentHour = date('H:i');
         $dayShortcode = substr($day, 0, 3);
         if (empty($json['opening_time']["{$dayShortcode}_start"])
             && empty($json['opening_time']["{$dayShortcode}_end"])
@@ -1371,9 +1364,9 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
             $return['closed'] = true;
         } else {
             $return['times'][0]['closes']
-                = $json['opening_time']["{$dayShortcode}_end"];
+                = $this->formatTime($json['opening_time']["{$dayShortcode}_end"]);
             $return['times'][0]['opens']
-                = $json['opening_time']["{$dayShortcode}_start"];
+                = $this->formatTime($json['opening_time']["{$dayShortcode}_start"]);
         }
         $return['day'] = $this->translator->translate('day-name-short-' . $day);
         $return['date'] = date('d.m', strtotime("{$day} this week"));

@@ -273,23 +273,27 @@ finna.organisationInfoPage = (function finnaOrganisationInfoPage() {
     holder.find('.office-quick-information .service-title').text(data.name);
     if ('address' in data) {
       holder.find('.office-links.address').html(data.address);
-      var address = holder.find('.address-contact');
-      address.show().find('> p').html(data.address);
+      if (!data.details.museum) {
+        var address = holder.find('.address-contact');
+        address.show().find('> p').html(data.address);
+      }
     }
     if ('email' in data) {
       var email = data.email;
       holder.find('.email').attr('href', 'mailto:' + email).show();
       holder.find('.email span.email').text(email.replace('@', '(at)'));
-
-      holder.find('.email-contact').show();
+      if (!data.details.museum) {
+        holder.find('.email-contact').show();
+      }
     }
-    if (data.details.museum == false) {
+    if (!data.details.museum) {
       if ('homepage' in data) {
         holder.find('.office-website > a').attr('href', data.homepage);
         holder.find('.office-website').show();
       }
     } else {
-      holder.find('.contact-info-header').html(data.details.museumContact);
+      var contact = holder.find('.contact-info-header');
+      contact.hide();
     }
     if ('routeUrl' in data) {
       holder.find('.office-links.route').attr('href', data.routeUrl).show();
@@ -350,7 +354,9 @@ finna.organisationInfoPage = (function finnaOrganisationInfoPage() {
       } else {
         img.fadeTo(300, 1);
       }
-      holder.find('.building-name').text(data.name).show();
+      if (!data.details.museum) {
+        holder.find('.building-name').text(data.name).show();
+      }
     } else {
       img.hide();
     }
@@ -401,7 +407,11 @@ finna.organisationInfoPage = (function finnaOrganisationInfoPage() {
       phones.find('> p').html(data.details.phone);
       phones.show();
     }
-
+    if ('contactInfo' in data.details) {
+      var contactInfo = holder.find('.phone-numbers');
+      contactInfo.find('> p').html(data.details.contactInfo);
+      contactInfo.show();
+    }
 
     $('.office-quick-information').show();
     $('.office-information').show();
