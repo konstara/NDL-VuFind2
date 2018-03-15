@@ -298,9 +298,10 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
                 $orgType = $params['orgType'];
                 return $this->lookupAction($parent, $link, $parentName, true);
             }
-            //TODO Current solution is for How to make museum organisation page for
+            //TODO How to make museum organisation page for
             //TODO consortiums with more than one museum
-            $id = $this->config->General->defaultOrganisation;
+            $id = !empty($parent) ? $parent :
+                $this->config->General->defaultOrganisation;
             $response = $this->museumAction(
                 $id, 'finna_org_perustiedot.php', $params, $target
             );
@@ -314,13 +315,13 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
     }
 
     /**
-     * Check if consortium is found in Kirjastohakemisto and output
-     * a link to the organisation page.
+     * Check if consortium is found in Kirjastohakemisto or in Museoliitto
+     * and output a link to the organisation page.
      *
-     * @param string  $parent     Consortium Finna ID in Kirjastohakemisto.
-     *   Use a comma delimited string to check multiple Finna IDs.
+     * @param string  $parent     Consortium Finna ID in Kirjastohakemisto or
+     * in Museoliitto. Use a comma delimited string to check multiple Finna IDs.
      * @param boolean $link       True to render the link as a html-snippet.
-     *   Oherwise only the link URL is outputted.
+     * Oherwise only the link URL is outputted.
      * @param string  $parentName Translated consortium display name.
      * @param boolean $museum     Check if organisation is museum
      *
@@ -336,61 +337,70 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
                 'lang' => $this->language
             ];
             $params['with'] = 'finna';
-
             $response = $this->fetchData('consortium', $params);
-            if (!$response) {
+
+            if (!$response || $response['total' == 0]) {
                 return false;
-            }
+            } else {
+                $urlHelper = $this->viewRenderer->plugin('url');
+                $url = $urlHelper('organisationinfo-home');
 
-            if ($response['total'] == 0) {
-                return false;
-            }
-
-            $urlHelper = $this->viewRenderer->plugin('url');
-            $url = $urlHelper('organisationinfo-home');
-
-            $result = ['success' => true, 'items' => []];
-            foreach ($response['items'] as $item) {
-                $id = $item['finna']['finna_id'];
-                $data = "{$url}?" . http_build_query(['id' => $id]);
-                if ($link) {
-                    $logo = null;
-                    if (isset($response['items'][0]['logo'])) {
-                        $logos = $response['items'][0]['logo'];
-                        foreach (['small', 'medium'] as $size) {
-                            if (isset($logos[$size])) {
-                                $logo = $logos[$size];
-                                break;
+                $result = ['success' => true, 'items' => []];
+                foreach ($response['items'] as $item) {
+                    $id = $item['finna']['finna_id'];
+                    $data = "{$url}?" . http_build_query(['id' => $id]);
+                    if ($link) {
+                        $logo = null;
+                        if (isset($response['items'][0]['logo'])) {
+                            $logos = $response['items'][0]['logo'];
+                            foreach (['small', 'medium'] as $size) {
+                                if (isset($logos[$size])) {
+                                    $logo = $logos[$size];
+                                    break;
+                                }
                             }
                         }
-                    }
 
+                        $data = $this->viewRenderer->partial(
+                            'Helpers/organisation-page-link.phtml', [
+                               'url' => $data, 'label' => 'organisation_info_link',
+                               'logo' => $logo, 'name' => $parentName
+                            ]
+                        );
+                    }
+                    $result['items'][$id] = $data;
+                }
+            }
+        } else {
+            $response = $this->fetchMuseumData(
+                $parent, 'finna_org_perustiedot.php', $params
+            );
+
+            if (!$response || $response['museot'] == 0) {
+                return false;
+            } else {
+                $urlHelper = $this->viewRenderer->plugin('url');
+                $url = $urlHelper('organisationinfo-home');
+                $json = $response['museot'][0];
+                if ($json['finna_publish'] == 1) {
+                    $result = ['success' => true, 'items' => []];
+                    $id = $json['finna_org_id'];
+                    $data = "{$url}?"  . http_build_query(['id' => $id]);
+                    if ($link) {
+                        $logo = isset($json['image']) ? $json['image'] : null;
+                    }
+                    $name = isset($json['name'][$this->language])
+                        ? $json['name'][$this->language]
+                            : $this->translator->translate("source_{$parent}");
                     $data = $this->viewRenderer->partial(
                         'Helpers/organisation-page-link.phtml', [
                            'url' => $data, 'label' => 'organisation_info_link',
-                           'logo' => $logo, 'name' => $parentName
+                           'logo' => $logo, 'name' => $name
                         ]
                     );
                 }
                 $result['items'][$id] = $data;
             }
-        } elseif ($museum) {
-            $response = $this->fetchMuseumData(
-                $params['finna:id'], 'finna_org_perustiedot.php', $params
-            );
-            if (!$response) {
-                return false;
-            }
-
-            if ($response['total'] == 0) {
-                return false;
-            }
-
-            $urlHelper = $this->viewRenderer->plugin('url');
-            $url = $urlHelper('organisationinfo-home');
-
-            //TODO Koko museokäsittely
-            $result = '';
         }
         return $result;
     }
@@ -1166,7 +1176,6 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
             );
             return false;
         }
-        $i = 0;
         $language = $this->language;
         $json = $response['museot'][0];
         $consortium = $finna = [];
