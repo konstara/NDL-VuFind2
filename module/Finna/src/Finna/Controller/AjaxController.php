@@ -1118,7 +1118,7 @@ class AjaxController extends \VuFind\Controller\AjaxController
         $params['orgType'] = 'library';
         $museumSource = [
             'museo', 'museum', 'kansallisgalleria', 'ateneum', 'museet',
-            'Nationalgalleri', 'Gallery'
+            'nationalgalleri', 'gallery'
         ];
         foreach ($museumSource as $source) {
             if (strpos(strtolower($this->translate("source_{$parent}")), $source)
