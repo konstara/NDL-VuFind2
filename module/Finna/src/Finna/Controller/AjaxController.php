@@ -1115,8 +1115,17 @@ class AjaxController extends \VuFind\Controller\AjaxController
         $cookieName = 'organisationInfoId';
         $cookieManager = $this->serviceLocator->get('VuFind\CookieManager');
         $cookie = $cookieManager->get($cookieName);
-        $museumCheck = $this->checkIfMuseum($parent);
-        $params['orgType'] = $museumCheck ? 'museum' : 'library';
+        $params['orgType'] = 'library';
+        $museumSource = [
+            'museo', 'museum', 'kansallisgalleria', 'ateneum', 'museet'
+        ];
+        foreach ($museumSource as $source) {
+            if (strpos(strtolower($this->translate("source_{$parent}")), $source)
+            ) {
+                $params['orgType'] = 'museum';
+                break;
+            }
+        }
         $action = $params['action'];
         $buildings = isset($params['buildings'])
             ? explode(',', $params['buildings']) : null;
@@ -1965,33 +1974,5 @@ class AjaxController extends \VuFind\Controller\AjaxController
             'userLists' => $listCount,
             'userResources' => $favoritesCount
         ];
-    }
-
-    /**
-     * Check if organisation is museum
-     *
-     * @param string $parent Finna-organisation ID
-     *
-     * @return boolean
-     */
-    protected function checkIfMuseum($parent)
-    {
-        $museumList = [
-            'Ateneum', 'designmuseo', 'ESPOO_KAUPMUS', 'Forum Marinum-säätiö',
-            'Halikon museo', 'HELINAMUSEO', 'Turun museokeskus', 'HKM',
-            'HOTELLI- JA RAVINTOLAMUSEO', 'HYVINKAAMUSEO', 'IlomantsinMuseosaatio',
-            'FNG_ARCH', 'FNG_LIB', 'Suomen kansallismuseo', 'KERAVAMUSEO','KSM',
-            'Nykytaiteen museo Kiasma', 'Kouvolan taidemuseo', 'kultamuseo',
-            'Kustavin museo', 'KYMIMUSEO', 'LAHTIMUSEO', 'LapinMetsamuseo',
-            'LPRMUSEOT', 'Lusto', 'mikkelinmuseot', 'sarka', 'Museovirasto',
-            'MANTSALAMUSEO', 'Naantalin museo', 'NurmeksenMuseo', 'NURMUJARVIMUSEO',
-            'PielisenMuseo', 'paivalehdenmuseo', 'SIIDA',
-            'Salon historiallinen museo', 'SATMUSEO', 'Sinebrychoff', 'SA-kuva',
-            'ilmailumuseo', 'KELLOMUSEO', 'HEVOSENKENKA', 'Suomen merimuseo',
-            'Metsastysmuseo', 'SRM', 'siirtolaisuusmuseo', 'Elektra', 'Siiri',
-            'tekniikan_museo', 'Turun museokeskus', 'Tuusula', 'Werstas', 'SUM',
-            'Uudenkaupungin museo', 'VANTAA', 'Verla', 'testimuseo', 'testimuseo'
-        ];
-        return in_array($parent, $museumList);
     }
 }

@@ -295,7 +295,6 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
             if ($action == 'lookup') {
                 $link = $params['link'];
                 $parentName = $params['parentName'];
-                $orgType = $params['orgType'];
                 return $this->lookupAction($parent, $link, $parentName, true);
             }
             //TODO How to make museum organisation page for
