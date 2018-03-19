@@ -1170,7 +1170,7 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
         $response = $this->fetchMuseumData($id, $action, $params);
         if ($response['museot'] == null) {
             $this->logError(
-                'Error reading consortium info: ' .
+                'Error reading museum info: ' .
                 var_export($params, true)
             );
             return false;
@@ -1277,7 +1277,7 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
             $details['id'] = $id;
             $details['email'] = isset($json['email']) ? $json['email'] : '';
             $result['list'][0] = $details;
-        } else if ($publish == 0) {
+        } else {
             $result = false;
         }
         return $result;
@@ -1318,14 +1318,14 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
             if ($result->isSuccess()) {
                 if ($result->getStatusCode() != 200) {
                     $this->logError(
-                        'Error querying organisation info, response code '
+                        'Error querying museum info, response code '
                         . $result->getStatusCode() . ", url: $url"
                     );
                     return false;
                 }
             } else {
                 $this->logError(
-                    'Error querying organisation info: '
+                    'Error querying museum info: '
                     . $result->getStatusCode() . ': ' . $result->getReasonPhrase()
                     . ", url: $url"
                 );
