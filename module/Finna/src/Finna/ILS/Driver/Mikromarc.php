@@ -1520,8 +1520,14 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
                 'duedate' => null,
                 'barcode' => $item['Barcode'],
                 'item_notes' => [isset($items['notes']) ? $item['notes'] : null],
-                'is_holdable' =>  false
             ];
+            if ($patron && $this->itemHoldAllowed($item)) {
+                $entry['is_holdable'] = true;
+                $entry['level'] = 'copy';
+                $entry['addLink'] = 'check';
+            } else {
+                $entry['is_holdable'] = false;
+            }
 
             $statuses[] = $entry;
         }
@@ -1802,7 +1808,11 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
      */
     protected function itemHoldAllowed($item)
     {
-        return false;
+        if ($item['ItemStatus'] == 'AvailableForLoan') {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     /**
