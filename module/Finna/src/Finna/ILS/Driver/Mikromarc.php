@@ -737,6 +737,9 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             true
         );
         if ($code >= 300) {
+            if ($result['error']['code'] == 'NoItemsAvailableByTerm') {
+                $result['error']['code'] = 'hold_error_denied';
+            }
             return $this->holdError($code, $result);
         }
         return ['success' => true];
@@ -1808,11 +1811,11 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
      */
     protected function itemHoldAllowed($item)
     {
-        if ($item['ItemStatus'] == 'AvailableForLoan') {
-            return true;
-        } else {
-            return false;
-        }
+        $notAllowedForHold = [
+            'ClaimedReturnedOrNeverBorrowed', 'Lost', 'SuppliedReturnNotRequired',
+            'MissingOverdue', 'Withdrawn', 'Discarded', 'Other'
+        ];
+        return in_array($item['ItemStatus'], $notAllowedForHold) ? false : true;
     }
 
     /**
