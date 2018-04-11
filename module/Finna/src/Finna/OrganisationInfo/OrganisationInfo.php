@@ -296,20 +296,19 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
                 $link = $params['link'];
                 $parentName = $params['parentName'];
                 return $this->lookupAction($parent, $link, $parentName, true);
-            }
-            //TODO How to make museum organisation page for
-            //TODO consortiums with more than one museum
-            $id = !empty($parent) ? $parent :
-                $this->config->General->defaultOrganisation;
-            $response = $this->museumAction(
-                $id, 'finna_org_perustiedot.php', $params, $target
-            );
-            if ($response == null) {
-                return false;
             } else {
-                $response['id'] = $id;
-                return $response;
+                $params['id'] = !empty($parent) ? $parent :
+                    $this->config->General->defaultOrganisation;
+                $response = $this->museumAction($params, $target);
+                if ($response == null) {
+                    return false;
+                } else {
+                    $response['id'] = $id;
+                    return $response;
+                }
             }
+            //TODO Consortium/Group handling, we need to get data for that first from
+            //TODO Museoliitto and organisations
         }
     }
 
@@ -371,10 +370,8 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
                 }
             }
         } else {
-            $response = $this->fetchMuseumData(
-                $parent, 'finna_org_perustiedot.php', $params
-            );
-
+            $params['id'] = $parent;
+            $response = $this->fetchData('consortium', $params, true);
             if (!$response || $response['museot'] == 0) {
                 return false;
             } else {
@@ -615,18 +612,23 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
     /**
      * Fetch data from cache or external API.
      *
-     * @param string $action Action
-     * @param array  $params Query parameters
+     * @param string  $action Action
+     * @param array   $params Query parameters
+     * @param boolean $museum If organisation type is museum
      *
      * @return mixed result or false on error.
      */
-    protected function fetchData($action, $params)
+    protected function fetchData($action, $params, $museum = false)
     {
-        $params['limit'] = 1000;
-        $url
-            = $this->config->General->url . '/' . $action
-            . '?' . http_build_query($params);
-
+        if (!$museum) {
+            $params['limit'] = 1000;
+            $url
+                = $this->config->General->url . '/' . $action
+                . '?' . http_build_query($params);
+        } else {
+            $url = $this->config->MuseumAPI->url . '/finna_org_perustiedot.php?'
+            . 'finna_org_id=' . $params['id'];
+        }
         $cacheDir = $this->cacheManager->getCache('organisation-info')
             ->getOptions()->getCacheDir();
 
@@ -1158,16 +1160,14 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
     /**
      * Query museum info for organisation page
      *
-     * @param int    $id     Finna-organisation ID
-     * @param string $action String which states the action performed
      * @param array  $params Query parameters
      * @param string $target page|widget
      *
      * @return array
      */
-    protected function museumAction($id, $action, $params, $target)
+    protected function museumAction($params, $target)
     {
-        $response = $this->fetchMuseumData($id, $action, $params);
+        $response = $this->fetchData('consortium', $params, true);
         if ($response['museot'] == null) {
             $this->logError(
                 'Error reading museum info: ' .
@@ -1181,13 +1181,17 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
         $publish = $json['finna_publish'];
         if ($publish == 1) {
             //Consortium info
-            $consortium['museum'] = true;
-            $consortium['name'] = $json['name'][$language];
-            $consortium['description'] = $json['description'][$language];
-            $consortium['finna']['service_point'] = $id;
-            $consortium['finna']['finna_coverage'] = $json['coverage'];
-            $consortium['finna']['usage_perc'] = $json['coverage'];
-            $consortium['finna']['usage_info'] = $json['usage_rights'][$language];
+            $consortium = [
+                'museum' => true,
+                'name' =>  $json['name'][$language],
+                'description' => $json['description'][$language],
+                'finna' => [
+                    'service_point' => $id,
+                    'finna_coverage' => $json['coverage'],
+                    'usage_perc' => $json['coverage'],
+                    'usage_info' => $json['usage_rights'][$language]
+                ],
+            ];
             foreach ($json['links'] as $field => $key) {
                 $consortium['finna']['finnaLink'][$field]['name']
                     = $key['link_info']['link_text_'.$language.''];
@@ -1197,10 +1201,26 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
             if (!empty($json['image'])) {
                 $consortium['logo']['small'] = $json['image'];
             }
-            $result = ['consortium' => $consortium];
             //Details info
-            $details['name'] = $json['name'][$language];
-            $details['openNow'] = false;
+            $details = [
+                'name' => $json['name'][$language],
+                'openNow' => false,
+                'openTimes' => [
+                    'museum' => true,
+                    'currentWeek' => true,
+                ],
+                'address' => [
+                    'coordinates' => [
+                        'lat' => !empty($json['latitude']) ? $json['latitude'] : '',
+                        'lon' => !empty($json['longitude']) ? $json['longitude'] : ''
+                    ],
+                    'street' => !empty($json['address']) ? $json['address'] : ''
+                ],
+                'id' => $id,
+                'email' => isset($json['email']) ? $json['email'] : '',
+                'type' => 'museum',
+            ];
+            //Date handling
             $today = date('d.m');
             $currentHour = date('H:i');
             $days = [
@@ -1215,15 +1235,7 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
                     $details['openTimes']['openNow'] = true;
                 }
             }
-            $details['openTimes']['museum'] = true;
-            $result['weekNum'] = date('W');
-            $details['openTimes']['currentWeek'] = true;
-            $details['address']['coordinates']['lon']
-                = !empty($json['longitude']) ? $json['longitude'] : '';
-            $details['address']['coordinates']['lat']
-                = !empty($json['latitude']) ? $json['latitude'] : '';
-            $details['address']['street']
-                = !empty($json['address']) ? $json['address'] : '';
+            //Address handling
             if (!empty($details['address'])) {
                 $mapUrl = $this->config->General->mapUrl;
                 $routeUrl = $this->config->General->routeUrl;
@@ -1245,111 +1257,51 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
                     = preg_replace('/\D/', '', $json['post_office']);
                 $details['address']['city'] = $replace['city'];
             }
+            //Contactinfo handling
             $contactInfo = [];
             foreach ($json['contact_infos'] as $field => $key) {
                 $contactInfo[]
                     = ['name' => $key['contact_info']['place_'.$language.''],
                      'contact' => $key['contact_info']['phone_email_'.$language.'']];
             }
-            $contactInfo['museum'] = true;
             try {
-                $result['contactInfo'] = $this->viewRenderer->partial(
+                $contactInfoToResult = $this->viewRenderer->partial(
                     "Helpers/organisation-info-museum-page.phtml",
                     ['contactInfo' => $contactInfo]
                 );
             } catch (\Exception $e) {
                 $this->logError($e->getmessage());
             }
-            if (!empty($json['image2'])) {
-                $result['pictures'][0]['url'] = $json['image2'];
-            }
-            if (!empty($json['image3'])) {
-                $result['pictures'][1]['url'] = $json['image3'];
-            }
-            if (!empty($json['image4'])) {
-                $result['pictures'][2]['url'] = $json['image4'];
-            }
-            $details['type'] = 'museum';
-            $result['scheduleDescriptions'][0]
-                = !empty($json['opening_info'][$language])
-                    ? $json['opening_info'][$language] : '';
-            $result['museum'] = true;
-            $details['id'] = $id;
-            $details['email'] = isset($json['email']) ? $json['email'] : '';
-            $result['list'][0] = $details;
+            //All data to view
+            $result = [
+                'museum' => true,
+                'list' => [
+                    0 => $details
+                ],
+                'weekNum' => date('W'),
+                'consortium' => $consortium,
+                'pictures' => [
+                    0 => [
+                        'url' => isset($json['image2']) ? $json['image2']: ''
+                    ],
+                    1 => [
+                        'url' => isset($json['image3']) ? $json['image3']: ''
+                    ],
+                    2 => [
+                        'url' => isset($json['image4']) ? $json['image4']: ''
+                    ]
+                ],
+                'scheduleDescriptions' => [
+                    0 => !empty($json['opening_info'][$language])
+                        ? $json['opening_info'][$language] : ''
+                ],
+                'contactInfo' => isset($contactInfoToResult)
+                    ? $contactInfoToResult : ''
+            ];
         } else {
             $result = false;
         }
         return $result;
-    }
-
-    /**
-     * Fetch data from cache or Museot.fi API
-     *
-     * @param int    $id     Finna-organisation ID
-     * @param string $action String which states the action performed
-     * @param array  $params Query parameters
-     *
-     * @return mixed museum data or false on error.
-     */
-    protected function fetchMuseumData($id, $action, $params)
-    {
-        $url = $this->config->MuseumAPI->url . '/' . $action . '?'
-            . 'finna_org_id=' . $id;
-
-        $cacheDir = $this->cacheManager->getCache('organisation-info')
-            ->getOptions()->getCacheDir();
-
-        $localFile = "$cacheDir/" . md5($url) . '.json';
-        $maxAge = isset($this->config->General->cachetime)
-            ? $this->config->General->cachetime : 10;
-
-        $response = false;
-        if ($maxAge) {
-            if (is_readable($localFile)
-                && time() - filemtime($localFile) < $maxAge * 60
-            ) {
-                $response = file_get_contents($localFile);
-            }
-        }
-        if (!$response) {
-            $client = $this->http->createClient($url);
-            $result = $client->setMethod('GET')->send();
-            if ($result->isSuccess()) {
-                if ($result->getStatusCode() != 200) {
-                    $this->logError(
-                        'Error querying museum info, response code '
-                        . $result->getStatusCode() . ", url: $url"
-                    );
-                    return false;
-                }
-            } else {
-                $this->logError(
-                    'Error querying museum info: '
-                    . $result->getStatusCode() . ': ' . $result->getReasonPhrase()
-                    . ", url: $url"
-                );
-                return false;
-            }
-
-            $response = $result->getBody();
-            if ($maxAge) {
-                file_put_contents($localFile, $response);
-            }
-        }
-
-        if (!$response) {
-            return false;
-        }
-
-        $response = json_decode($response, true);
-        $jsonError = json_last_error();
-        if ($jsonError !== JSON_ERROR_NONE) {
-            $this->logError("Error decoding JSON: $jsonError (url: $url)");
-            return false;
-        }
-
-        return $response;
     }
 
     /**
