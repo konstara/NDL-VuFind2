@@ -375,8 +375,8 @@ finna.organisationInfoPage = (function finnaOrganisationInfoPage() {
         holder.find('.extra-image-2').hide();
       }
     } else {
-     holder.find('.extra-image-2').hide();
-     holder.find('.extra-image').hide();
+      holder.find('.extra-image-2').hide();
+      holder.find('.extra-image').hide();
     }
 
     if ('buildingYear' in data.details) {
