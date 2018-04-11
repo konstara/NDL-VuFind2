@@ -266,7 +266,7 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
                 $link = $params['link'];
                 $parentName = $params['parentName'];
                 return $this->lookupAction($parent, $link, $parentName);
-            } else if ($action == 'consortium') {
+            } elseif ($action == 'consortium') {
                 $response = $this->consortiumAction(
                     $parent, $buildings, $target, $startDate, $endDate, $params
                 );
@@ -275,7 +275,7 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
                     $response['weekNum'] = $weekNum;
                 }
                 return $response;
-            } else if ($action == 'details') {
+            } elseif ($action == 'details') {
                 $allServices = !empty($params['allServices']);
                 $fullDetails = !empty($params['fullDetails']);
                 $response = $this->detailsAction(
@@ -291,7 +291,7 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
 
             $this->logError("Unknown action: $action");
             return false;
-        } else if ($params['orgType'] == 'museum') {
+        } elseif ($params['orgType'] == 'museum') {
             if ($action == 'lookup') {
                 $link = $params['link'];
                 $parentName = $params['parentName'];
@@ -381,7 +381,7 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
                 if ($json['finna_publish'] == 1) {
                     $result = ['success' => true, 'items' => []];
                     $id = $json['finna_org_id'];
-                    $data = "{$url}?"  . http_build_query(['id' => $id]);
+                    $data = "{$url}?" . http_build_query(['id' => $id]);
                     if ($link) {
                         $logo = isset($json['image']) ? $json['image'] : null;
                     }
@@ -1194,9 +1194,9 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
             ];
             foreach ($json['links'] as $field => $key) {
                 $consortium['finna']['finnaLink'][$field]['name']
-                    = $key['link_info']['link_text_'.$language.''];
+                    = $key['link_info']['link_text_' . $language . ''];
                 $consortium['finna']['finnaLink'][$field]['value']
-                    = $key['link_info']['link_url_'.$language.''];
+                    = $key['link_info']['link_url_' . $language . ''];
             }
             if (!empty($json['image'])) {
                 $consortium['logo']['small'] = $json['image'];
@@ -1261,8 +1261,12 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
             $contactInfo = [];
             foreach ($json['contact_infos'] as $field => $key) {
                 $contactInfo[]
-                    = ['name' => $key['contact_info']['place_'.$language.''],
-                     'contact' => $key['contact_info']['phone_email_'.$language.'']];
+                    = [
+                        'name' =>
+                            $key['contact_info']['place_' . $language . ''],
+                        'contact' =>
+                            $key['contact_info']['phone_email_' . $language . '']
+                    ];
             }
             try {
                 $contactInfoToResult = $this->viewRenderer->partial(
@@ -1282,13 +1286,13 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
                 'consortium' => $consortium,
                 'pictures' => [
                     0 => [
-                        'url' => isset($json['image2']) ? $json['image2']: ''
+                        'url' => isset($json['image2']) ? $json['image2'] : ''
                     ],
                     1 => [
-                        'url' => isset($json['image3']) ? $json['image3']: ''
+                        'url' => isset($json['image3']) ? $json['image3'] : ''
                     ],
                     2 => [
-                        'url' => isset($json['image4']) ? $json['image4']: ''
+                        'url' => isset($json['image4']) ? $json['image4'] : ''
                     ]
                 ],
                 'scheduleDescriptions' => [

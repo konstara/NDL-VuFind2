@@ -1125,7 +1125,7 @@ class AjaxController extends \VuFind\Controller\AjaxController
             'nationalgalleri', 'gallery'
         ];
         foreach ($museumSource as $source) {
-            $checkName = $this->translate("source_".strtolower($parent));
+            $checkName = $this->translate("source_" . strtolower($parent));
             if (strpos($checkName, $source)) {
                 $params['orgType'] = 'museum';
                 //$id = $params['id'];
