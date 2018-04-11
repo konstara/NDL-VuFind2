@@ -367,7 +367,7 @@ finna.organisationInfoWidget = (function finnaOrganisationInfoWidget() {
 
   function updateNextBtn(response) {
     var nextBtn = holder.find('.week-navi.next-week');
-    if (response.openTimes.museum == true) {
+    if (response.openTimes.museum === true) {
       nextBtn.unbind('click').fadeTo(200, 0);
     } else {
       nextBtn.fadeTo(200, 1);

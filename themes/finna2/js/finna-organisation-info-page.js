@@ -21,7 +21,7 @@ finna.organisationInfoPage = (function finnaOrganisationInfoPage() {
         $.each(response.list, function countItem(ind, obj) {
           organisationList[obj.id] = obj;
           if (obj.type === 'library' || obj.type === 'other'
-            || obj.type == 'museum') {
+            || obj.type === 'museum') {
             cnt++;
           }
         });
@@ -361,39 +361,22 @@ finna.organisationInfoPage = (function finnaOrganisationInfoPage() {
       img.hide();
     }
 
-    if (data.details.museum == true) {
-      var img = holder.find('.extra-image');
-      var img2 = holder.find('.extra-image-2');
-
-      if ('pictures' in data.details) {
-        var src = data.details.pictures[1].url;
-        var src2 = data.details.pictures[2].url;
-        img.show();
-        img2.show();
-        if (img.attr('src') !== src || img2.attr('src') !== src2) {
-          img.attr('src', src);
-          img2.attr('src', src2);
-          img.fadeTo(0, 0);
-          img2.fadeTo(0, 0);
-          img.on('load', function onLoadImage() {
-            $(this).stop(true, true).fadeTo(300, 1);
-          });
-          img2.on('load', function onLoadImage() {
-            $(this).stop(true, true).fadeTo(300, 1);
-          });
-        } else {
-          img.fadeTo(300, 1);
-          img2.fadeTo(300, 1);
-        }
+    if (data.details.museum === true) {
+      //Museum API always returns path with atleast 30 characters even
+      //if no pic is added..
+      if (data.details.pictures[1].url.length > 30) {
+        holder.find('.extra-image').attr('src', data.details.pictures[1].url);
       } else {
-        img.hide();
-        img2.hide();
+        holder.find('.extra-image').hide();
+      }
+      if (data.details.pictures[2].url.length > 30) {
+        holder.find('.extra-image-2').attr('src', data.details.pictures[2].url);
+      } else {
+        holder.find('.extra-image-2').hide();
       }
     } else {
-      var img2 = holder.find('.extra-image-2');
-      var img = holder.find('.extra-image');
-      img.hide();
-      img2.hide();
+     holder.find('.extra-image-2').hide();
+     holder.find('.extra-image').hide();
     }
 
     if ('buildingYear' in data.details) {
