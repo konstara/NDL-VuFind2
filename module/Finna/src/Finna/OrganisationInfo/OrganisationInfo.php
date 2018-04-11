@@ -1216,7 +1216,7 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
                     ],
                     'street' => !empty($json['address']) ? $json['address'] : ''
                 ],
-                'id' => $id,
+                'id' => $params['id'],
                 'email' => isset($json['email']) ? $json['email'] : '',
                 'type' => 'museum',
             ];

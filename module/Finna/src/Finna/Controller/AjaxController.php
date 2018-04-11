@@ -1128,6 +1128,7 @@ class AjaxController extends \VuFind\Controller\AjaxController
             $checkName = $this->translate("source_".strtolower($parent));
             if (strpos($checkName, $source)) {
                 $params['orgType'] = 'museum';
+                //$id = $params['id'];
                 break;
             }
         }
