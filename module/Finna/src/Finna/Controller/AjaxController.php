@@ -1121,14 +1121,13 @@ class AjaxController extends \VuFind\Controller\AjaxController
         $cookie = $cookieManager->get($cookieName);
         $params['orgType'] = 'library';
         $museumSource = [
-            'museo', 'museum', 'kansallisgalleria', 'ateneum', 'museet',
+            'museo', 'museum', 'kansallisgalleria', 'ateneum', 'musee',
             'nationalgalleri', 'gallery'
         ];
         foreach ($museumSource as $source) {
             $checkName = $this->translate("source_" . strtolower($parent));
-            if (strpos($checkName, $source)) {
+            if (stripos($checkName, $source)) {
                 $params['orgType'] = 'museum';
-                //$id = $params['id'];
                 break;
             }
         }
