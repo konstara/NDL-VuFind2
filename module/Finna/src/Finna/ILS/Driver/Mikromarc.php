@@ -737,9 +737,6 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             true
         );
         if ($code >= 300) {
-            if ($result['error']['code'] == 'NoItemsAvailableByTerm') {
-                $result['error']['code'] = 'hold_error_denied';
-            }
             return $this->holdError($code, $result);
         }
         return ['success' => true];
@@ -1527,7 +1524,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             if ($patron && $this->itemHoldAllowed($item)) {
                 $entry['is_holdable'] = true;
                 $entry['level'] = 'copy';
-                $entry['addLink'] = 'check';
+                $entry['addLink'] = true;
             } else {
                 $entry['is_holdable'] = false;
             }
@@ -1811,10 +1808,8 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
      */
     protected function itemHoldAllowed($item)
     {
-        $notAllowedForHold = [
-            'ClaimedReturnedOrNeverBorrowed', 'Lost', 'SuppliedReturnNotRequired',
-            'MissingOverdue', 'Withdrawn', 'Discarded', 'Other'
-        ];
+        $notAllowedForHold = isset($this->config['Holds']['notAllowedForHold'])
+        ? explode(':', $this->config['Holds']['notAllowedForHold']) : [];
         return in_array($item['ItemStatus'], $notAllowedForHold) ? false : true;
     }
 
@@ -1857,7 +1852,9 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
         }
 
         $map = [
-           'DuplicateReservationExists' => 'hold_error_duplicate'
+           'DuplicateReservationExists' => 'hold_error_duplicate',
+           'NoItemsAvailableByTerm' => 'hold_error_denied',
+           'NoItemAvailable' => 'hold_error_denied'
         ];
 
         if (isset($map[$message])) {
