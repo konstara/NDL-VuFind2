@@ -282,15 +282,16 @@ finna.organisationInfoPage = (function finnaOrganisationInfoPage() {
         holder.find('.email-contact').show();
       }
     }
-    if (!data.details.museum) {
-      if ('homepage' in data) {
-        holder.find('.office-website > a').attr('href', data.homepage);
-        holder.find('.office-website').show();
-      }
-    } else {
-      var contact = holder.find('.contact-info-header');
-      contact.hide();
+
+    if ('homepage' in data) {
+      holder.find('.office-website > a').attr('href', data.homepage);
+      holder.find('.office-website').show();
     }
+
+    if (data.details.museum) {
+      holder.find('.contact-info-header').hide();
+    }
+
     if ('routeUrl' in data) {
       holder.find('.office-links.route').attr('href', data.routeUrl).show();
     }
@@ -350,9 +351,7 @@ finna.organisationInfoPage = (function finnaOrganisationInfoPage() {
       } else {
         img.fadeTo(300, 1);
       }
-      if (!data.details.museum) {
-        holder.find('.building-name').text(data.name).show();
-      }
+      holder.find('.building-name').text(data.name).show();
     } else {
       img.hide();
     }
