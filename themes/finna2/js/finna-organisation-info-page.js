@@ -273,10 +273,6 @@ finna.organisationInfoPage = (function finnaOrganisationInfoPage() {
     holder.find('.office-quick-information .service-title').text(data.name);
     if ('address' in data) {
       holder.find('.office-links.address').html(data.address);
-      if (!data.details.museum) {
-        var address = holder.find('.address-contact');
-        address.show().find('> p').html(data.address);
-      }
     }
     if ('email' in data) {
       var email = data.email;

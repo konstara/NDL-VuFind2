@@ -1134,6 +1134,7 @@ class AjaxController extends \VuFind\Controller\AjaxController
         $action = $params['action'];
         $buildings = isset($params['buildings'])
             ? explode(',', $params['buildings']) : null;
+
         $key = $parent;
         if ($action == 'details') {
             if (!isset($params['id'])) {
@@ -1145,15 +1146,18 @@ class AjaxController extends \VuFind\Controller\AjaxController
                 $cookieManager->set($cookieName, $id, $expire);
             }
         }
+
         if (!isset($params['id']) && $cookie) {
             $params['id'] = $cookie;
         }
+
         if ($action == 'lookup') {
             $link = isset($reqParams['link']) ? $reqParams['link'] : '0';
             $params['link'] = $link === '1';
             $params['parentName'] = isset($reqParams['parentName'])
                 ? $reqParams['parentName'] : null;
         }
+
         $lang = $this->serviceLocator->get('VuFind\Translator')->getLocale();
         $map = ['en-gb' => 'en'];
 
@@ -1166,7 +1170,7 @@ class AjaxController extends \VuFind\Controller\AjaxController
 
         $service = $this->serviceLocator->get('Finna\OrganisationInfo');
         try {
-            $response = $service->query($parent, $params, $buildings);
+            $response = $service->query($parent, $params, $buildings, $action);
         } catch (\Exception $e) {
             return $this->handleError(
                 'getOrganisationInfo: '

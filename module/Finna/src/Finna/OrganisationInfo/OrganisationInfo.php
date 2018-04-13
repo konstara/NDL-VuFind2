@@ -216,187 +216,221 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
             return false;
         }
 
-        $target = isset($params['target']) ? $params['target'] : 'widget';
-        $action = isset($params['action']) ? $params['action'] : 'list';
-
         if ($params['orgType'] == 'library') {
-            $id = null;
-            if (isset($params['id'])) {
-                $id = $params['id'];
-            }
-            $consortium
-                = isset($params['consortium']) ? $params['consortium'] : null;
-
-            $now = false;
-            if (isset($params['periodStart'])) {
-                $now = strtotime($params['periodStart']);
-                if ($now === false) {
-                    $this->logError(
-                        'Error parsing periodStart: ' . $params['periodStart']
-                    );
-                }
-            }
-            if ($now === false) {
-                $now = time();
-            }
-
-            $weekDay = date('N', $now);
-            $startDate = $weekDay == 1
-                ? $now : strtotime('last monday', $now);
-
-            $endDate = $weekDay == 7
-                ? $now : strtotime('next sunday', $now);
-
-            $schedules = $action == 'list' || !empty($params['periodStart']);
-
-            if ($action == 'details') {
-                $dir = isset($params['dir']) && in_array($params['dir'], ['1', '-1'])
-                    ? $params['dir'] : 0;
-                $startDate = strtotime("{$dir} Week", $startDate);
-                $endDate = strtotime("{$dir} Week", $endDate);
-            }
-
-            $weekNum = date('W', $startDate);
-            $startDate = date('Y-m-d', $startDate);
-            $endDate = date('Y-m-d', $endDate);
-
-            $url = $this->config->General->url;
-
-            if ($action == 'lookup') {
-                $link = $params['link'];
-                $parentName = $params['parentName'];
-                return $this->lookupAction($parent, $link, $parentName);
-            } elseif ($action == 'consortium') {
-                $response = $this->consortiumAction(
-                    $parent, $buildings, $target, $startDate, $endDate, $params
-                );
-                if ($response) {
-                    $response['id'] = $id;
-                    $response['weekNum'] = $weekNum;
-                }
-                return $response;
-            } elseif ($action == 'details') {
-                $allServices = !empty($params['allServices']);
-                $fullDetails = !empty($params['fullDetails']);
-                $response = $this->detailsAction(
-                    $id, $target, $schedules, $startDate, $endDate,
-                    $fullDetails, $allServices
-                );
-
-                if ($response) {
-                    $response['weekNum'] = $weekNum;
-                }
-                return $response;
-            }
-
-            $this->logError("Unknown action: $action");
-            return false;
+            return $this->queryLibrary($parent, $params, $buildings);
         } elseif ($params['orgType'] == 'museum') {
-            if ($action == 'lookup') {
-                $link = $params['link'];
-                $parentName = $params['parentName'];
-                return $this->lookupAction($parent, $link, $parentName, true);
-            } else {
-                $params['id'] = !empty($parent) ? $parent :
-                    $this->config->General->defaultOrganisation;
-                $response = $this->museumAction($params, $target);
-                if ($response == null) {
-                    return false;
-                } else {
-                    $response['id'] = $id;
-                    return $response;
-                }
+            return $this->queryMuseum($parent, $params);
+        }
+
+        $this->logError("Unknown action: {$params['action']}");
+        return false;
+    }
+
+    /**
+     * Perform query for library data.
+     *
+     * @param string $parent    Parent organisation
+     * @param array  $params    Query parameters
+     * @param array  $buildings List of building id's to include in the
+     * consortium-query
+     *
+     * @return mixed array of results or false on error.
+     */
+    protected function queryLibrary($parent, $params, $buildings = null)
+    {
+        $id = null;
+        if (isset($params['id'])) {
+            $id = $params['id'];
+        }
+        $consortium
+            = isset($params['consortium']) ? $params['consortium'] : null;
+
+        $now = false;
+        if (isset($params['periodStart'])) {
+            $now = strtotime($params['periodStart']);
+            if ($now === false) {
+                $this->logError(
+                    'Error parsing periodStart: ' . $params['periodStart']
+                );
             }
-            //TODO Consortium/Group handling, we need to get data for that first from
-            //TODO Museoliitto and organisations
+        }
+        if ($now === false) {
+            $now = time();
+        }
+
+        $weekDay = date('N', $now);
+        $startDate = $weekDay == 1
+            ? $now : strtotime('last monday', $now);
+
+        $endDate = $weekDay == 7
+            ? $now : strtotime('next sunday', $now);
+
+        $schedules = $params['action'] == 'list' || !empty($params['periodStart']);
+
+        if ($params['action'] == 'details') {
+            $dir = isset($params['dir']) && in_array($params['dir'], ['1', '-1'])
+                ? $params['dir'] : 0;
+            $startDate = strtotime("{$dir} Week", $startDate);
+            $endDate = strtotime("{$dir} Week", $endDate);
+        }
+
+        $weekNum = date('W', $startDate);
+        $startDate = date('Y-m-d', $startDate);
+        $endDate = date('Y-m-d', $endDate);
+
+        $url = $this->config->General->url;
+
+        if ($params['action'] == 'lookup') {
+            $link = $params['link'];
+            $parentName = $params['parentName'];
+            return $this->lookupLibraryAction($parent, $link, $parentName);
+        } elseif ($params['action'] == 'consortium') {
+            $response = $this->consortiumAction(
+                $parent, $buildings, $target, $startDate, $endDate, $params
+            );
+            if ($response) {
+                $response['id'] = $id;
+                $response['weekNum'] = $weekNum;
+            }
+            return $response;
+        } elseif ($params['action'] == 'details') {
+            $allServices = !empty($params['allServices']);
+            $fullDetails = !empty($params['fullDetails']);
+            $response = $this->detailsAction(
+                $id, $target, $schedules, $startDate, $endDate,
+                $fullDetails, $allServices
+            );
+
+            if ($response) {
+                $response['weekNum'] = $weekNum;
+            }
+            return $response;
         }
     }
 
     /**
-     * Check if consortium is found in Kirjastohakemisto or in Museoliitto
-     * and output a link to the organisation page.
+     * Perform query for museum data.
+     *
+     * @param string $parent Parent organisation
+     * @param array  $params Query parameters
+     *
+     * @return mixed array of results or false on error.
+     */
+    protected function queryMuseum($parent, $params)
+    {
+        if ($params['action'] == 'lookup') {
+            $link = $params['link'];
+            $parentName = $params['parentName'];
+            return $this->lookupMuseumAction($parent, $link, $parentName);
+        } else {
+            $params['id'] = !empty($parent) ? $parent :
+                $this->config->General->defaultOrganisation;
+            $response = $this->museumAction($params, $target);
+            if ($response == null) {
+                return false;
+            } else {
+                $response['id'] = $id;
+                return $response;
+            }
+        }
+        //TODO Consortium/Group handling, we need to get data for that first from
+        //TODO Museoliitto and organisations
+    }
+
+    /**
+     * Check if consortium is found in Kirjastohakemisto
+     *
+     * @param string  $parent     Consortium Finna ID in Kirjastohakemisto or
+     * in Museoliitto. Use a comma delimited string to check multiple Finna IDs.
+     * @param array   $params     Query parameters
+     * @param boolean $link       True to render the link as a html-snippet.
+     * Oherwise only the link URL is outputted.
+     * @param string  $parentName Translated consortium display name.
+     *
+     * @return array Array with the keys 'success' and 'items'.
+     */
+    protected function lookupLibraryAction($parent, $link = false, $parentName = null
+    ) {
+        // Check if consortium is found in Kirjastohakemisto
+        $params = [
+            'finna:id' => $parent,
+            'lang' => $this->language
+        ];
+        $params['with'] = 'finna';
+        $response = $this->fetchData('consortium', $params);
+        if (!$response || $response['total' == 0]) {
+            return false;
+        } else {
+            $urlHelper = $this->viewRenderer->plugin('url');
+            $url = $urlHelper('organisationinfo-home');
+            $result = ['success' => true, 'items' => []];
+            foreach ($response['items'] as $item) {
+                $id = $item['finna']['finna_id'];
+                $data = "{$url}?" . http_build_query(['id' => $id]);
+                if ($link) {
+                    $logo = null;
+                    if (isset($response['items'][0]['logo'])) {
+                        $logos = $response['items'][0]['logo'];
+                        foreach (['small', 'medium'] as $size) {
+                            if (isset($logos[$size])) {
+                                $logo = $logos[$size];
+                                break;
+                            }
+                        }
+                    }
+                    $data = $this->viewRenderer->partial(
+                        'Helpers/organisation-page-link.phtml', [
+                           'url' => $data, 'label' => 'organisation_info_link',
+                           'logo' => $logo, 'name' => $parentName
+                        ]
+                    );
+                }
+                $result['items'][$id] = $data;
+            }
+        }
+        return $result;
+    }
+
+    /**
+     * Check if consortium is found in Museoliitto API
      *
      * @param string  $parent     Consortium Finna ID in Kirjastohakemisto or
      * in Museoliitto. Use a comma delimited string to check multiple Finna IDs.
      * @param boolean $link       True to render the link as a html-snippet.
      * Oherwise only the link URL is outputted.
      * @param string  $parentName Translated consortium display name.
-     * @param boolean $museum     Check if organisation is museum
      *
      * @return array Array with the keys 'success' and 'items'.
      */
-    protected function lookupAction($parent, $link = false, $parentName = null,
-        $museum = false
+    protected function lookupMuseumAction($parent, $link = false,
+        $parentName = null
     ) {
-        if (!$museum) {
-            // Check if consortium is found in Kirjastohakemisto
-            $params = [
-                'finna:id' => $parent,
-                'lang' => $this->language
-            ];
-            $params['with'] = 'finna';
-            $response = $this->fetchData('consortium', $params);
-
-            if (!$response || $response['total' == 0]) {
-                return false;
-            } else {
-                $urlHelper = $this->viewRenderer->plugin('url');
-                $url = $urlHelper('organisationinfo-home');
-
-                $result = ['success' => true, 'items' => []];
-                foreach ($response['items'] as $item) {
-                    $id = $item['finna']['finna_id'];
-                    $data = "{$url}?" . http_build_query(['id' => $id]);
-                    if ($link) {
-                        $logo = null;
-                        if (isset($response['items'][0]['logo'])) {
-                            $logos = $response['items'][0]['logo'];
-                            foreach (['small', 'medium'] as $size) {
-                                if (isset($logos[$size])) {
-                                    $logo = $logos[$size];
-                                    break;
-                                }
-                            }
-                        }
-
-                        $data = $this->viewRenderer->partial(
-                            'Helpers/organisation-page-link.phtml', [
-                               'url' => $data, 'label' => 'organisation_info_link',
-                               'logo' => $logo, 'name' => $parentName
-                            ]
-                        );
-                    }
-                    $result['items'][$id] = $data;
-                }
-            }
+        $params['id'] = $parent;
+        $response = $this->fetchData('consortium', $params, true);
+        if (!$response || $response['museot'] == 0) {
+            return false;
         } else {
-            $params['id'] = $parent;
-            $response = $this->fetchData('consortium', $params, true);
-            if (!$response || $response['museot'] == 0) {
-                return false;
-            } else {
-                $urlHelper = $this->viewRenderer->plugin('url');
-                $url = $urlHelper('organisationinfo-home');
-                $json = $response['museot'][0];
-                if ($json['finna_publish'] == 1) {
-                    $result = ['success' => true, 'items' => []];
-                    $id = $json['finna_org_id'];
-                    $data = "{$url}?" . http_build_query(['id' => $id]);
-                    if ($link) {
-                        $logo = isset($json['image']) ? $json['image'] : null;
-                    }
-                    $name = isset($json['name'][$this->language])
-                        ? $json['name'][$this->language]
-                            : $this->translator->translate("source_{$parent}");
-                    $data = $this->viewRenderer->partial(
-                        'Helpers/organisation-page-link.phtml', [
-                           'url' => $data, 'label' => 'organisation_info_link',
-                           'logo' => $logo, 'name' => $name
-                        ]
-                    );
+            $urlHelper = $this->viewRenderer->plugin('url');
+            $url = $urlHelper('organisationinfo-home');
+            $json = $response['museot'][0];
+            if ($json['finna_publish'] == 1) {
+                $result = ['success' => true, 'items' => []];
+                $id = $json['finna_org_id'];
+                $data = "{$url}?" . http_build_query(['id' => $id]);
+                if ($link) {
+                    $logo = isset($json['image']) ? $json['image'] : null;
                 }
-                $result['items'][$id] = $data;
+                $name = isset($json['name'][$this->language])
+                    ? $json['name'][$this->language]
+                        : $this->translator->translate("source_{$parent}");
+                $data = $this->viewRenderer->partial(
+                    'Helpers/organisation-page-link.phtml', [
+                       'url' => $data, 'label' => 'organisation_info_link',
+                       'logo' => $logo, 'name' => $name
+                    ]
+                );
             }
+            $result['items'][$id] = $data;
         }
         return $result;
     }
