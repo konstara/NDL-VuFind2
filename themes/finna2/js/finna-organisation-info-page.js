@@ -356,19 +356,9 @@ finna.organisationInfoPage = (function finnaOrganisationInfoPage() {
       img.hide();
     }
 
-    if (data.details.museum === true) {
-      //Museum API always returns path with atleast 30 characters even
-      //if no pic is added..
-      if (data.details.pictures[1].url.length > 30) {
-        holder.find('.extra-image').attr('src', data.details.pictures[1].url);
-      } else {
-        holder.find('.extra-image').hide();
-      }
-      if (data.details.pictures[2].url.length > 30) {
-        holder.find('.extra-image-2').attr('src', data.details.pictures[2].url);
-      } else {
-        holder.find('.extra-image-2').hide();
-      }
+    if (data.details.museum) {
+      holder.find('.extra-image').attr('src', data.details.pictures[1].url);
+      holder.find('.extra-image-2').attr('src', data.details.pictures[2].url);
     } else {
       holder.find('.extra-image-2').hide();
       holder.find('.extra-image').hide();

@@ -1319,13 +1319,19 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
                 'consortium' => $consortium,
                 'pictures' => [
                     0 => [
-                        'url' => isset($json['image2']) ? $json['image2'] : ''
+                        'url' =>
+                        isset($json['image2']) && strlen($json['image2']) > 30
+                         ? $json['image2'] : ''
                     ],
                     1 => [
-                        'url' => isset($json['image3']) ? $json['image3'] : ''
+                        'url' =>
+                        isset($json['image3']) && strlen($json['image3']) > 30
+                         ? $json['image3'] : ''
                     ],
                     2 => [
-                        'url' => isset($json['image4']) ? $json['image4'] : ''
+                        'url' =>
+                        isset($json['image4']) && strlen($json['image4']) > 30
+                         ? $json['image4'] : ''
                     ]
                 ],
                 'scheduleDescriptions' => [
