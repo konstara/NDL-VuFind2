@@ -360,8 +360,8 @@ finna.organisationInfoPage = (function finnaOrganisationInfoPage() {
       holder.find('.extra-image').attr('src', data.details.pictures[1].url);
       holder.find('.extra-image-2').attr('src', data.details.pictures[2].url);
     } else {
-      holder.find('.extra-image-2').hide();
       holder.find('.extra-image').hide();
+      holder.find('.extra-image-2').hide();
     }
 
     if ('buildingYear' in data.details) {
