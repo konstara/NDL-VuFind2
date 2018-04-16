@@ -1812,7 +1812,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             ? explode(':', $this->config['Holds']['notAllowedForHold'])
             : [
                 'ClaimedReturnedOrNeverBorrowed', 'Lost',
-                'SuppliedReturnNotRequired', 'MissingOverDue','Withdrawn',
+                'SuppliedReturnNotRequired', 'MissingOverDue', 'Withdrawn',
                 'Discarded', 'Other'
             ];
         return in_array($item['ItemStatus'], $notAllowedForHold) ? false : true;
