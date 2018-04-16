@@ -1809,7 +1809,12 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
     protected function itemHoldAllowed($item)
     {
         $notAllowedForHold = isset($this->config['Holds']['notAllowedForHold'])
-        ? explode(':', $this->config['Holds']['notAllowedForHold']) : [];
+            ? explode(':', $this->config['Holds']['notAllowedForHold'])
+            : [
+                'ClaimedReturnedOrNeverBorrowed', 'Lost',
+                'SuppliedReturnNotRequired', 'MissingOverDue:Withdrawn', 'Discarded',
+                'Other'
+            ];
         return in_array($item['ItemStatus'], $notAllowedForHold) ? false : true;
     }
 

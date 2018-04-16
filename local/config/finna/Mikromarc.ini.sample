@@ -28,7 +28,7 @@ extraHoldFields = pickUpLocation
 ;excludePickupLocations = 10:11
 
 ; List of ItemStatus codes, that will block possibility to place hold on that record when found.
-notAllowedForHold = ClaimerReturnedOrNeverBorrowed:Lost:SuppliedReturnNotRequired:MissingOverDue:Withdrawn:Discarded:Other
+notAllowedForHold = ClaimedReturnedOrNeverBorrowed:Lost:SuppliedReturnNotRequired:MissingOverDue:Withdrawn:Discarded:Other
 
 [Holdings]
 ; By default the holdings location list is sorted alphabetically. This setting can be
