@@ -244,6 +244,7 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
         }
         $consortium
             = isset($params['consortium']) ? $params['consortium'] : null;
+        $target = isset($params['target']) ? $params['target'] : 'widget';
 
         $now = false;
         if (isset($params['periodStart'])) {
@@ -325,7 +326,7 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
         } else {
             $params['id'] = !empty($parent) ? $parent :
                 $this->config->General->defaultOrganisation;
-            $response = $this->museumAction($params, $target);
+            $response = $this->museumAction($params);
             if ($response == null) {
                 return false;
             } else {
@@ -1193,12 +1194,11 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
     /**
      * Query museum info for organisation page
      *
-     * @param array  $params Query parameters
-     * @param string $target page|widget
+     * @param array $params Query parameters
      *
      * @return array
      */
-    protected function museumAction($params, $target)
+    protected function museumAction($params)
     {
         $response = $this->fetchData('consortium', $params, true);
         if ($response['museot'] == null) {
