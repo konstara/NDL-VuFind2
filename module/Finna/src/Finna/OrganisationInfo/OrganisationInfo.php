@@ -324,8 +324,8 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
             $parentName = $params['parentName'];
             return $this->lookupMuseumAction($parent, $link, $parentName);
         } else {
-            $params['id'] = !empty($parent) ? $parent :
-                $this->config->General->defaultOrganisation;
+            $params['id'] = !empty($parent) ? $parent
+                : $this->config->General->defaultOrganisation;
             $response = $this->museumAction($params);
             if ($response == null) {
                 return false;
@@ -654,14 +654,13 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
      */
     protected function fetchData($action, $params, $museum = false)
     {
-        if (!$museum) {
-            $params['limit'] = 1000;
-            $url
-                = $this->config->General->url . '/' . $action
-                . '?' . http_build_query($params);
+        if ($museum) {
+            $url = $this->config->MuseumAPI->url . '/finna_org_perustiedot.php'
+                . '?finna_org_id=' . urlencode($params['id']);
         } else {
-            $url = $this->config->MuseumAPI->url . '/finna_org_perustiedot.php?'
-            . 'finna_org_id=' . $params['id'];
+            $params['limit'] = 1000;
+            $url = $this->config->General->url . '/' . $action
+                . '?' . http_build_query($params);
         }
         $cacheDir = $this->cacheManager->getCache('organisation-info')
             ->getOptions()->getCacheDir();
