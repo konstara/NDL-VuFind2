@@ -359,12 +359,10 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
         $params['with'] = 'finna';
         $response = $this->fetchData('consortium', $params);
 
-        if (!$response) {
+        if (!$response || $response['total'] == 0) {
             return false;
         }
-        if ($response['total'] == 0) {
-            return false;
-        }
+
         $urlHelper = $this->viewRenderer->plugin('url');
         $url = $urlHelper('organisationinfo-home');
         $result = ['success' => true, 'items' => []];
@@ -411,12 +409,10 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
         $params['id'] = $parent;
         $response = $this->fetchData('consortium', $params, true);
 
-        if (!$response) {
+        if (!$response || empty($response['museot'])) {
             return false;
         }
-        if (empty($response['museot'])) {
-            return false;
-        }
+
         $urlHelper = $this->viewRenderer->plugin('url');
         $url = $urlHelper('organisationinfo-home');
         $json = $response['museot'][0];
