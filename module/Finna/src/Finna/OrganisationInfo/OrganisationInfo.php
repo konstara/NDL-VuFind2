@@ -358,6 +358,7 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
         ];
         $params['with'] = 'finna';
         $response = $this->fetchData('consortium', $params);
+
         if (!$response) {
             return false;
         }
@@ -409,29 +410,32 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
     ) {
         $params['id'] = $parent;
         $response = $this->fetchData('consortium', $params, true);
-        if (!$response || $response['museot'] == 0) {
+
+        if (!$response) {
             return false;
-        } else {
-            $urlHelper = $this->viewRenderer->plugin('url');
-            $url = $urlHelper('organisationinfo-home');
-            $json = $response['museot'][0];
-            if ($json['finna_publish'] == 1) {
-                $result = ['success' => true, 'items' => []];
-                $id = $json['finna_org_id'];
-                $data = "{$url}?" . http_build_query(['id' => $id]);
-                if ($link) {
-                    $logo = isset($json['image']) ? $json['image'] : null;
-                }
-                $name = isset($json['name'][$this->language])
-                    ? $json['name'][$this->language]
-                        : $this->translator->translate("source_{$parent}");
-                $data = $this->viewRenderer->partial(
-                    'Helpers/organisation-page-link.phtml', [
-                       'url' => $data, 'label' => 'organisation_info_link',
-                       'logo' => $logo, 'name' => $name
-                    ]
-                );
+        }
+        if (empty($response['museot'])) {
+            return false;
+        }
+        $urlHelper = $this->viewRenderer->plugin('url');
+        $url = $urlHelper('organisationinfo-home');
+        $json = $response['museot'][0];
+        if ($json['finna_publish'] == 1) {
+            $result = ['success' => true, 'items' => []];
+            $id = $json['finna_org_id'];
+            $data = "{$url}?" . http_build_query(['id' => $id]);
+            if ($link) {
+                $logo = isset($json['image']) ? $json['image'] : null;
             }
+            $name = isset($json['name'][$this->language])
+                ? $json['name'][$this->language]
+                    : $this->translator->translate("source_{$parent}");
+            $data = $this->viewRenderer->partial(
+                'Helpers/organisation-page-link.phtml', [
+                   'url' => $data, 'label' => 'organisation_info_link',
+                   'logo' => $logo, 'name' => $name
+                ]
+            );
             $result['items'][$id] = $data;
         }
         return $result;
