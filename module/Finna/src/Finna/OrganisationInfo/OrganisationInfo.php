@@ -358,35 +358,37 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
         ];
         $params['with'] = 'finna';
         $response = $this->fetchData('consortium', $params);
-        if (!$response || $response['total' == 0]) {
+        if (!$response) {
             return false;
-        } else {
-            $urlHelper = $this->viewRenderer->plugin('url');
-            $url = $urlHelper('organisationinfo-home');
-            $result = ['success' => true, 'items' => []];
-            foreach ($response['items'] as $item) {
-                $id = $item['finna']['finna_id'];
-                $data = "{$url}?" . http_build_query(['id' => $id]);
-                if ($link) {
-                    $logo = null;
-                    if (isset($response['items'][0]['logo'])) {
-                        $logos = $response['items'][0]['logo'];
-                        foreach (['small', 'medium'] as $size) {
-                            if (isset($logos[$size])) {
-                                $logo = $logos[$size];
-                                break;
-                            }
+        }
+        if ($response['total'] == 0) {
+            return false;
+        }
+        $urlHelper = $this->viewRenderer->plugin('url');
+        $url = $urlHelper('organisationinfo-home');
+        $result = ['success' => true, 'items' => []];
+        foreach ($response['items'] as $item) {
+            $id = $item['finna']['finna_id'];
+            $data = "{$url}?" . http_build_query(['id' => $id]);
+            if ($link) {
+                $logo = null;
+                if (isset($response['items'][0]['logo'])) {
+                    $logos = $response['items'][0]['logo'];
+                    foreach (['small', 'medium'] as $size) {
+                        if (isset($logos[$size])) {
+                            $logo = $logos[$size];
+                            break;
                         }
                     }
-                    $data = $this->viewRenderer->partial(
-                        'Helpers/organisation-page-link.phtml', [
-                           'url' => $data, 'label' => 'organisation_info_link',
-                           'logo' => $logo, 'name' => $parentName
-                        ]
-                    );
                 }
-                $result['items'][$id] = $data;
+                $data = $this->viewRenderer->partial(
+                    'Helpers/organisation-page-link.phtml', [
+                       'url' => $data, 'label' => 'organisation_info_link',
+                       'logo' => $logo, 'name' => $parentName
+                    ]
+                );
             }
+            $result['items'][$id] = $data;
         }
         return $result;
     }
