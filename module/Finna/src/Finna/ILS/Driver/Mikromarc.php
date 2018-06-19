@@ -1481,17 +1481,6 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
 
             $available = $item['ItemStatus'] === 'AvailableForLoan';
             $statusCode = $this->getItemStatusCode($item);
-
-            if (isset($organisationTotal[$unitId])) {
-                $organisationTotal[$unitId]['total']++;
-                if ($available) {
-                    $organisationTotal[$unitId]['available']++;
-                }
-                $organisationTotal[$unitId]['reservations']
-                    += $item['ReservationQueueLength'];
-                continue;
-            }
-
             $organisationTotal[$unit['branch']] = [
                'available' => $available ? 1 : 0,
                'total' => 1,
