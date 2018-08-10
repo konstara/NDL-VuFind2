@@ -1511,7 +1511,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
                 $entry['is_holdable'] = true;
                 $entry['level'] = 'copy';
                 $entry['addLink'] = true;
-            } elseif (!$patron && $this->itemHoldAllowed($item) ) {
+            } elseif (!$patron && $this->itemHoldAllowed($item)) {
                 $entry['is_holdable'] = true;
             } else {
                 $entry['is_holdable'] = false;
