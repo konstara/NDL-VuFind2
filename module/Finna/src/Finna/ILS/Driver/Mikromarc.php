@@ -1488,6 +1488,11 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
 
             $unit = $this->getLibraryUnit($unitId);
 
+            if ($item['LocationId'] != null) {
+                $shelf = $item['Shelf'] .' '.
+                    $this->getShelfName($item['LocationId']);
+            }
+
             $entry = [
                 'id' => $id,
                 'item_id' => $item['Id'],
@@ -1501,7 +1506,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
                 'status' => $statusCode,
                 'status_array' => [$statusCode],
                 'reserve' => 'N',
-                'callnumber' => $item['Shelf'],
+                'callnumber' => $shelf ?? $item['Shelf'],
                 'duedate' => null,
                 'barcode' => $item['Barcode'],
                 'item_notes' => [isset($items['notes']) ? $item['notes'] : null],
@@ -2005,5 +2010,24 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             return 1;
         }
         return strcmp($a['branch'], $b['branch']);
+    }
+
+    /**
+     * Fetch name of the department where the shelf is located
+     *
+     * @param int $locationId Id of the shelf
+     *
+     * @return string
+     */
+    public function getShelfName($locationId)
+    {
+        $request = [
+            '$filter' => 'Id eq' . ' ' . $locationId
+        ];
+        $result = $this->makeRequest(
+            ['odata', 'CatalogueItemLocations'],
+            $request
+        );
+        return $result[0]['Name'];
     }
 }
