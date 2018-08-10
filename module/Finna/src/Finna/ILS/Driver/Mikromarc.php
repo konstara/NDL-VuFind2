@@ -1488,11 +1488,6 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
 
             $unit = $this->getLibraryUnit($unitId);
 
-            if ($item['LocationId'] != null) {
-                $department = $this->getDepartment($item['LocationId']);
-                $copy = $this->translate("Copy");
-            }
-
             $entry = [
                 'id' => $id,
                 'item_id' => $item['Id'],
@@ -1500,18 +1495,23 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
                 'holdings_id' => $unit['organisation'],
                 'location' => $locationName,
                 'organisation_id' => $unit['organisation'],
-                'branch' => $copy ?? $locationName,
+                'branch' => $locationName,
                 'branch_id' => $unit['branch'],
                 'availability' => $available,
                 'status' => $statusCode,
                 'status_array' => [$statusCode],
                 'reserve' => 'N',
                 'callnumber' => $item['Shelf'],
-                'department' => $department,
                 'duedate' => null,
                 'barcode' => $item['Barcode'],
                 'item_notes' => [isset($items['notes']) ? $item['notes'] : null],
             ];
+
+            if ($item['LocationId'] != null) {
+                $entry['department'] = $this->getDepartment($item['LocationId']);
+                $entry['branch'] = $this->translate("Copy");
+            }
+
             if ($patron && $this->itemHoldAllowed($item)) {
                 $entry['is_holdable'] = true;
                 $entry['level'] = 'copy';
