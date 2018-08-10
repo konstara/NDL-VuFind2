@@ -1489,8 +1489,8 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             $unit = $this->getLibraryUnit($unitId);
 
             if ($item['LocationId'] != null) {
-                $shelf = $item['Shelf'] .' '.
-                    $this->getShelfName($item['LocationId']);
+                $shelf = $item['Shelf']
+                    .' '. $this->getShelfName($item['LocationId']);
             }
 
             $entry = [
