@@ -1490,7 +1490,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
 
             if ($item['LocationId'] != null) {
                 $shelf = $item['Shelf']
-                    .' '. $this->getShelfName($item['LocationId']);
+                    . ' ' . $this->getShelfName($item['LocationId']);
             }
 
             $entry = [
