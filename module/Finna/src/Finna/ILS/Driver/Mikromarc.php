@@ -1489,8 +1489,8 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             $unit = $this->getLibraryUnit($unitId);
 
             if ($item['LocationId'] != null) {
-                $shelf = $item['Shelf']
-                    . ' ' . $this->getShelfName($item['LocationId']);
+                $department = $this->getDepartment($item['LocationId']);
+                $copy = $this->translate("Copy");
             }
 
             $entry = [
@@ -1500,13 +1500,14 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
                 'holdings_id' => $unit['organisation'],
                 'location' => $locationName,
                 'organisation_id' => $unit['organisation'],
-                'branch' => $locationName,
+                'branch' => $copy ?? $locationName,
                 'branch_id' => $unit['branch'],
                 'availability' => $available,
                 'status' => $statusCode,
                 'status_array' => [$statusCode],
                 'reserve' => 'N',
-                'callnumber' => $shelf ?? $item['Shelf'],
+                'callnumber' => $item['Shelf'],
+                'department' => $department,
                 'duedate' => null,
                 'barcode' => $item['Barcode'],
                 'item_notes' => [isset($items['notes']) ? $item['notes'] : null],
@@ -2019,7 +2020,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
      *
      * @return string
      */
-    public function getShelfName($locationId)
+    public function getDepartment($locationId)
     {
         $request = [
             '$filter' => 'Id eq' . ' ' . $locationId
