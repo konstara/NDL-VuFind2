@@ -1508,8 +1508,8 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             ];
             if ($patron && $this->itemHoldAllowed($item)) {
                 $entry['is_holdable'] = true;
-                $entry['level'] = 'copy';
-                $entry['addLink'] = true;
+                $entry['level'] = 'check';
+                $entry['addLink'] = $this->config['Holds']['ShowLinkOnCopy'];
             } else {
                 $entry['is_holdable'] = false;
             }
