@@ -30,7 +30,7 @@ extraHoldFields = pickUpLocation
 ; List of ItemStatus codes, that will block possibility to place hold on that record when found.
 notAllowedForHold = ClaimedReturnedOrNeverBorrowed:Lost:SuppliedReturnNotRequired:MissingOverDue:Withdrawn:Discarded:Other
 
-; Changing this value to true/false to enable visibility of hold button on all copies
+; Change this value to true/false to enable visibility of hold button on all copies
 ShowLinkOnCopy = false
 
 [Holdings]
