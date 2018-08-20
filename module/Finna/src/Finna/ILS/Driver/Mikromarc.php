@@ -1573,7 +1573,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
            'availability' => null,
            'callnumber' => null,
            'location' => null,
-           'mikromarc' => true
+           'groupBranches' => false
         ];
     }
 
