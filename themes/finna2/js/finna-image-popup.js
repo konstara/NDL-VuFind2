@@ -65,13 +65,11 @@ finna.imagePopup = (function finnaImagePopup() {
       e.preventDefault();
     });
 
-    // Open image-popup from medium size record image.
-    $('.image-popup-trigger').click(function onClickPopupTrigger(e) {
+    // Open image-popup only if record has picture otherwise redirect to recordpage
+    $('.image-popup-trigger').click(function onClickPopupTrigger() {
       if ($(this).hasClass('no-image')) {
-        return;
+        $(this).modal('dismiss').window.location.href = $(this).attr('href');
       }
-      openPopup($(this));
-      e.preventDefault();
     });
   }
 
