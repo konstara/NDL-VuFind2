@@ -1507,7 +1507,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
                 'item_notes' => [isset($items['notes']) ? $item['notes'] : null],
             ];
 
-            if ($item['LocationId'] != null) {
+            if (!empty($item['LocationId'])) {
                 $entry['department'] = $this->getDepartment($item['LocationId']);
                 $entry['branch'] = $this->translate("Copy");
             }
@@ -2022,13 +2022,16 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
      */
     public function getDepartment($locationId)
     {
-        $request = [
-            '$filter' => 'Id eq' . ' ' . $locationId
-        ];
-        $result = $this->makeRequest(
-            ['odata', 'CatalogueItemLocations'],
-            $request
-        );
-        return $result[0]['Name'];
+        static $cacheDepartment = [];
+        if (!isset($cacheDepartment[$locationId])) {
+            $request = [
+                '$filter' => "Id eq $locationId"
+            ];
+            $cacheDepartment[$locationId] = $this->makeRequest(
+                ['odata', 'CatalogueItemLocations'],
+                $request
+            );
+        }
+        return $cacheDepartment[$locationId][0]['Name'];
     }
 }
