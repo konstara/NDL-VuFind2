@@ -1505,11 +1505,18 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
                 'item_notes' => [isset($items['notes']) ? $item['notes'] : null],
             ];
 
+            if (!empty($item['LocationId'])) {
+                $entry['department'] = $this->getDepartment($item['LocationId']);
+                $entry['branch'] = $this->translate("Copy");
+            }
+
             if ($this->itemHoldAllowed($item) && $item['PermitLoan']) {
                 $entry['is_holdable'] = true;
                 if ($patron) {
                     $entry['level'] = 'copy';
-                    $entry['addLink'] = true;
+                    $entry['addLink'] = !empty(
+                        $this->config['Holds']['ShowLinkOnCopy']
+                    );
                 }
             } else {
                 $entry['is_holdable'] = false;
@@ -1574,7 +1581,8 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
            'holdable' => $holdable,
            'availability' => null,
            'callnumber' => null,
-           'location' => null
+           'location' => null,
+           'groupBranches' => false
         ];
     }
 
@@ -2007,5 +2015,27 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             return 1;
         }
         return strcmp($a['branch'], $b['branch']);
+    }
+
+    /**
+     * Fetch name of the department where the shelf is located
+     *
+     * @param int $locationId Id of the shelf
+     *
+     * @return string
+     */
+    public function getDepartment($locationId)
+    {
+        static $cacheDepartment = [];
+        if (!isset($cacheDepartment[$locationId])) {
+            $request = [
+                '$filter' => "Id eq $locationId"
+            ];
+            $cacheDepartment[$locationId] = $this->makeRequest(
+                ['odata', 'CatalogueItemLocations'],
+                $request
+            );
+        }
+        return $cacheDepartment[$locationId][0]['Name'];
     }
 }
