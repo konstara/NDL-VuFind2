@@ -68,7 +68,9 @@ finna.imagePopup = (function finnaImagePopup() {
     // Open image-popup only if record has picture otherwise redirect to recordpage
     $('.image-popup-trigger').click(function onClickPopupTrigger() {
       if ($(this).hasClass('no-image')) {
-        $(this).modal('dismiss').window.location.href = $(this).attr('href');
+        $(this).unbind('click', magnificPopup);
+        window.location.href = $(this).attr('href');
+        return;
       }
     });
   }
@@ -360,6 +362,33 @@ finna.imagePopup = (function finnaImagePopup() {
     }
   }
 
+  function initImageCheck() {
+    $('.image-popup-trigger img').each(function setupImagePopup() {
+      $(this).one('load', function onLoadImage() {
+        // Don't hide anything if we have multiple images
+        var navi = $(this).closest('.image-popup-navi');
+        if (navi && navi.length > 1) {
+          return;
+        }
+        if (this.naturalWidth && this.naturalWidth === 10 && this.naturalHeight === 10) {
+          $(this).parent().addClass('no-image');
+          $(this).unbind("click");
+          $('.record.large-image-layout').addClass('no-image-layout').removeClass('large-image-layout');
+          $('.large-image-sidebar').addClass('visible-xs');
+          $('.record-main').addClass('mainbody left');
+          var href = $(this).parent().attr('href');
+          $(this).parent().attr({'href': href.split('#')[0], 'title': ''});
+          $(this).parents('.grid').addClass('no-image');
+          $('.rating-stars').addClass('hidden-xs');
+        }
+      }).each(function loadImage() {
+        if (this.complete) {
+          $(this).load();
+        }
+      });
+    });
+  }
+
   function init() {
     if (module !== 'record') {
       initThumbnailNavi();
@@ -375,6 +404,7 @@ finna.imagePopup = (function finnaImagePopup() {
     $.extend(true, $.magnificPopup.defaults, {
       tLoading: VuFind.translate('loading') + '...'
     });
+    initImageCheck();
   }
 
   var my = {
