@@ -68,7 +68,7 @@ finna.imagePopup = (function finnaImagePopup() {
     // Open image-popup only if record has picture otherwise redirect to recordpage
     $('.image-popup-trigger').click(function onClickPopupTrigger() {
       if ($(this).hasClass('no-image')) {
-        $(this).unbind('click', magnificPopup);
+        $(this).unbind(openPopup);
         window.location.href = $(this).attr('href');
         return;
       }
