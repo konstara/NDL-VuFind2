@@ -926,6 +926,8 @@ class KohaRest extends \VuFind\ILS\Driver\KohaRest
         ) {
             return !empty($this->config['PasswordRecovery']['enabled'])
                 ? $this->config['PasswordRecovery'] : false;
+        } elseif ('getPatronStaffAuthorizationStatus' === $function) {
+            return ['enabled' => true];
         }
         return parent::getConfig($function, $params);
     }
@@ -1043,6 +1045,9 @@ class KohaRest extends \VuFind\ILS\Driver\KohaRest
             'GET',
             $patron
         );
+        if (empty($result[0]['item_availabilities'])) {
+            return [];
+        }
 
         $statuses = [];
         foreach ($result[0]['item_availabilities'] as $i => $item) {
@@ -1069,15 +1074,21 @@ class KohaRest extends \VuFind\ILS\Driver\KohaRest
                 $duedate = null;
             }
 
+            $location = $this->getItemLocationName($item);
+            $callnumber = $this->getItemCallNumber($item);
+            if (!empty($item['sub_description'])) {
+                $location .= ', ' . $item['sub_description'];
+            }
             $entry = [
                 'id' => $id,
+                'holdings_id' => "$location/$callnumber",
                 'item_id' => $item['itemnumber'],
-                'location' => $this->getItemLocationName($item),
+                'location' => $location,
                 'availability' => $available,
                 'status' => $status,
                 'status_array' => $statusCodes,
                 'reserve' => 'N',
-                'callnumber' => $this->getItemCallNumber($item),
+                'callnumber' => $callnumber,
                 'duedate' => $duedate,
                 'number' => $item['enumchron'],
                 'barcode' => $item['barcode'],
@@ -1340,6 +1351,30 @@ class KohaRest extends \VuFind\ILS\Driver\KohaRest
             "$prefix$code",
             null,
             $description
+        );
+    }
+
+    /**
+     * Check if patron belongs to staff.
+     *
+     * @param array $patron The patron array from patronLogin
+     *
+     * @return bool True if patron is staff, false if not
+     */
+    public function getPatronStaffAuthorizationStatus($patron)
+    {
+        $username = $patron['cat_username'];
+        if ($this->sessionCache->patron != $username) {
+            if (!$this->renewPatronCookie($patron)) {
+                return false;
+            }
+        }
+
+        return !empty(
+            array_intersect(
+                ['superlibrarian', 'catalogue'],
+                $this->sessionCache->patronPermissions
+            )
         );
     }
 }

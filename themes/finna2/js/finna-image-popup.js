@@ -68,7 +68,6 @@ finna.imagePopup = (function finnaImagePopup() {
     // Open image-popup only if record has picture otherwise redirect to recordpage
     $('.image-popup-trigger').click(function onClickPopupTrigger() {
       if ($(this).hasClass('no-image')) {
-        $(this).unbind(openPopup);
         window.location.href = $(this).attr('href');
         return;
       }
@@ -252,8 +251,9 @@ finna.imagePopup = (function finnaImagePopup() {
               var url = VuFind.path + '/AJAX/JSON?method=getDescription&id=' + id;
               $.getJSON(url)
                 .done(function onGetDescriptionDone(response) {
-                  if (response.data.length > 0) {
-                    summaryHolder.find('> div p').html(response.data);
+                  var data = response.data.html;
+                  if (data.length > 0) {
+                    summaryHolder.find('> div p').html(data);
                     finna.layout.initTruncate(summaryHolder);
                     summaryHolder.removeClass('loading');
                   }
@@ -339,9 +339,14 @@ finna.imagePopup = (function finnaImagePopup() {
           initThumbnailNavi();
           initRecordImage();
         } else {
-          $(this).closest('a.image-popup-trigger')
-            .addClass('disable')
-            .unbind('click').click(function onClickPopupTrigger() { return false; });
+          $(this).closest('.recordcover-holder').hide();
+          $('.access-rights p').first().hide();
+          $('.image-rights').hide();
+          $('.media-left > .organisation-menu').hide();
+
+          if( $('.access-rights').has('.more-link') ) {
+            $('.access-rights > .more-link').hide();
+          }
         }
       });
     }
@@ -372,7 +377,7 @@ finna.imagePopup = (function finnaImagePopup() {
         }
         if (this.naturalWidth && this.naturalWidth === 10 && this.naturalHeight === 10) {
           $(this).parent().addClass('no-image');
-          $(this).unbind("click");
+          $(this).closest('a.image-popup-trigger').unbind('click');
           $('.record.large-image-layout').addClass('no-image-layout').removeClass('large-image-layout');
           $('.large-image-sidebar').addClass('visible-xs');
           $('.record-main').addClass('mainbody left');
@@ -413,4 +418,3 @@ finna.imagePopup = (function finnaImagePopup() {
 
   return my;
 })();
-
