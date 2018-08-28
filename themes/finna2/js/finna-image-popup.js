@@ -64,14 +64,6 @@ finna.imagePopup = (function finnaImagePopup() {
       initRecordImage();
       e.preventDefault();
     });
-
-    // Open image-popup only if record has picture otherwise redirect to recordpage
-    $('.image-popup-trigger').click(function onClickPopupTrigger() {
-      if ($(this).hasClass('no-image')) {
-        window.location.href = $(this).attr('href');
-        return;
-      }
-    });
   }
 
   // Copied from finna-mylist.js to avoid dependency
