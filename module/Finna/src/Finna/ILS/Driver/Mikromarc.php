@@ -1494,20 +1494,21 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
                 'holdings_id' => $unit['organisation'],
                 'location' => $locationName,
                 'organisation_id' => $unit['organisation'],
-                'branch' => $locationName,
                 'branch_id' => $unit['branch'],
                 'availability' => $available,
                 'status' => $statusCode,
                 'reserve' => 'N',
-                'callnumber' => $item['Shelf'],
                 'duedate' => null,
                 'barcode' => $item['Barcode'],
                 'item_notes' => [isset($items['notes']) ? $item['notes'] : null],
             ];
 
             if (!empty($item['LocationId'])) {
-                $entry['department'] = $this->getDepartment($item['LocationId']);
-                $entry['branch'] = $this->translate("Copy");
+                $department = $this->getDepartment($item['LocationId']);
+                $entry['department'] = $department;
+                $entry['callnumber'] = $item['Shelf'] . ' ' . $department;
+            } else {
+                $entry['callnumber'] = $item['Shelf'];
             }
 
             if ($this->itemHoldAllowed($item) && $item['PermitLoan']) {
@@ -2014,7 +2015,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
         if ($orderB !== null) {
             return 1;
         }
-        return strcmp($a['branch'], $b['branch']);
+        return strcmp($a['location'], $b['location']);
     }
 
     /**
