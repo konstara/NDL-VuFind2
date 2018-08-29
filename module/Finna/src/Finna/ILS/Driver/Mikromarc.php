@@ -1498,17 +1498,17 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
                 'availability' => $available,
                 'status' => $statusCode,
                 'reserve' => 'N',
+                'callnumber' => $item['Shelf'],
                 'duedate' => null,
                 'barcode' => $item['Barcode'],
                 'item_notes' => [isset($items['notes']) ? $item['notes'] : null],
             ];
 
             if (!empty($item['LocationId'])) {
-                $department = $this->getDepartment($item['LocationId']);
-                $entry['department'] = $department;
-                $entry['callnumber'] = $item['Shelf'] . ' ' . $department;
-            } else {
-                $entry['callnumber'] = $item['Shelf'];
+                $entry['department'] = $this->getDepartment($item['LocationId']);
+                $entry['branch'] = $this->translate('Copy');
+                $entry['callnumber'] = $entry['department'] . ', ' . $item['Shelf'];
+                $entry['shelfnumber'] = $item['Shelf'];
             }
 
             if ($this->itemHoldAllowed($item) && $item['PermitLoan']) {
