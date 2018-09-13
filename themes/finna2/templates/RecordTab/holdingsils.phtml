@@ -315,10 +315,8 @@
           if (!empty($row['department'])) {
             $parts[] = '<span class="department">' . $this->escapeHtml($row['department']) . '</span>';
           }
-          if (!empty($row['callnumber']) && count($callnumbers) > 1 && empty($row['shelfnumber'])) {
+          if (!empty($row['callnumber']) && count($callnumbers) > 1) {
             $parts[] = '<span class="callnumber">' . $this->escapeHtml($row['callnumber']) . '</span>';
-          } else {
-            $parts[] = '<span class="callnumber">' . $this->escapeHtml($row['shelfnumber']) . '</span>';
           }
         ?>
         <div class="copy-title">

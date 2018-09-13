@@ -1507,8 +1507,6 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             if (!empty($item['LocationId'])) {
                 $entry['department'] = $this->getDepartment($item['LocationId']);
                 $entry['branch'] = $this->translate('Copy');
-                $entry['callnumber'] = $entry['department'] . ', ' . $item['Shelf'];
-                $entry['shelfnumber'] = $item['Shelf'];
             }
 
             if ($this->itemHoldAllowed($item) && $item['PermitLoan']) {
