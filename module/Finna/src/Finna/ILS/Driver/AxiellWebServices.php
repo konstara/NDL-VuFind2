@@ -4,7 +4,7 @@
  *
  * PHP version 7
  *
- * Copyright (C) The National Library of Finland 2015-2016.
+ * Copyright (C) The National Library of Finland 2015-2018.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -24,6 +24,7 @@
  * @author   Bjarne Beckmann <bjarne.beckmann@helsinki.fi>
  * @author   Ere Maijala <ere.maijala@helsinki.fi>
  * @author   Samuli Sillanpää <samuli.sillanpaa@helsinki.fi>
+ * @author   Konsta Raunio  <konsta.raunio@helsinki.fi>
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org/wiki/development:plugins:ils_drivers Wiki
  */
@@ -45,6 +46,7 @@ use Zend\Db\Sql\Ddl\Column\Boolean;
  * @author   Bjarne Beckmann <bjarne.beckmann@helsinki.fi>
  * @author   Ere Maijala <ere.maijala@helsinki.fi>
  * @author   Samuli Sillanpää <samuli.sillanpaa@helsinki.fi>
+ * @author   Konsta Raunio  <konsta.raunio@helsinki.fi>
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org/wiki/development:plugins:ils_drivers Wiki
  */
@@ -121,6 +123,13 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
      * @var string
      */
     protected $patron_wsdl = '';
+
+    /**
+     * Wsdl file name or url for accessing the patronaurora section of AWS
+     *
+     * @var string
+     */
+    protected $patronaurora_wsdl = '';
 
     /**
      * Wsdl file name or url for accessing the loans section of AWS
@@ -302,6 +311,15 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
                 = $this->getWsdlPath($this->config['Catalog']['patron_wsdl']);
         } else {
             throw new ILSException('patron_wsdl configuration needs to be set.');
+        }
+
+        if (isset($this->config['Catalog']['patronaurora_wsdl'])) {
+            $this->patronaurora_wsdl
+                = $this->getWsdlPath($this->config['Catalog']['patronaurora_wsdl']);
+        } else {
+            throw new ILSException(
+                'patronaurora_wsdl configuration needs to be set.'
+            );
         }
 
         if (isset($this->config['Catalog']['loans_wsdl'])) {
@@ -1985,6 +2003,74 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
                 'status' => 'Email address changed',
                 'sys_message' => '',
             ];
+    }
+
+    /**
+     * Update patron contact information
+     *
+     * @param array  $patron Patron array
+     * @param String $details Associative array of patron contact information
+     *
+     * @throws ILSException
+     *
+     * @return array Associative array of the results
+     */
+    public function updateAddress($patron, $details)
+    {
+        $username = $patron['cat_username'];
+        $password = $patron['cat_password'];
+
+        $user = $this->getMyProfile($patron);
+
+        $function = '';
+        $functionResult = '';
+        $functionParam = '';
+
+        $conf = [
+            'arenaMember'   => $this->arenaMember,
+            'language'      => 'en',
+            'user'          => $username,
+            'password'      => $password,
+            'patronId'      => $patron['id'],
+            'careOf'        => '',
+            'city'          => $details['city'],
+            'country'       => 'FI',
+            'isActive'      => 'yes',
+            'streetAddress' => $details['address1'],
+            'type'          => 'B',
+            'zipCode'       => $details['zip']
+        ];
+
+        $function = 'changeAddressRequest';
+        $functionResult = 'changeAddressResult';
+
+        $result = $this->doSOAPRequest(
+            $this->patronaurora_wsdl, $function, $functionResult, $username, $conf
+        )
+
+        $statusAWS = $result->$functionResult->status;
+
+        if ($statusAWS->type != 'ok') {
+            $message = $this->handleError($function, $statusAWS->message, $username);
+            if ($message == 'ils_connection_failed') {
+                throw new ILSException('ils_offline_status');
+            }
+            return  [
+                'success' => false,
+                'status' => 'Changing the address failed',
+                'sys_message' => $statusAWS->message
+            ];
+        }
+
+        // Clear patron cache
+        $cacheKey = $this->getPatronCacheKey($username);
+        $this->putCachedData($cacheKey, null);
+
+        return [
+            'success' => true,
+            'status' => 'request_change_done',
+            'sys_message' => 'request_change_done'
+        ];
     }
 
     /**

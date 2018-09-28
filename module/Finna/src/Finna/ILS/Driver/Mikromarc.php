@@ -2038,4 +2038,38 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
         }
         return $cacheDepartment[$locationId][0]['Name'];
     }
+
+    /**
+     * Change request status
+     *
+     * This is responsible for changing the status of a hold request
+     *
+     * @param string $patron      Patron array
+     * @param string $holdDetails The request details (at the moment only 'frozen'
+     * is supported)
+     *
+     * @return array Associative array of the results
+     */
+    public function changeRequestStatus($patron, $holdDetails)
+    {
+        if ($holdDetails['frozen']) {
+            $dateFrom = "2018-09-26";
+            $dateTo = "2018-09-26";
+            $requestBody = [
+                "ResPausedFrom" => $dateFrom,
+                "ResPausedTo" => $dateTo
+            ];
+            $result = $this->makeRequest(
+                ['odata',
+                'BorrowerReservations(' . $holdDetails['requestId'] . ')'],
+                json_encode($requestBody),
+                'PATCH',
+                true
+            );
+            if (!empty($result)) {
+                return $this->holdError('failed_to_do_this');
+            }
+            return ['success' => true];
+        }
+    }
 }
