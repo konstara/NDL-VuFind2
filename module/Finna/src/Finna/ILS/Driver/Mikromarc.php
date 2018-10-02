@@ -737,6 +737,13 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             'POST',
             true
         );
+
+        if (isset($result['error'])
+            && $result['error']['code'] == 'NoTermsPermitLoanOrReservation'
+        ) {
+            $result['error']['code'] = $this->translate('hold_error_not_holdable');
+        }
+
         if ($code >= 300) {
             return $this->holdError($code, $result);
         }
