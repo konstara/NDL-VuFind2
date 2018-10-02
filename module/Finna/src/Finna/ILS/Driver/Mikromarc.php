@@ -737,13 +737,6 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             'POST',
             true
         );
-
-        if (isset($result['error'])
-            && $result['error']['code'] == 'NoTermsPermitLoanOrReservation'
-        ) {
-            $result['error']['code'] = $this->translate('hold_error_not_holdable');
-        }
-
         if ($code >= 300) {
             return $this->holdError($code, $result);
         }
@@ -1858,7 +1851,8 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
         $map = [
            'DuplicateReservationExists' => 'hold_error_duplicate',
            'NoItemsAvailableByTerm' => 'hold_error_denied',
-           'NoItemAvailable' => 'hold_error_denied'
+           'NoItemAvailable' => 'hold_error_denied',
+           'NoTermsPermitLoanOrReservation' => 'hold_error_not_holdable'
         ];
 
         if (isset($map[$message])) {
