@@ -84,7 +84,6 @@ class ChangeRequestStatus extends \VuFind\AjaxHandler\AbstractIlsAndUserAction
                 'requestId' => $requestId,
                 'frozen' => $frozen
             ];
-
             $results = $this->ils->changeRequestStatus($patron, $details);
 
             return $this->formatResponse($results);
