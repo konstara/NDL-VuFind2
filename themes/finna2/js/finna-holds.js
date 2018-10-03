@@ -99,7 +99,7 @@ finna.changeHolds = (function finnaChangeHolds() {
         });
     }
 
-    function changeHoldStatus(container, requestId, frozen, expire = null) {
+    function changeHoldStatus(container, requestId, frozen, expire) {
       var spinnerChange = container.find('.status-change-load-indicator');
 
       $('.hold-change-success').remove();
