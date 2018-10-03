@@ -229,7 +229,7 @@
                       <p><a href="<?=$this->escapeHtmlAttr($ilsDetails['cancel_link']) ?>"><?=$this->transEsc("hold_cancel") ?></a></p>
                     <?php endif; ?>
                     <?php if (isset($ilsDetails['available']) && !$ilsDetails['available'] && $changeRequestStatus && $requestIsEditable): ?>
-                      <div class="change-hold-status" data-record-id="<?=$this->escapeHtmlAttr($resource->getUniqueId()) ?>" data-request-id="<?=$this->escapeHtml($ilsDetails['requestId']) ?>" <?php if (!empty($ilsDetails['expire'])): ?>data-expire="<?=$this->escapeHtml($ilsDetails['expire'])?><?php endif;?>" >
+                      <div class="change-hold-status" data-record-id="<?=$this->escapeHtmlAttr($resource->getUniqueId()) ?>" data-request-id="<?=$this->escapeHtml($ilsDetails['requestId']) ?>" >
                         <span class="status-change-load-indicator hidden"><i class="fa fa-spinner fa-spin"></i></span>
                         <span class="hold-status-active<?=!empty($ilsDetails['frozen']) ? ' hidden' : '' ?>">
                           <a class="hold-status-freeze" href="#"><?=$this->transEsc('request_freeze') ?></a>

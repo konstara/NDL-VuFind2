@@ -47,8 +47,7 @@ finna.changeHolds = (function finnaChangeHolds() {
     $('.hold-status-freeze').click(function onClickHoldFreeze() {
       var container = $(this).closest('.change-hold-status');
       var requestId = container.data('request-id');
-      var expire = container.data('expire') ? container.data('expire') : null;
-      changeHoldStatus(container, requestId, 1, expire);
+      changeHoldStatus(container, requestId, 1);
       return false;
     });
 
@@ -99,7 +98,7 @@ finna.changeHolds = (function finnaChangeHolds() {
         });
     }
 
-    function changeHoldStatus(container, requestId, frozen, expire) {
+    function changeHoldStatus(container, requestId, frozen) {
       var spinnerChange = container.find('.status-change-load-indicator');
 
       $('.hold-change-success').remove();
@@ -111,9 +110,6 @@ finna.changeHolds = (function finnaChangeHolds() {
         requestId: requestId,
         frozen: frozen
       };
-      if (expire != null) {
-        params.expire = expire;
-      }
       $.ajax({
         data: params,
         dataType: 'json',

@@ -85,10 +85,6 @@ class ChangeRequestStatus extends \VuFind\AjaxHandler\AbstractIlsAndUserAction
                 'frozen' => $frozen
             ];
 
-            if (!empty($params->fromQuery('expire'))) {
-                $details['expire'] = $params->fromQuery('expire');
-            }
-
             $results = $this->ils->changeRequestStatus($patron, $details);
 
             return $this->formatResponse($results);

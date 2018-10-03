@@ -2055,8 +2055,11 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
     {
         if ($holdDetails['frozen'] == 1) {
             // Mikromarc doesn't have any separate 'freeze' status on reservations
+            $getHold = $this->makeRequest(
+                ['odata','BorrowerReservations(' . $holdDetails['requestId'] . ')']
+            );
             $pausedFrom = date('Y-m-d', strtotime('today'));
-            $pausedTo = date('Y-m-d', strtotime($holdDetails['expire']));
+            $pausedTo = date('Y-m-d', strtotime($getHold['ResValidUntil']));
         } else {
             $pausedFrom = null;
             $pausedTo = null;
