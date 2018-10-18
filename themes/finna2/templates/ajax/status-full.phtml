@@ -215,7 +215,7 @@ foreach ($this->statusItems as $item):
     $location
       = $groupBranches
       ? '<span class="branch">' . ($this->transEsc($item['branch']) . '</span>, <span class="department">' . $this->transEsc($item['department']) . '</span>')
-      : (isset($item['department']) ? '<span class="branch">' . ($this->transEsc($item['location']) . '</span>, <span class="department">' . $item['department'] . '</span>') : '<span class="branch">' . ($this->transEsc($item['location']) . '</span>'));
+      : (!empty($item['department']) ? '<span class="branch">' . ($this->transEsc($item['location']) . '</span>, <span class="department">' . $item['department'] . '</span>') : '<span class="branch">' . ($this->transEsc($item['location']) . '</span>'));
   ?>
     <div class="<?=$currentRow % 2 == 0 ? 'even' : 'odd'?> clearfix">
       <div class="<?=$groupBranches ? 'group-location-col' : 'no-branches'?>">
