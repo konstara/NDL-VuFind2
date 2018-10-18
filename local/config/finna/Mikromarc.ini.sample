@@ -98,8 +98,11 @@ method = driver
 ; Uncomment the following lines to enable updating of phone number.
 ; Choose a method on how to update the phone number.
 ; Only 'driver' is currently supported.
+; Add parameter 'mobile' and set it true to enable editing 'Mobile' -field
+; in Mikromarc rather than 'MainPhone' which is set as a default.
 [updatePhone]
 method = driver
+;mobile = true
 
 ; Transport methods for messaging services.
 ; Format of the methods is name:label.

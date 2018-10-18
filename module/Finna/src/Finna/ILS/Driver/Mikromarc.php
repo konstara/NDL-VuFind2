@@ -456,11 +456,12 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
                ]
             ];
         }
-
+        $mobile = $this->config['updatePhone']['mobile'] ?? false;
+        $phoneField = $mobile ? $result['Mobile'] : $result['MainPhone'];
         $profile = [
             'firstname' => trim($name[1]),
             'lastname' => ucfirst(trim($name[0])),
-            'phone' => $result['MainPhone'],
+            'phone' => $phoneField,
             'email' => $result['MainEmail'],
             'address1' => $result['MainAddrLine1'],
             'address2' => $result['MainAddrLine2'],
@@ -894,7 +895,9 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
      */
     public function updatePhone($patron, $phone)
     {
-        $code = $this->updatePatronInfo($patron, ['MainPhone' => $phone]);
+        $mobile = $this->config['updatePhone']['mobile'] ?? false;
+        $phoneField = $mobile ? 'Mobile' : 'MainPhone';
+        $code = $this->updatePatronInfo($patron, [$phoneField => $phone]);
         if ($code !== 200) {
             return  [
                 'success' => false,
