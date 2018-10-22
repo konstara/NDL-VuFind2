@@ -456,7 +456,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
                ]
             ];
         }
-        
+
         $profile = [
             'firstname' => trim($name[1]),
             'lastname' => ucfirst(trim($name[0])),
