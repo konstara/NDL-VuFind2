@@ -894,10 +894,8 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
      */
     public function updatePhone($patron, $phone)
     {
-        $code = $this->updatePatronInfo($patron, [
-            'MainPhone' => $phone,
-            'Mobile' => $phone
-            ]
+        $code = $this->updatePatronInfo(
+            $patron, ['MainPhone' => $phone, 'Mobile' => $phone]
         );
         if ($code !== 200) {
             return  [
