@@ -211,7 +211,7 @@ foreach ($this->statusItems as $item):
     }
     if (!$classes) {
       $classes = ['remove', 'error'];
-    } 
+    }
     if (!empty($item['department']) && !$groupBranches) {
       $location = '<span class="branch">' . $this->transEsc($item['location']) . '</span>, <span class="department">' . $this->transEsc($item['department']) . '</span>';
     } elseif ($groupBranches) {
