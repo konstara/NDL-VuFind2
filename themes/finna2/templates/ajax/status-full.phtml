@@ -211,11 +211,14 @@ foreach ($this->statusItems as $item):
     }
     if (!$classes) {
       $classes = ['remove', 'error'];
+    } 
+    if (!empty($item['department']) && !$groupBranches) {
+      $location = '<span class="branch">' . $this->transEsc($item['location']) . '</span>, <span class="department">' . $this->transEsc($item['department']) . '</span>';
+    } elseif ($groupBranches) {
+      $location = '<span class="branch">' . ($this->transEsc($item['branch']) . '</span>, <span class="department">' . $this->transEsc($item['department']) . '</span>');
+    } else {
+      $location = '<span class="branch">' . $this->transEsc($item['location']) . '</span>';
     }
-    $location
-      = $groupBranches
-      ? '<span class="branch">' . ($this->transEsc($item['branch']) . '</span>, <span class="department">' . $this->transEsc($item['department']) . '</span>')
-      : (!empty($item['department']) ? '<span class="branch">' . ($this->transEsc($item['location']) . '</span>, <span class="department">' . $item['department'] . '</span>') : '<span class="branch">' . ($this->transEsc($item['location']) . '</span>'));
   ?>
     <div class="<?=$currentRow % 2 == 0 ? 'even' : 'odd'?> clearfix">
       <div class="<?=$groupBranches ? 'group-location-col' : 'no-branches'?>">
