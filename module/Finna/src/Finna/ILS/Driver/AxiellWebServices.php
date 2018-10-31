@@ -24,6 +24,7 @@
  * @author   Bjarne Beckmann <bjarne.beckmann@helsinki.fi>
  * @author   Ere Maijala <ere.maijala@helsinki.fi>
  * @author   Samuli Sillanpää <samuli.sillanpaa@helsinki.fi>
+ * @author   Konsta Raunio <konsta.raunio@helsinki.fi>
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org/wiki/development:plugins:ils_drivers Wiki
  */
@@ -45,6 +46,7 @@ use Zend\Db\Sql\Ddl\Column\Boolean;
  * @author   Bjarne Beckmann <bjarne.beckmann@helsinki.fi>
  * @author   Ere Maijala <ere.maijala@helsinki.fi>
  * @author   Samuli Sillanpää <samuli.sillanpaa@helsinki.fi>
+ * @author   Konsta Raunio <konsta.raunio@helsinki.fi>
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org/wiki/development:plugins:ils_drivers Wiki
  */
@@ -121,6 +123,13 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
      * @var string
      */
     protected $patron_wsdl = '';
+
+    /**
+     * Wsdl file name or url for accessing the patronaurora section of AWS
+     *
+     * @var string
+     */
+    protected $patronaurora_wsdl = '';
 
     /**
      * Wsdl file name or url for accessing the loans section of AWS
@@ -258,15 +267,13 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
 
         $username = $patron['cat_username'];
         $cacheKey = $this->getPatronCacheKey($username);
+        $profile = $this->getCachedData($cacheKey);
 
-        $userCached = $this->getCachedData($cacheKey);
-
-        if (null === $userCached) {
+        if (null === $profile) {
             $this->patronLogin($username, $patron['cat_password']);
-            return $this->getCachedData($cacheKey);
+            $profile = $this->getCachedData($cacheKey);
         }
-
-        return $userCached;
+        return $profile;
     }
 
     /**
@@ -325,6 +332,11 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
             throw new
                 ILSException('reservations_wsdl configuration needs to be set.');
         }
+
+        if (isset($this->config['Catalog']['patronaurora_wsdl'])) {
+            $this->patronaurora_wsdl
+                = $this->getWsdlPath($this->config['Catalog']['patronaurora_wsdl']);
+        } 
 
         $this->defaultPickUpLocation
             = isset($this->config['Holds']['defaultPickUpLocation'])
@@ -1164,7 +1176,6 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
             'user' => $username,
             'password' => $password,
             'language' => $this->getLanguage()
-
         ];
 
         $result = $this->doSOAPRequest(
@@ -1985,6 +1996,76 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
                 'status' => 'Email address changed',
                 'sys_message' => '',
             ];
+    }
+
+    /**
+     * Update patron contact information
+     *
+     * @param array  $patron  Patron array
+     * @param String $details Associative array of patron contact information
+     *
+     * @throws ILSException
+     *
+     * @return array Associative array of the results
+     */
+    public function updateAddress($patron, $details)
+    {
+        if (!isset($this->config['Catalog']['patronaurora_wsdl'])) {
+            return [
+                'success' => false,
+                'status' => 'patronaurora_missing',
+            ];
+        } 
+
+        $username = $patron['cat_username'];
+        $password = $patron['cat_password'];
+
+        $function = '';
+        $functionResult = '';
+
+        $conf = [
+            'arenaMember'   => $this->arenaMember,
+            'language'      => $this->getLanguage(),
+            'user'          => $username,
+            'password'      => $password,
+            'patronId'      => $patron['id'],
+            'country'       => 'FI',
+            'isActive'      => 'yes',
+            'type'          => 'B',
+            'streetAddress' => $details['address1'],
+            'zipCode'       => $details['zip'],
+            'city'          => $details['city']
+        ];
+
+        $function = 'addAddress';
+        $functionResult = 'addAddressResponse';
+
+        $result = $this->doSOAPRequest(
+            $this->patronaurora_wsdl, $function, $functionResult, $username,
+            ['addAddressRequest' => $conf]
+        );
+
+        $statusAWS = $result->$functionResult;
+        if ($statusAWS->status->type != 'ok') {
+            $message = $this->handleError($function, $statusAWS->message, $username);
+            if ($message == 'ils_connection_failed') {
+                throw new ILSException('ils_offline_status');
+            }
+            return  [
+                'success' => false,
+                'status' => $statusAWS->status->type,
+            ];
+        }
+
+        // Clear patron cache
+        $cacheKey = $this->getPatronCacheKey($username);
+        $this->putCachedData($cacheKey, null);
+
+        return [
+            'success' => true,
+            'status' => 'request_change_accepted',
+            'sys_message' => $statusAWS->status->type 
+        ];
     }
 
     /**
