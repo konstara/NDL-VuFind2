@@ -23,7 +23,7 @@
       } else {
         $linkText = $this->translate(($updatePhone || $updateEmail || $updateSmsNumber) ? 'request_address_change' : 'request_contact_information_change');
       }
-      
+
       ob_start();
 ?>
         <?php if ($updateAddress['method'] == 'email' || $updateAddress['method'] == 'driver'): ?>
