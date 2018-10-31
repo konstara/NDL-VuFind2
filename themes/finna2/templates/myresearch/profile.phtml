@@ -14,7 +14,7 @@
     $updatePhone = $this->ils()->checkFunction('updatePhone', $capabilityParams);
     $updateSmsNumber = $this->ils()->checkFunction('updateSmsNumber', $capabilityParams);
     $updateEmail = $this->ils()->checkFunction('updateEmail', $capabilityParams);
-    $patronAurora = isset($updateAddress['patronaurora']) ? true : false;
+    $patronAurora = $this->profile['patronAurora'] ?? false;
     $updateLoanHistory = $this->ils()->checkFunction('updateTransactionHistoryState', $capabilityParams);
     $updateAddressLink = '';
     if ($updateAddress) {

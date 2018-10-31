@@ -3,7 +3,7 @@
     $user = $this->auth()->isLoggedIn();
     $updatePhone = $this->ils()->checkFunction('updatePhone', compact($user));
     $updateEmail = $this->ils()->checkFunction('updateEmail', compact($user));
-    $patronAurora = isset($this->config['patronaurora']) ? true : false;
+    $patronAurora = $this->profile['patronAurora'] ?? false;
     // Set up page title:
     if ($patronAurora) {
       $title = $this->translate('profile_address_change');

@@ -273,6 +273,11 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
             $this->patronLogin($username, $patron['cat_password']);
             $profile = $this->getCachedData($cacheKey);
         }
+
+        if (isset($this->config['Catalog']['patronaurora_wsdl'])) {
+            $profile['patronAurora'] = true;
+        }
+
         return $profile;
     }
 
