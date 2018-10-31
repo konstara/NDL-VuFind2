@@ -2015,7 +2015,7 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
                 'success' => false,
                 'status' => 'patronaurora_missing',
             ];
-        } 
+        }
 
         $username = $patron['cat_username'];
         $password = $patron['cat_password'];
