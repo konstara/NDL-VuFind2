@@ -336,7 +336,7 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
         if (isset($this->config['Catalog']['patronaurora_wsdl'])) {
             $this->patronaurora_wsdl
                 = $this->getWsdlPath($this->config['Catalog']['patronaurora_wsdl']);
-        } 
+        }
 
         $this->defaultPickUpLocation
             = isset($this->config['Holds']['defaultPickUpLocation'])
@@ -2064,7 +2064,7 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
         return [
             'success' => true,
             'status' => 'request_change_accepted',
-            'sys_message' => $statusAWS->status->type 
+            'sys_message' => $statusAWS->status->type
         ];
     }
 
