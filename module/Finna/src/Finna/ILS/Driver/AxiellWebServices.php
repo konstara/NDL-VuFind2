@@ -1261,7 +1261,7 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
                         ? $address->city : '';
                     $userCached['country'] = isset($address->country)
                         ? $address->country : '';
-                    $userCached['addressId'] = isset($address->id) 
+                    $userCached['addressId'] = isset($address->id)
                         ? $address->id : '';
                 }
             }
@@ -2077,6 +2077,7 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
             'sys_message' => $statusAWS->status->type
         ];
     }
+
     /**
      * Change pin code
      *
