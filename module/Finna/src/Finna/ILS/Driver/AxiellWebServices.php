@@ -1223,6 +1223,7 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
             'email' => '',
             'emailId' => '',
             'address1' => '',
+            'addressId' => '',
             'zip' => '',
             'city' => '',
             'country' => '',
@@ -1260,6 +1261,8 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
                         ? $address->city : '';
                     $userCached['country'] = isset($address->country)
                         ? $address->country : '';
+                    $userCached['addressId'] = isset($address->id) 
+                        ? $address->id : '';
                 }
             }
         }
@@ -2021,6 +2024,7 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
                 'status' => 'patronaurora_missing',
             ];
         }
+        $user = $this->getMyProfile($patron);
 
         $username = $patron['cat_username'];
         $password = $patron['cat_password'];
@@ -2037,17 +2041,18 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
             'country'       => 'FI',
             'isActive'      => 'yes',
             'type'          => 'B',
+            'id'            => $user['addressId'],
             'streetAddress' => $details['address1'],
             'zipCode'       => $details['zip'],
             'city'          => $details['city']
         ];
 
-        $function = 'addAddress';
-        $functionResult = 'addAddressResponse';
+        $function = 'changeAddress';
+        $functionResult = 'changeAddressResponse';
 
         $result = $this->doSOAPRequest(
             $this->patronaurora_wsdl, $function, $functionResult, $username,
-            ['addAddressRequest' => $conf]
+            ['changeAddressRequest' => $conf]
         );
 
         $statusAWS = $result->$functionResult;
@@ -2072,7 +2077,6 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
             'sys_message' => $statusAWS->status->type
         ];
     }
-
     /**
      * Change pin code
      *
