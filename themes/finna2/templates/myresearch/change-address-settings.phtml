@@ -3,8 +3,8 @@
     $user = $this->auth()->isLoggedIn();
     $updatePhone = $this->ils()->checkFunction('updatePhone', compact($user));
     $updateEmail = $this->ils()->checkFunction('updateEmail', compact($user));
-    $patronAurora = $this->profile['patronAurora'] ?? false;
     $updateAddress = $this->ils()->checkFunction('updateAddress', compact($user));
+    $patronAurora = $this->profile['patronAurora'] ?? false;
     $needsApproval = $updateAddress['needsApproval'] ?? true;
     // Set up page title: 
     $title = $this->translate(($updatePhone || $updateEmail) ? 'request_address_change' : 'request_contact_information_change');
