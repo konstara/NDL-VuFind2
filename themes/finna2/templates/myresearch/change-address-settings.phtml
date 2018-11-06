@@ -4,12 +4,10 @@
     $updatePhone = $this->ils()->checkFunction('updatePhone', compact($user));
     $updateEmail = $this->ils()->checkFunction('updateEmail', compact($user));
     $patronAurora = $this->profile['patronAurora'] ?? false;
-    // Set up page title:
-    if ($patronAurora) {
-      $title = $this->translate('profile_address_change');
-    } else {
-      $title = $this->translate(($updatePhone || $updateEmail) ? 'request_address_change' : 'request_contact_information_change');
-    }
+    $updateAddress = $this->ils()->checkFunction('updateAddress', compact($user));
+    $needsApproval = $updateAddress['needsApproval'] ?? true;
+    // Set up page title: 
+    $title = $this->translate(($updatePhone || $updateEmail) ? 'request_address_change' : 'request_contact_information_change');
     $this->headTitle($title);
 
     // Set up myresearch menu
@@ -41,13 +39,13 @@
     </div>
   </form>
 <?php endif; ?>
+<?php if ($needsApproval): ?>
   <div class="address-change-description">
-    <?php if ('driver' === $this->config['method'] && !$patronAurora): ?>
+    <?php if ('driver' === $this->config['method']): ?>
       <?=$this->transEsc('request_change_description_html') ?>
-    <?php elseif ($patronAurora): ?>
-      <?=$this->transEsc('profile_address_change_form_info') ?>
     <?php else: ?>
       <?=$this->transEsc('request_change_email_description_html') ?>
     <?php endif; ?>
   </div>
+<?php endif; ?>
 <!-- END of: finna - myresearch/change-address-settings.phtml -->

@@ -14,16 +14,11 @@
     $updatePhone = $this->ils()->checkFunction('updatePhone', $capabilityParams);
     $updateSmsNumber = $this->ils()->checkFunction('updateSmsNumber', $capabilityParams);
     $updateEmail = $this->ils()->checkFunction('updateEmail', $capabilityParams);
-    $patronAurora = $this->profile['patronAurora'] ?? false;
+    $needsApproval = $updateAddress['needsApproval'] ?? true;
     $updateLoanHistory = $this->ils()->checkFunction('updateTransactionHistoryState', $capabilityParams);
     $updateAddressLink = '';
     if ($updateAddress) {
-      if ($patronAurora) {
-        $linkText = $this->translate('profile_address_change');
-      } else {
-        $linkText = $this->translate(($updatePhone || $updateEmail || $updateSmsNumber) ? 'request_address_change' : 'request_contact_information_change');
-      }
-
+      $linkText = $this->translate(($updatePhone || $updateEmail || $updateSmsNumber) ? 'request_address_change' : 'request_contact_information_change');
       ob_start();
 ?>
         <?php if ($updateAddress['method'] == 'email' || $updateAddress['method'] == 'driver'): ?>
@@ -128,9 +123,9 @@
                 <div class="my-profile-col profile-title profile-long"><?=$this->transEsc('Address') ?> 1:</div>
                 <div class="my-profile-col profile-text-value profile-long"><?=empty($this->profile['address1']) ? '' : $this->escapeHtml($this->profile['address1']) ?></div>
                 <div class="my-profile-col profile-long">
-                <?php if (!$patronAurora): ?>
-                  <i class="fa fa-info-big"></i> <?=$this->transEsc(($updatePhone || $updateEmail) ? 'request_address_change_title' : 'request_contact_information_change_title') ?>
-                <?php endif; ?>  
+                  <?php if ($needsApproval): ?>
+                    <i class="fa fa-info-big"></i> <?=$this->transEsc(($updatePhone || $updateEmail) ? 'request_address_change_title' : 'request_contact_information_change_title') ?>
+                  <?php endif; ?>
                   <br/>
                   <?=$updateAddressLink ?>
                 </div>

@@ -1390,6 +1390,14 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
      */
     public function getConfig($function)
     {
+        if ($function == 'updateAddress' 
+            && !isset($this->config['Catalog']['patronaurora_wsdl'])
+            && $this->config[$function]['method']== 'driver'
+        ) {
+            return false;
+        } else {
+            $this->config[$function]['needsApproval'] = 0;
+        }
         if (isset($this->config[$function])) {
             $functionConfig = $this->config[$function];
         } else {
@@ -2018,16 +2026,10 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
      */
     public function updateAddress($patron, $details)
     {
-        if (!isset($this->config['Catalog']['patronaurora_wsdl'])) {
-            return [
-                'success' => false,
-                'status' => 'patronaurora_missing',
-            ];
-        }
-        $user = $this->getMyProfile($patron);
-
         $username = $patron['cat_username'];
         $password = $patron['cat_password'];
+
+        $user = $this->getMyProfile($patron);
 
         $function = '';
         $functionResult = '';
