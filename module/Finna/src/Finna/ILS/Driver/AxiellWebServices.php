@@ -2059,10 +2059,16 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
         $cacheKey = $this->getPatronCacheKey($username);
         $this->putCachedData($cacheKey, null);
 
+        if (isset($this->config['updateAddress']['needsApproval'])
+            && !$this->config['updateAddress']['needsApproval']
+        ) {
+            $status = 'request_change_accepted';
+        } else {
+            $status = 'request_change_done';
+        }
         return [
             'success' => true,
-            'status' => isset($this->config['updateAddress']['needsApproval'])
-                 ? 'request_change_accepted' : 'request_change_done',
+            'status' => $status,
             'sys_message' => $statusAWS->status->type
         ];
     }
