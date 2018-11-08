@@ -1386,12 +1386,6 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
      */
     public function getConfig($function)
     {
-        if ($function == 'updateAddress'
-            && isset($this->config['Catalog']['patronaurora_wsdl'])
-            && $this->config[$function]['method'] == 'driver'
-        ) {
-            $this->config[$function]['needsApproval'] = false;
-        }
         if (isset($this->config[$function])) {
             $functionConfig = $this->config[$function];
         } else {
@@ -2067,7 +2061,8 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
 
         return [
             'success' => true,
-            'status' => 'request_change_accepted',
+            'status' => isset($this->config['updateAddress']['needsApproval'])
+                 ? 'request_change_accepted' : 'request_change_done',
             'sys_message' => $statusAWS->status->type
         ];
     }

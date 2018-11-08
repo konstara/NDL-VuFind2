@@ -100,6 +100,8 @@ method = driver
 ;method = email
 ; emailAddress is required for the email method
 ;emailAddress =
+; Uncomment needsApproval and keep it as false when using driver and patronaurora
+;needsApproval = false
 ; Uncomment the following lines to change which fields are included in the form
 ; when using the email method. Format for the fields is label:profile_field
 ; Default is address, zip, city and country. Email and phone are included unless
