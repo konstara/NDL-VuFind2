@@ -4,9 +4,8 @@
     $updatePhone = $this->ils()->checkFunction('updatePhone', compact($user));
     $updateEmail = $this->ils()->checkFunction('updateEmail', compact($user));
     $updateAddress = $this->ils()->checkFunction('updateAddress', compact($user));
-    $patronAurora = $this->profile['patronAurora'] ?? false;
     $needsApproval = $updateAddress['needsApproval'] ?? true;
-    // Set up page title:
+    // Set up page title: 
     $title = $this->translate(($updatePhone || $updateEmail) ? 'request_address_change' : 'request_contact_information_change');
     $this->headTitle($title);
 
@@ -20,9 +19,6 @@
 <?php if (!isset($this->requestCompleted) || !$this->requestCompleted): ?>
   <form  name="requestAddressChange" method="post" action="<?=$this->url('myresearch-changeprofileaddress')?>" class="address-form profile-form">
     <?php foreach ($this->fields as $field => $data): ?>
-    <?php  if (($field == 'country' || $field == 'sms_number') && $patronAurora): ?>
-      <?php break; ?>
-    <?php endif; ?>
       <div class="form-group">
         <label class="control-label" for="<?=$this->escapeHtmlAttr($field)?>"><?=$this->transEsc($data['label']) ?>:</label>
         <?php

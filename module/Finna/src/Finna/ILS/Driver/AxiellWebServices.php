@@ -1390,13 +1390,11 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
      */
     public function getConfig($function)
     {
-        if ($function == 'updateAddress'
-            && !isset($this->config['Catalog']['patronaurora_wsdl'])
-            && $this->config[$function]['method'] == 'driver'
+        if ($function == 'updateAddress' 
+            && isset($this->config['Catalog']['patronaurora_wsdl'])
+            && $this->config[$function]['method']== 'driver'
         ) {
-            return false;
-        } else {
-            $this->config[$function]['needsApproval'] = 0;
+            $this->config[$function]['needsApproval'] = false;
         }
         if (isset($this->config[$function])) {
             $functionConfig = $this->config[$function];
