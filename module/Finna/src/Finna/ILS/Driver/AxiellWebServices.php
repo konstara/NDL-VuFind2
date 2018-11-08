@@ -274,10 +274,6 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
             $profile = $this->getCachedData($cacheKey);
         }
 
-        if (isset($this->config['Catalog']['patronaurora_wsdl'])) {
-            $profile['patronAurora'] = true;
-        }
-
         return $profile;
     }
 
@@ -2038,9 +2034,7 @@ class AxiellWebServices extends \VuFind\ILS\Driver\AbstractBase
             'user'          => $username,
             'password'      => $password,
             'patronId'      => $patron['id'],
-            'country'       => 'FI',
             'isActive'      => 'yes',
-            'type'          => 'B',
             'id'            => $user['addressId'],
             'streetAddress' => $details['address1'],
             'zipCode'       => $details['zip'],
