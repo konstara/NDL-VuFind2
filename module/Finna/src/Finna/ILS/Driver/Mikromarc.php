@@ -24,7 +24,7 @@
  * @author   Bjarne Beckmann <bjarne.beckmann@helsinki.fi>
  * @author   Ere Maijala <ere.maijala@helsinki.fi>
  * @author   Samuli Sillanpää <samuli.sillanpaa@helsinki.fi>
- * @author   Konsta Raunio  <konsta.raunio@helsinki.fi>
+ * @author   Konsta Raunio <konsta.raunio@helsinki.fi>
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org/wiki/development:plugins:ils_drivers Wiki
  */
@@ -32,6 +32,7 @@ namespace Finna\ILS\Driver;
 
 use VuFind\Date\DateException;
 use VuFind\Exception\ILS as ILSException;
+use VuFind\Exception\Auth as AuthException;
 
 /**
  * Mikromarc ILS Driver
@@ -41,7 +42,7 @@ use VuFind\Exception\ILS as ILSException;
  * @author   Bjarne Beckmann <bjarne.beckmann@helsinki.fi>
  * @author   Ere Maijala <ere.maijala@helsinki.fi>
  * @author   Samuli Sillanpää <samuli.sillanpaa@helsinki.fi>
- * @author   Konsta Raunio  <konsta.raunio@helsinki.fi>
+ * @author   Konsta Raunio <konsta.raunio@helsinki.fi>
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org/wiki/development:plugins:ils_drivers Wiki
  */
@@ -233,7 +234,8 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
      * @param string $username The patron username
      * @param string $password The patron password
      *
-     * @return mixed           Associative array of patron info on successful login,
+     * @throws AuthException
+     * @return mixed Associative array of patron info on successful login,
      * null on unsuccessful login.
      *
      * @SuppressWarnings(PHPMD.UnusedFormalParameter)
@@ -251,6 +253,16 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             $request, 'POST', true
         );
         if ($code != 200 || empty($result)) {
+            if ($code == 403 && !empty($result)
+                && $result['error']['code'] == 'Defaulted'
+            ) {
+                $defaultedPatron = $this->makeRequest(
+                    ['odata', 'Borrowers', 'Default.AuthenticateDebtor'],
+                    $request, 'POST', false
+                );
+                $reason = $this->getDefaultedReason($defaultedPatron);
+                throw new AuthException('reason_' . $reason);
+            }
             return null;
         }
         $patron = [
@@ -1594,7 +1606,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
      *
      * @param array $item Item from Mikromarc.
      *
-     * @return String Status
+     * @return string Status
      */
     protected function getItemStatusCode($item)
     {
@@ -1626,6 +1638,27 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
         ];
 
         return $map[$item['ItemStatus']] ?? 'No information available';
+    }
+
+    /**
+     * Map Mikromarc Defaulted reasons to VuFind
+     * 
+     * @param array $defaultedPatron Data from defaulted login attempt 
+     * 
+     * @return string Defaulted reason
+     */
+    protected function getDefaultedReason($defaultedPatron)
+    {
+        $map = [
+            'CompensationClaim' => 'compesation',
+            'TotalDebtLimitExceeded' => 'debt_limit_exceeded',
+            'LateFeeLimitExceeded' => 'late_limit_exceeded',
+            'ChildOfThisParentWasDefaulted' => 'child_is_defaulted',
+            'ChildWithoutParent' => 'child_without_parent' 
+        ];
+        
+        return $map[$defaultedPatron['DefaultedCause']]
+        ?? 'No information available';
     }
 
     /**
