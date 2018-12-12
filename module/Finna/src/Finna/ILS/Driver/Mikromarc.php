@@ -1654,11 +1654,11 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             'TotalDebtLimitExceeded' => 'debt_limit_exceeded',
             'LateFeeLimitExceeded' => 'late_limit_exceeded',
             'ChildOfThisParentWasDefaulted' => 'child_is_defaulted',
-            'ChildWithoutParent' => 'child_without_parent' 
+            'ChildWithoutParent' => 'child_without_parent'
         ];
-        
+
         return $map[$defaultedPatron['DefaultedCause']]
-        ?? 'No information available';
+            ?? 'No information available';
     }
 
     /**
