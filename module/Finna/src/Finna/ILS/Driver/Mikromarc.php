@@ -1642,9 +1642,9 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
 
     /**
      * Map Mikromarc Defaulted reasons to VuFind
-     * 
-     * @param array $defaultedPatron Data from defaulted login attempt 
-     * 
+     *
+     * @param array $defaultedPatron Data from defaulted login attempt
+     *
      * @return string Defaulted reason
      */
     protected function getDefaultedReason($defaultedPatron)
