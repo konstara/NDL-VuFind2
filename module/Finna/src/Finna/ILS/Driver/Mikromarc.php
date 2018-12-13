@@ -31,8 +31,8 @@
 namespace Finna\ILS\Driver;
 
 use VuFind\Date\DateException;
-use VuFind\Exception\ILS as ILSException;
 use VuFind\Exception\Auth as AuthException;
+use VuFind\Exception\ILS as ILSException;
 
 /**
  * Mikromarc ILS Driver
