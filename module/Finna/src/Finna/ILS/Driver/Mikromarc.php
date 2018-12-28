@@ -253,7 +253,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             $request, 'POST', true
         );
         if ($code != 200 || empty($result)) {
-            if ($code == 403 && !empty($result)
+            if ($code == 403 && !empty($result['error']['code'])
                 && $result['error']['code'] == 'Defaulted'
             ) {
                 throw new AuthException('authentication_error_account_locked');
