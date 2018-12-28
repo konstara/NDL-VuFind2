@@ -256,12 +256,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             if ($code == 403 && !empty($result)
                 && $result['error']['code'] == 'Defaulted'
             ) {
-                $defaultedPatron = $this->makeRequest(
-                    ['odata', 'Borrowers', 'Default.AuthenticateDebtor'],
-                    $request, 'POST', false
-                );
-                $reason = $this->getDefaultedReason($defaultedPatron);
-                throw new AuthException('reason_' . $reason);
+                throw new AuthException('account_defaulted');
             }
             return null;
         }
@@ -1638,27 +1633,6 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
         ];
 
         return $map[$item['ItemStatus']] ?? 'No information available';
-    }
-
-    /**
-     * Map Mikromarc Defaulted reasons to VuFind
-     *
-     * @param array $defaultedPatron Data from defaulted login attempt
-     *
-     * @return string Defaulted reason
-     */
-    protected function getDefaultedReason($defaultedPatron)
-    {
-        $map = [
-            'CompensationClaim' => 'compesation',
-            'TotalDebtLimitExceeded' => 'debt_limit_exceeded',
-            'LateFeeLimitExceeded' => 'late_limit_exceeded',
-            'ChildOfThisParentWasDefaulted' => 'child_is_defaulted',
-            'ChildWithoutParent' => 'child_without_parent'
-        ];
-
-        return $map[$defaultedPatron['DefaultedCause']]
-            ?? 'No information available';
     }
 
     /**
