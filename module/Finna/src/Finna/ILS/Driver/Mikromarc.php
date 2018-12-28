@@ -256,7 +256,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             if ($code == 403 && !empty($result)
                 && $result['error']['code'] == 'Defaulted'
             ) {
-                throw new AuthException('account_defaulted');
+                throw new AuthException('authentication_error_account_locked');
             }
             return null;
         }
