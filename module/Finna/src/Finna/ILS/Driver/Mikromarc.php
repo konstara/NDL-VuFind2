@@ -260,8 +260,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
                 $request, 'POST', false
             );
         }
-        $id = isset($defaultedPatron['BorrowerId']) ? $defaultedPatron['BorrowerId']
-            : $result;
+        $id = $defaultedPatron['BorrowerId'] ?? $result;
         $patron = [
             'cat_username' => $username, 'cat_password' => $password, 'id' => $id
         ];
