@@ -246,23 +246,25 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
               'Pin' => $password
             ]
         );
-        list($code, $result) = $this->makeRequest(
+        list($code, $patronId) = $this->makeRequest(
             ['odata', 'Borrowers', 'Default.Authenticate'],
             $request, 'POST', true
         );
-        if (($code != 200 && $code != 403) || empty($result)) {
+        if (($code != 200 && $code != 403) || empty($patronId)) {
             return null;
-        } elseif ($code == 403 && !empty($result['error']['code'])
-            && $result['error']['code'] == 'Defaulted'
+        } elseif ($code == 403 && !empty($patronId['error']['code'])
+            && $patronId['error']['code'] == 'Defaulted'
         ) {
             $defaultedPatron = $this->makeRequest(
                 ['odata', 'Borrowers', 'Default.AuthenticateDebtor'],
                 $request, 'POST', false
             );
+            $patronId = $defaultedPatron['BorrowerId'];
         }
-        $id = $defaultedPatron['BorrowerId'] ?? $result;
         $patron = [
-            'cat_username' => $username, 'cat_password' => $password, 'id' => $id
+            'cat_username' => $username,
+            'cat_password' => $password,
+            'id' => $patronId
         ];
 
         if ($profile = $this->getMyProfile($patron)) {
