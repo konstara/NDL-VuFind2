@@ -471,7 +471,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
         $profile = [
             'firstname' => trim($name[1]),
             'lastname' => ucfirst(trim($name[0])),
-            'phone' => !empty($result['MainPhone']) 
+            'phone' => !empty($result['MainPhone'])
                 ? $result['MainPhone'] : $result['Mobile'],
             'email' => $result['MainEmail'],
             'address1' => $result['MainAddrLine1'],
