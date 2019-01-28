@@ -478,7 +478,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
             'zip' => $result['MainZip'],
             'city' => $result['MainPlace'],
             'expiration_date' => $expirationDate,
-            'loan_history' => $result['StoreBorrowerHistory'] ? 0 : 1,
+            'loan_history' => $result['StoreBorrowerHistory'],
             'messagingServices' => $messagingSettings
         ];
 
@@ -998,7 +998,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
     public function updateTransactionHistoryState($patron, $state)
     {
         $code = $this->updatePatronInfo(
-            $patron, ['StoreBorrowerHistory' => ($state == 0)]
+            $patron, ['StoreBorrowerHistory' => $state == 1 ? true : false]
         );
 
         if ($code !== 200) {
