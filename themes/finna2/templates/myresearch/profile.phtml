@@ -187,7 +187,7 @@
               <div class="my-profile-col profile-title"><?=$this->transEsc('Hold Identifier') ?>:</div>
               <div class="profile-text-value"><?=$this->escapeHtml($this->profile['hold_identifier']) ?></div>
             <?php endif; ?>
-            <?php if ((isset($this->profile['loan_history']) && $this->profile['loan_history']) || $updateLoanHistory): ?>
+            <?php if (isset($this->profile['loan_history']) || $updateLoanHistory): ?>
               <div class="my-profile-col profile-title">
                 <?php if ($updateLoanHistory): ?>
                   <label for="loan-history"><?=$this->transEsc('loan_history_retention') ?>:</label>
