@@ -20,10 +20,7 @@ finna.organisationInfoPage = (function finnaOrganisationInfoPage() {
         var cnt = 0;
         $.each(response.list, function countItem(ind, obj) {
           organisationList[obj.id] = obj;
-          if (obj.type === 'library' || obj.type === 'other'
-            || obj.type === 'museum') {
             cnt++;
-          }
         });
 
         infoWidget.organisationListLoaded(response);
@@ -219,7 +216,7 @@ finna.organisationInfoPage = (function finnaOrganisationInfoPage() {
 
   function updateConsortiumNotification(data) {
     if ('consortium' in data) {
-      if ('finna' in data.consortium && 'notification' in data.consortium.finna) {
+      if ('finna' in data.consortium && data.consortium.finna.notification.length > 1) {
         holder.find('.consortium-notification')
           .html(data.consortium.finna.notification).removeClass('hide');
       }
