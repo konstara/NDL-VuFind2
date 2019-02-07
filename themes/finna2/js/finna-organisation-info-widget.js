@@ -254,7 +254,7 @@ finna.organisationInfoWidget = (function finnaOrganisationInfoWidget() {
           });
         } else {
           var timeRow = timeRowTpl.clone();
-          timeRow.find('.date').text(obj.date);
+          timeRow.find('.date').text(obj.date + ' ' + obj.day);
           timeRow.find('.name').text(obj.day);
           timeRow.find('.info').text(obj.info);
           timeRow.find('.period, .name-staff').hide();
@@ -366,7 +366,7 @@ finna.organisationInfoWidget = (function finnaOrganisationInfoWidget() {
       && 'currentWeek' in response.openTimes
       && response.openTimes.currentWeek
     ) {
-      prevBtn.unbind('click').fadeTo(200, 0);
+      prevBtn.hide();
     } else {
       prevBtn.fadeTo(200, 1);
       attachWeekNaviListener();

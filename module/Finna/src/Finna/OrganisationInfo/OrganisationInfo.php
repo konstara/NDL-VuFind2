@@ -936,6 +936,9 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
             $closed = $day['closed'];
 
             foreach ($day['times'] as $time) {
+                if (!empty($day['info'])) {
+                    $result['info'] = $day['info'];
+                }
                 if ($time['staff']) {
                     $result['opens'] = $this->formatTime($time['from']);
                     $result['closes'] = $this->formatTime($time['to']);
@@ -971,10 +974,6 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
 
             if ($today) {
                 $scheduleData['today'] = true;
-            }
-
-            if (!empty($day['info'])) {
-                $scheduleData['info'] = $day['info'];
             }
 
             $schedules[] = $scheduleData;
