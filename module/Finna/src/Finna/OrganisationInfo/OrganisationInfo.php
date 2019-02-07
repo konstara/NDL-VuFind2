@@ -535,7 +535,7 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
 
         $with = 'schedules';
         if ($fullDetails) {
-            $with .= 
+            $with .=
                 ',phoneNumbers,mailAddress,pictures,links,services,customData';
         }
 
@@ -684,7 +684,7 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
                 'name' => $item['name'],
                 'shortName' => $item['shortName'],
                 'slug' => $item['slug'],
-                'type' => $item['type'], 
+                'type' => $item['type'],
                 'mobile' => $item['type'] == 'mobile' ? 1 : 0,
                 'email' => $item['primaryContactInfo']['email']['email'] ?? null,
                 'homepage' => $item['primaryContactInfo']['homepage']['url'] ?? null
@@ -698,16 +698,16 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
                 ];
 
                 if (!empty($item['address']['area'])) {
-                    $address['city'] 
+                    $address['city']
                         = "{$item['address']['area']} / {$item['address']['city']}";
                 } else {
                     $address['city'] = $item['address']['city'];
                 }
 
                 if (!empty($item['coordinates'])) {
-                    $address['coordinates']['lat'] = $item['coordinates']['lat'] 
+                    $address['coordinates']['lat'] = $item['coordinates']['lat']
                         ?? null;
-                    $address['coordinates']['lon'] = $item['coordinates']['lon'] 
+                    $address['coordinates']['lon'] = $item['coordinates']['lon']
                         ?? null;
                 }
 
@@ -851,7 +851,7 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
                     }
                 }
                 if ($includeAllServices) {
-                    $name = empty($service['name']) 
+                    $name = empty($service['name'])
                         ? $service['standardName'] : $service['name'];
                     $data = [$name];
                     $desc = html_entity_decode($service['shortDescription']);
@@ -957,7 +957,7 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
             } elseif ($data['status'] === 1) {
                 $result['selfservice'] = false;
             }
-        
+
             if ($today && !empty($times)) {
                 $openToday = $times;
             }
