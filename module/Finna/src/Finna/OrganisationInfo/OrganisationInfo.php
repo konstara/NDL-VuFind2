@@ -557,7 +557,6 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
             return false;
         }
 
-
         // Details
         $response = $response['items'][0];
         $result = $this->parseDetails(
