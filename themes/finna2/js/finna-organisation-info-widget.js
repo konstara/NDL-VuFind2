@@ -218,9 +218,13 @@ finna.organisationInfoWidget = (function finnaOrganisationInfoWidget() {
 
             if (currentSelfservice === null || selfservice !== currentSelfservice) {
               var timeRow = timeRowTpl.clone();
-              timeRow.find('.date').text(date);
-              timeRow.find('.name').text(day);
-              timeRow.find('.info').text(info);
+              timeRow.find('.date').text(date + ' ' + day);
+
+              if (info == null) {
+                timeRow.find('.info').hide();
+              } else {
+                timeRow.find('.info').text(info);
+              }
 
               timeRow.find('.opens').text(timeOpens);
               timeRow.find('.closes').text(timeCloses);
@@ -228,9 +232,12 @@ finna.organisationInfoWidget = (function finnaOrganisationInfoWidget() {
               if (selfserviceAvail && selfservice !== currentSelfservice) {
                 timeRow.toggleClass('staff', !selfservice);
               }
-              if ('selfserviceOnly' in time) {
+
+              if (time.selfservice == true) {
                 timeRow.find('.selfservice-only').removeClass('hide');
-              }
+                timeRow.find('.name-staff').hide();
+              } 
+
               dayRow.append(timeRow);
               currentTimeRow = timeRow;
             } else {
@@ -319,7 +326,7 @@ finna.organisationInfoWidget = (function finnaOrganisationInfoWidget() {
       var links = response.links;
       if (links.length) {
         $.each(links, function handleLink(ind, obj) {
-          if (obj.name === 'Facebook') {
+          if (obj.name.includes('Facebook')) {
             holder.find('.facebook').attr('href', obj.url).show();
           }
         });

@@ -140,7 +140,7 @@ finna.organisationInfoPage = (function finnaOrganisationInfoPage() {
         var term = request.term.toLowerCase();
         var result = [];
         $.each(organisationList, function handleOrganisation(id, obj) {
-          if ((obj.type === 'library' || obj.type === 'other') && obj.name.toLowerCase().indexOf(term) !== -1) {
+          if (obj.name.toLowerCase().indexOf(term) !== -1) {
             result.push({value: id, label: obj.name});
           }
         });
@@ -216,7 +216,7 @@ finna.organisationInfoPage = (function finnaOrganisationInfoPage() {
 
   function updateConsortiumNotification(data) {
     if ('consortium' in data) {
-      if ('finna' in data.consortium && data.consortium.finna.notification.length > 1) {
+      if (data.consortium.finna.notification) {
         holder.find('.consortium-notification')
           .html(data.consortium.finna.notification).removeClass('hide');
       }
@@ -312,7 +312,7 @@ finna.organisationInfoPage = (function finnaOrganisationInfoPage() {
       var links = data.details.links;
       if (links.length) {
         $.each(links, function handleSocialButton(ind, obj) {
-          if (obj.name === 'Facebook') {
+          if (obj.name.includes('Facebook')) {
             var btn = holder.find('.social-button');
             btn.find('> a').attr('href', obj.url);
             btn.show();
@@ -326,14 +326,23 @@ finna.organisationInfoPage = (function finnaOrganisationInfoPage() {
       $.each(data.openTimes.schedules, function handleSchedule(ind, obj) {
         if ('today' in obj && 'times' in obj && obj.times.length) {
           openToday = obj.times[0];
-
+          var lastElement = obj.times[obj.times.length - 1];
           var timeOpen = holder.find('.time-open');
           timeOpen.find('.opening-times .opens').text(openToday.opens);
-          timeOpen.find('.opening-times .closes').text(openToday.closes);
+          timeOpen.find('.opening-times .closes').text(lastElement.closes);
           timeOpen.show();
-          var staffSchedule = obj.times[1];
+          var staffSchedule = [];
+          obj.times.forEach(function (e) {
+             if (e.selfservice == false) {
+               staffSchedule = {
+                 opens: e.opens,
+                 closes: e.closes
+               };
+             };
+             return staffSchedule
+          });
           var staffTimes;
-          if (staffSchedule) {
+          if (staffSchedule && obj.times.length > 1) {
             staffTimes = timeOpen.find('.staff-times');
             staffTimes.find('.opens').text(staffSchedule.opens);
             staffTimes.find('.closes').text(staffSchedule.closes);
