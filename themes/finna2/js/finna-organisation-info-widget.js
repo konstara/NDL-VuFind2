@@ -366,9 +366,9 @@ finna.organisationInfoWidget = (function finnaOrganisationInfoWidget() {
       && 'currentWeek' in response.openTimes
       && response.openTimes.currentWeek
     ) {
-      prevBtn.hide();
+      prevBtn.css('visibility', 'hidden');
     } else {
-      prevBtn.fadeTo(200, 1);
+      prevBtn.css('visibility', 'visible').fadeTo(200, 1);
       attachWeekNaviListener();
     }
   }
