@@ -240,7 +240,7 @@ foreach ($this->statusItems as $item):
           <?php endif; ?>
         <?php else: ?>
           <div class="groupCallnumber">
-            <?php if ($item['duedate'] != null && !$item['availability']) : ?>
+            <?php if (!empty($item['duedate']) && !$item['availability']) : ?>
             <div class="duedate">
               <?= str_replace('%%date%%', $item['duedate'], $this->transEsc('closest_due_date')); ?>
             </div>
