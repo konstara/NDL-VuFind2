@@ -1502,6 +1502,16 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
 
             $unit = $this->getLibraryUnit($unitId);
 
+            if ($statusCode == 'Charged') {
+                $loanInfo = $this->makeRequest(
+                    ['odata', 'BorrowerLoans'],
+                    ['$filter' => 'ItemId eq ' . $item['Id']]
+                );
+                $dueTime = $this->dateConverter->convertToDisplayDate(
+                    'U', strtotime($loanInfo[0]['DueTime'])
+                );
+            }
+
             $entry = [
                 'id' => $id,
                 'item_id' => $item['Id'],
@@ -1514,7 +1524,7 @@ class Mikromarc extends \VuFind\ILS\Driver\AbstractBase implements
                 'status' => $statusCode,
                 'reserve' => 'N',
                 'callnumber' => $item['Shelf'],
-                'duedate' => null,
+                'duedate' => $dueTime ?? null,
                 'barcode' => $item['Barcode'],
                 'item_notes' => [isset($items['notes']) ? $item['notes'] : null],
             ];
