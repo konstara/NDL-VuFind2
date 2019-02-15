@@ -482,6 +482,8 @@ class OrganisationInfo implements \Zend\Log\LoggerAwareInterface
             }
         }
 
+        $consortium['id'] = $response['id'];
+
         // Organisation list for a consortium with schedules for the current week
         $params = [
             'consortium' => $response['id'],
