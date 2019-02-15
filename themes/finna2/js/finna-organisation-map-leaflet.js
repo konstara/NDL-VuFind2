@@ -69,7 +69,7 @@ finna.organisationMap = (function finnaOrganisationMap() {
 
         var icon = icons['no-schedule'];
         var openTimes = finna.common.getField(obj, 'openTimes');
-        if (openTimes) {
+        if (openTimes && obj.type !== 'mobile') {
           var schedules = finna.common.getField(openTimes, 'schedules');
           var openNow = finna.common.getField(openTimes, 'openNow');
           icon = schedules && schedules.length > 0 && openNow ? icons.open : icons.closed;
