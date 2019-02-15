@@ -20,7 +20,7 @@ finna.organisationInfoPage = (function finnaOrganisationInfoPage() {
         var cnt = 0;
         $.each(response.list, function countItem(ind, obj) {
           organisationList[obj.id] = obj;
-            cnt++;
+          cnt++;
         });
 
         infoWidget.organisationListLoaded(response);
@@ -332,14 +332,14 @@ finna.organisationInfoPage = (function finnaOrganisationInfoPage() {
           timeOpen.find('.opening-times .closes').text(lastElement.closes);
           timeOpen.show();
           var staffSchedule = [];
-          obj.times.forEach(function (e) {
-             if (e.selfservice == false) {
-               staffSchedule = {
-                 opens: e.opens,
-                 closes: e.closes
-               };
-             };
-             return staffSchedule
+          $.each(obj.times, function isSelfservice(e) {
+            if (e.selfservice === false) {
+              staffSchedule = {
+                opens: e.opens,
+                closes: e.closes
+              };
+            }
+            return staffSchedule
           });
           var staffTimes;
           if (staffSchedule && obj.times.length > 1) {

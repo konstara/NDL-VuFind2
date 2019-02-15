@@ -233,7 +233,7 @@ finna.organisationInfoWidget = (function finnaOrganisationInfoWidget() {
                 timeRow.toggleClass('staff', !selfservice);
               }
 
-              if (time.selfservice == true) {
+              if (time.selfservice === true) {
                 timeRow.find('.selfservice-only').removeClass('hide');
                 timeRow.find('.name-staff').hide();
               }
